@@ -23,24 +23,24 @@ spec:
         - containerPort: {{ .Values.container.port }}
         env:
         - name: AGENT_PORT
-          value: {{ .Values.environment.AGENT_PORT }}
+          value: "{{ .Values.environment.AGENT_PORT }}"
         - name: AGENT_NAME
-          value: {{ .Values.environment.AGENT_NAME }}
+          value: "{{ .Values.environment.AGENT_NAME }}"
         - name: WALLET_NAME
-          value: {{ .Values.environment.WALLET_NAME }}
+          value: "{{ .Values.environment.WALLET_NAME }}"
         - name: WALLET_KEY
-          value: {{ .Values.environment.WALLET_KEY }}
+          value: "{{ .Values.environment.WALLET_KEY }}"
         - name: POSTGRES_USER
-          value: {{ .Values.environment.POSTGRES_USER }}
+          value: "{{ .Values.environment.POSTGRES_USER }}"
         - name: POSTGRES_PASSWORD
-          value: {{ .Values.environment.POSTGRES_PASSWORD }}
+          value: "{{ .Values.environment.POSTGRES_PASSWORD }}"
         - name: POSTGRES_HOST
-          value: {{ .Values.environment.POSTGRES_HOST }}
+          value: "{{ .Values.environment.POSTGRES_HOST }}"
         - name: POSTGRES_ADMIN_USER
-          value: {{ .Values.environment.POSTGRES_ADMIN_USER }}
+          value: "{{ .Values.environment.POSTGRES_ADMIN_USER }}"
         - name: POSTGRES_ADMIN_PASSWORD
-          value: {{ .Values.environment.POSTGRES_ADMIN_PASSWORD }}
+          value: "{{ .Values.environment.POSTGRES_ADMIN_PASSWORD }}"
         - name: AGENT_ENDPOINTS
-          value: {{ .Values.environment.AGENT_ENDPOINTS }}
+          value: "{{ .Values.environment.AGENT_ENDPOINTS }}"
         - name: LOG_LEVEL
-          value: {{ .Values.environment.LOG_LEVEL }}
+          value: "{{ .Values.environment.LOG_LEVEL }}"
