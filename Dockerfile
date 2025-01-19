@@ -1,10 +1,12 @@
-FROM node:20 as base
+FROM node:20 AS base
 
-workdir /app
+WORKDIR /app
 
-RUN corepack enable
+RUN apt-get update && \
+  apt-get upgrade -y && \ 
+  corepack enable
 
-FROM base as setup
+FROM base AS setup
 
 # Copy root package files
 COPY package.json /app/package.json
@@ -18,7 +20,7 @@ COPY . /app
 
 RUN pnpm build
 
-FROM base as final
+FROM base AS final
 
 WORKDIR /app
 
@@ -29,15 +31,15 @@ COPY package.json /app/package.json
 COPY pnpm-lock.yaml /app/pnpm-lock.yaml
 COPY patches /app/patches
 
-# Run yarn install
-RUN pnpm install --production
-
-# Clean cache to reduce image size
-RUN pnpm store prune
+# Package yarn install and prune to
+# reduce image size
+RUN pnpm install --production && \
+  pnpm store prune
 
 # Don't run production as root
-RUN addgroup --system --gid 1001 agent
-RUN adduser --system --uid 1001 agent
+RUN addgroup --system --gid 1001 agent && \
+  adduser --system --uid 1001 agent
+
 USER agent
 
 ENTRYPOINT [ "node", "build/index.js" ]
