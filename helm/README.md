@@ -1,4 +1,5 @@
-# Installing didcomm-mediator-credo on k8s with Helm
+# Installing DIDComm Mediator Credo on k8s with Helm
+
 ### Three manifest files are used in Helm charts
 1. Deployment.yaml
 This file contains the replicaset, container image name, container port, and environment variables for the container. This will create a Deployment type object for the application.
