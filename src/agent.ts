@@ -16,6 +16,7 @@ import { ariesAskar } from '@hyperledger/aries-askar-nodejs'
 
 import express from 'express'
 import { Server } from 'ws'
+import { SocketDockInboundTransport } from './transport/SocketDockInboundTransport'
 
 import config from './config'
 import { askarPostgresConfig } from './database'
@@ -90,14 +91,19 @@ export async function createAgent() {
   // Create all transports
   const httpInboundTransport = new HttpInboundTransport({ app, port: config.get('agent:port') })
   const httpOutboundTransport = new HttpOutboundTransport()
-  const wsInboundTransport = new WsInboundTransport({ server: socketServer })
-  const wsOutboundTransport = new WsOutboundTransport()
 
   // Register all Transports
   agent.registerInboundTransport(httpInboundTransport)
   agent.registerOutboundTransport(httpOutboundTransport)
-  agent.registerInboundTransport(wsInboundTransport)
-  agent.registerOutboundTransport(wsOutboundTransport)
+
+  if (!config.get('agent:useSocketDock')) {
+    const wsInboundTransport = new WsInboundTransport({ server: socketServer })
+    const wsOutboundTransport = new WsOutboundTransport()
+    agent.registerInboundTransport(wsInboundTransport)
+    agent.registerOutboundTransport(wsOutboundTransport)
+  } else {
+    agent.registerInboundTransport(new SocketDockInboundTransport({ app }))
+  }
 
   // Added health check endpoint
   httpInboundTransport.app.get('/health', async (_req, res) => {

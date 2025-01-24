@@ -38,6 +38,7 @@ nconf.overrides({
     logLevel: process.env.LOG_LEVEL ?? LogLevel.debug,
     usePushNotifications: process.env.USE_PUSH_NOTIFICATIONS === 'true',
     notificationWebhookUrl: process.env.NOTIFICATION_WEBHOOK_URL,
+    useSocketDock: process.env.USE_SOCKETDOCK === 'true',
   },
   wallet: {
     name: process.env.WALLET_NAME ?? 'mediator-dev',
