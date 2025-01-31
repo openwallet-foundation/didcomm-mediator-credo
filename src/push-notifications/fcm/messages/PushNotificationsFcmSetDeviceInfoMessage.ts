@@ -31,7 +31,7 @@ export class PushNotificationsFcmSetDeviceInfoMessage extends AgentMessage {
 
   @Expose({ name: 'device_platform' })
   @IsString()
-  @ValidateIf((object, value) => value !== null)
+  @ValidateIf((_, value) => value !== null)
   public devicePlatform!: string | null
 
   @IsValidMessageType(PushNotificationsFcmSetDeviceInfoMessage.type)

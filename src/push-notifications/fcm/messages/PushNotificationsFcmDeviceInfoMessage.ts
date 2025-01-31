@@ -29,12 +29,12 @@ export class PushNotificationsFcmDeviceInfoMessage extends AgentMessage {
 
   @Expose({ name: 'device_token' })
   @IsString()
-  @ValidateIf((object, value) => value !== null)
+  @ValidateIf((_, value) => value !== null)
   public deviceToken!: string | null
 
   @Expose({ name: 'device_platform' })
   @IsString()
-  @ValidateIf((object, value) => value !== null)
+  @ValidateIf((_, value) => value !== null)
   public devicePlatform!: string | null
 
   @IsValidMessageType(PushNotificationsFcmDeviceInfoMessage.type)

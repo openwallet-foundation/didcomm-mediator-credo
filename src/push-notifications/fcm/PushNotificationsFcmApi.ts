@@ -1,19 +1,13 @@
 import type { FcmDeviceInfo } from './models'
 
-import {
-  type AgentContext,
-  type ConnectionService,
-  type MessageSender,
-  OutboundMessageContext,
-  injectable,
-} from '@credo-ts/core'
+import { AgentContext, ConnectionService, MessageSender, OutboundMessageContext, injectable } from '@credo-ts/core'
 
 import {
   PushNotificationsFcmDeviceInfoHandler,
   PushNotificationsFcmProblemReportHandler,
   PushNotificationsFcmSetDeviceInfoHandler,
 } from './handlers'
-import type { PushNotificationsFcmService } from './services/PushNotificationsFcmService'
+import { PushNotificationsFcmService } from './services/PushNotificationsFcmService'
 
 @injectable()
 export class PushNotificationsFcmApi {

@@ -1,0 +1,19 @@
+{
+  "name": "Node.js",
+  "dockerComposeFile": ["docker-compose.yml"],
+  "service": "mediator",
+  "remoteUser": "node",
+  "workspaceFolder": "/work",
+  "containerEnv": {
+    "COREPACK_ENABLE_STRICT": "1"
+  },
+  "postCreateCommand": "sudo chown node node_modules && sudo sudo corepack enable && yes | corepack prepare pnpm --activate && yes | pnpm install --frozen-lockfile",
+  "features": {
+    "ghcr.io/jckimble/devcontainer-features/ngrok:3": {}
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": ["ms-azuretools.vscode-docker"]
+    }
+  }
+}

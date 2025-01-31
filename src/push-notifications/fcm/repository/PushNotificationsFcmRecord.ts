@@ -23,7 +23,6 @@ export class PushNotificationsFcmRecord extends BaseRecord<
   public deviceToken!: string | null
   public devicePlatform!: string | null
   public connectionId!: string
-
   public static readonly type = 'PushNotificationsFcmRecord'
   public readonly type = PushNotificationsFcmRecord.type
 

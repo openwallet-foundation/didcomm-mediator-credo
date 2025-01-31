@@ -7,12 +7,13 @@ import type {
   TakeFromQueueOptions,
 } from '@credo-ts/core'
 
-import { type AgentContext, injectable, utils } from '@credo-ts/core'
+import { AgentContext, injectable, utils } from '@credo-ts/core'
 
-import { NOTIFICATION_WEBHOOK_URL, USE_PUSH_NOTIFICATIONS } from '../constants'
 import { PushNotificationsFcmRepository } from '../push-notifications/fcm/repository'
 import { MessageRecord } from './MessageRecord'
-import type { MessageRepository } from './MessageRepository'
+import { MessageRepository } from './MessageRepository'
+
+import config from '../config'
 
 export interface NotificationMessage {
   messageType: string
@@ -23,10 +24,16 @@ export interface NotificationMessage {
 export class StorageServiceMessageQueue implements MessagePickupRepository {
   private messageRepository: MessageRepository
   private agentContext: AgentContext
+  private pushNotificationsFcmRepository: PushNotificationsFcmRepository
 
-  public constructor(messageRepository: MessageRepository, agentContext: AgentContext) {
+  public constructor(
+    messageRepository: MessageRepository,
+    agentContext: AgentContext,
+    pushNotificationsFcmRepository: PushNotificationsFcmRepository
+  ) {
     this.messageRepository = messageRepository
     this.agentContext = agentContext
+    this.pushNotificationsFcmRepository = pushNotificationsFcmRepository
   }
 
   public async getAvailableMessageCount(options: GetAvailableMessageCountOptions) {
@@ -67,7 +74,7 @@ export class StorageServiceMessageQueue implements MessagePickupRepository {
   }
 
   public async addMessage(options: AddMessageOptions) {
-    const { connectionId, payload, messageType } = options
+    const { connectionId, payload } = options
 
     this.agentContext.config.logger.debug(
       `Adding message to queue for connection ${connectionId} with payload ${JSON.stringify(payload)}`
@@ -85,8 +92,8 @@ export class StorageServiceMessageQueue implements MessagePickupRepository {
     )
 
     // Send a notification to the device
-    if (USE_PUSH_NOTIFICATIONS && NOTIFICATION_WEBHOOK_URL) {
-      await this.sendNotification(this.agentContext, connectionId, messageType)
+    if (config.get('agent:usePushNotifications') && config.get('agent:notificationWebhookUrl')) {
+      await this.sendNotification(this.agentContext, connectionId, 'messageType')
     }
 
     return id
@@ -106,10 +113,8 @@ export class StorageServiceMessageQueue implements MessagePickupRepository {
 
   private async sendNotification(agentContext: AgentContext, connectionId: string, messageType?: string) {
     try {
-      const pushNotificationsFcmRepository = agentContext.dependencyManager.resolve(PushNotificationsFcmRepository)
-
       // Get the device token for the connection
-      const pushNotificationFcmRecord = await pushNotificationsFcmRepository.findSingleByQuery(agentContext, {
+      const pushNotificationFcmRecord = await this.pushNotificationsFcmRepository.findSingleByQuery(agentContext, {
         connectionId,
       })
 
@@ -148,7 +153,7 @@ export class StorageServiceMessageQueue implements MessagePickupRepository {
         body: JSON.stringify(body),
       }
 
-      const response = await fetch(NOTIFICATION_WEBHOOK_URL, requestOptions)
+      const response = await fetch(config.get('agent:notificationWebhookUrl'), requestOptions)
 
       if (response.ok) {
         this.agentContext.config.logger.info('Notification sent successfully')

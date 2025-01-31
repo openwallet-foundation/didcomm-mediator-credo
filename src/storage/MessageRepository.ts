@@ -1,6 +1,6 @@
 import {
   type AgentContext,
-  type EventEmitter,
+  EventEmitter,
   InjectionSymbols,
   Repository,
   type StorageService,

@@ -17,7 +17,7 @@ import { ariesAskar } from '@hyperledger/aries-askar-nodejs'
 import express from 'express'
 import { Server } from 'ws'
 
-import { AGENT_ENDPOINTS, AGENT_NAME, AGENT_PORT, LOG_LEVEL, POSTGRES_HOST, WALLET_KEY, WALLET_NAME } from './constants'
+import config from './config'
 import { askarPostgresConfig } from './database'
 import { Logger } from './logger'
 import { PushNotificationsFcmModule } from './push-notifications/fcm'
@@ -48,14 +48,14 @@ export async function createAgent() {
   const app = express()
   const socketServer = new Server({ noServer: true })
 
-  const logger = new Logger(LOG_LEVEL)
+  const logger = new Logger(config.get('agent:logLevel'))
 
   // Only load postgres database in production
-  const storageConfig = POSTGRES_HOST ? askarPostgresConfig : undefined
+  const storageConfig = config.get('db:host') ? askarPostgresConfig : undefined
 
   const walletConfig: WalletConfig = {
-    id: WALLET_NAME,
-    key: WALLET_KEY,
+    id: config.get('wallet:name'),
+    key: config.get('wallet:key'),
     storage: storageConfig,
   }
 
@@ -72,8 +72,8 @@ export async function createAgent() {
 
   const agent = new Agent({
     config: {
-      label: AGENT_NAME,
-      endpoints: AGENT_ENDPOINTS,
+      label: config.get('agent:name'),
+      endpoints: config.get('agent:endpoints'),
       walletConfig: walletConfig,
       useDidSovPrefixWhereAllowed: true,
       logger: logger,
@@ -88,7 +88,7 @@ export async function createAgent() {
   })
 
   // Create all transports
-  const httpInboundTransport = new HttpInboundTransport({ app, port: AGENT_PORT })
+  const httpInboundTransport = new HttpInboundTransport({ app, port: config.get('agent:port') })
   const httpOutboundTransport = new HttpOutboundTransport()
   const wsInboundTransport = new WsInboundTransport({ server: socketServer })
   const wsOutboundTransport = new WsOutboundTransport()
@@ -101,7 +101,7 @@ export async function createAgent() {
 
   // Added health check endpoint
   httpInboundTransport.app.get('/health', async (_req, res) => {
-    res.status(200).send('Ok')
+    res.sendStatus(202)
   })
 
   httpInboundTransport.app.get('/invite', async (req, res) => {
@@ -118,10 +118,23 @@ export async function createAgent() {
     ) {
       return res.status(400).send(`No invitation found for _oobid ${req.query._oobid}`)
     }
+
     return res.send(outOfBandRecord.outOfBandInvitation.toJSON())
   })
 
   await agent.initialize()
+
+  httpInboundTransport.server?.on('listening', () => {
+    logger.info(`Agent listening on port ${config.get('agent:port')}`)
+  })
+
+  httpInboundTransport.server?.on('error', (err) => {
+    logger.error(`Agent failed to start on port ${config.get('agent:port')}`, err)
+  })
+
+  httpInboundTransport.server?.on('close', () => {
+    logger.info(`Agent stopped listening on port ${config.get('agent:port')}`)
+  })
 
   // When an 'upgrade' to WS is made on our http server, we forward the
   // request to the WS server
