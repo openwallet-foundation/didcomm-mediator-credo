@@ -145,6 +145,14 @@ docker build \
    .
 ```
 
+## Using Helm
+### To deploy the application on Kubernetes using Helm, follow this [installation guide](/helm/README.md) containing
+
+- Helm Chart structure
+- Quick Note
+- Helm Commands
+
+
 ## Roadmap
 
 The contents in this repository started out as a simple mediator built using Credo that can be used for development. Over time we've added some features, but there's still a lot we want to add to this repository over time. Some things on the roadmap:
