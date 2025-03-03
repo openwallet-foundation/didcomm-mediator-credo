@@ -1,12 +1,14 @@
 export const messagesTableName = 'queuedmessage'
 
+export const message_state_type = `CREATE TYPE message_state AS ENUM ('pending', 'sending');`
+
 export const createTableMessage = `
 CREATE TABLE IF NOT EXISTS ${messagesTableName} (
-  id VARCHAR(20) DEFAULT substr(md5(random()::text), 1, 20) PRIMARY KEY,
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   connectionId VARCHAR(255),
-  recipientKeys TEXT[],
+  recipientKeysBase58 TEXT[],
   encryptedMessage JSONB,
-  state VARCHAR(50),
+  state message_state NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 `

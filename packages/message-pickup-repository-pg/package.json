@@ -26,7 +26,6 @@
 },
   "dependencies": {
     "@credo-ts/core": "^0.5.11",
-    "loglevel": "^1.8.0",
     "pg": "^8.11.3",
     "pg-pubsub": "^0.8.1",
     "typescript": "^4.0.0"

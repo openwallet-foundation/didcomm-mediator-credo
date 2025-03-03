@@ -22,6 +22,7 @@ import {
   liveSessionTableName,
   liveSessionTableIndex,
   messageTableIndex,
+  message_state_type,
 } from '../config/dbCollections'
 import { ConnectionInfo, PostgresMessagePickupRepositoryConfig } from './interfaces'
 import { MessagePickupSession } from '@credo-ts/core/build/modules/message-pickup/MessagePickupSession'
@@ -142,44 +143,60 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
     this.logger?.info(`[takeFromQueue] Initializing method for ConnectionId: ${connectionId}, Limit: ${limit}`)
 
     try {
-      // Query to fetch messages from the database
+      // If deleteMessages is true, just fetch messages without updating their state
+      if (deleteMessages) {
+        const query = `
+        SELECT id, encryptedmessage, state 
+        FROM ${messagesTableName} 
+        WHERE (connectionid = $1 OR $2 = ANY (recipientKeysBase58)) AND state = 'pending' 
+        ORDER BY created_at 
+        LIMIT $3
+      `
+        const params = [connectionId, recipientDid, limit ?? 0]
+        const result = await this.messagesCollection?.query(query, params)
+
+        if (!result || result.rows.length === 0) {
+          this.logger?.debug(`[takeFromQueue] No messages found for ConnectionId: ${connectionId}`)
+          return []
+        }
+
+        return result.rows.map((message) => ({
+          id: message.id,
+          encryptedMessage: message.encryptedmessage,
+          state: message.state,
+        }))
+      }
+
+      // Use UPDATE and RETURNING to fetch and update messages in one step
       const query = `
-      SELECT id, encryptedmessage, state 
-      FROM ${messagesTableName} 
-      WHERE (connectionid = $1 OR $2 = ANY (recipientkeys)) AND state = 'pending' 
-      ORDER BY created_at 
-      LIMIT $3
+      UPDATE ${messagesTableName}
+      SET state = 'sending'
+      WHERE id IN (
+        SELECT id 
+        FROM ${messagesTableName} 
+        WHERE (connectionid = $1 OR $2 = ANY (recipientKeysBase58)) 
+        AND state = 'pending' 
+        ORDER BY created_at 
+        LIMIT $3
+      )
+      RETURNING id, encryptedmessage, state;
     `
       const params = [connectionId, recipientDid, limit ?? 0]
       const result = await this.messagesCollection?.query(query, params)
 
       if (!result || result.rows.length === 0) {
-        this.logger?.debug(`[takeFromQueue] No messages found for ConnectionId: ${connectionId}`)
+        this.logger?.debug(`[takeFromQueue] No messages updated for ConnectionId: ${connectionId}`)
         return []
       }
 
-      const messagesToUpdateIds = result.rows.map((message) => message.id)
+      this.logger?.debug(`[takeFromQueue] ${result.rows.length} messages updated to "sending" state.`)
 
-      // Update message states to 'sending' if deleteMessages is false
-      if (!deleteMessages && messagesToUpdateIds.length > 0) {
-        const updateQuery = `UPDATE ${messagesTableName} SET state = 'sending' WHERE id = ANY($1)`
-        const updateResult = await this.messagesCollection?.query(updateQuery, [messagesToUpdateIds])
-
-        if (updateResult?.rowCount !== result.rows.length) {
-          this.logger?.debug(`[takeFromQueue] Not all messages were updated to "sending" state.`)
-        } else {
-          this.logger?.debug(`[takeFromQueue] ${updateResult.rowCount} messages updated to "sending" state.`)
-        }
-      }
-
-      // Map database rows to QueuedMessage objects
-      const queuedMessages: QueuedMessage[] = result.rows.map((message) => ({
+      // Return the messages as QueuedMessage objects
+      return result.rows.map((message) => ({
         id: message.id,
         encryptedMessage: message.encryptedmessage,
-        state: !deleteMessages ? 'sending' : message.state,
+        state: 'sending',
       }))
-
-      return queuedMessages
     } catch (error) {
       this.logger?.error(`[takeFromQueue] Error: ${error}`)
       return []
@@ -248,7 +265,7 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
 
       // Insert the message into the database
       const query = `
-      INSERT INTO ${messagesTableName}(connectionid, recipientKeys, encryptedmessage, state) 
+      INSERT INTO ${messagesTableName}(connectionid, recipientKeysBase58, encryptedmessage, state) 
       VALUES($1, $2, $3, $4) 
       RETURNING id
     `
@@ -410,6 +427,9 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
     try {
       await client.connect()
 
+      // Use advisory lock to prevent
+      await client.query('SELECT pg_advisory_lock(99998)')
+
       // Check if the database already exists.
       const result = await client.query('SELECT 1 FROM pg_database WHERE datname = $1', [this.postgresDatabaseName])
       this.logger?.debug(`[buildPgDatabase] PostgresDbService exist ${result.rowCount}`)
@@ -420,16 +440,22 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
         this.logger?.info(`[buildPgDatabase] PostgresDbService Database "${this.postgresDatabaseName}" created.`)
       }
 
+      await client.query('SELECT pg_advisory_unlock(99998)')
+
       // Create a new client connected to the specific database.
       const dbClient = new Client(poolConfig)
 
       try {
         await dbClient.connect()
 
+        // Use advisory lock to prevent race conditions
+        await client.query('SELECT pg_advisory_lock(99999)')
+
         // Check if the 'messagesTableName' table exists.
         const messageTableResult = await dbClient.query(`SELECT to_regclass('${messagesTableName}')`)
         if (!messageTableResult.rows[0].to_regclass) {
           // If it doesn't exist, create the table.
+          await dbClient.query(message_state_type)
           await dbClient.query(createTableMessage)
           await dbClient.query(messageTableIndex)
           this.logger?.info(`[buildPgDatabase] PostgresDbService Table "${messagesTableName}" created.`)
@@ -447,6 +473,9 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
           await dbClient.query(`TRUNCATE TABLE ${liveSessionTableName}`)
           this.logger?.info(`[buildPgDatabase] PostgresDbService Table "${liveSessionTableName}" cleared.`)
         }
+
+        // Unlock after table creation
+        await dbClient.query('SELECT pg_advisory_unlock(99999)')
       } finally {
         await dbClient.end()
       }
