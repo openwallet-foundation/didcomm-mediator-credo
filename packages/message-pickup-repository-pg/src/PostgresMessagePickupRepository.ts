@@ -23,7 +23,7 @@ import {
   liveSessionTableIndex,
   messageTableIndex,
   message_state_type,
-} from '../config/dbCollections'
+} from './config/dbCollections'
 import { ConnectionInfo, PostgresMessagePickupRepositoryConfig } from './interfaces'
 import { MessagePickupSession } from '@credo-ts/core/build/modules/message-pickup/MessagePickupSession'
 
