@@ -1,11 +1,11 @@
 import admin from 'firebase-admin'
-
+import config from '../../config'
 export const firebase = admin.apps.length
   ? admin.app()
   : admin.initializeApp({
-    credential: admin.credential.cert({
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY,
-    }),
-  })
+      credential: admin.credential.cert({
+        projectId: config.get('agent:firebase:projectId'),
+        clientEmail: config.get('agent:firebase:clientEmail'),
+        privateKey: config.get('agent:firebase:privateKey'),
+      }),
+    })

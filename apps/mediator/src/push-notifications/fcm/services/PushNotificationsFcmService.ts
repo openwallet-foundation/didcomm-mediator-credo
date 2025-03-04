@@ -78,14 +78,8 @@ export class PushNotificationsFcmService {
   }
 
   public async getPushNotificationRecordByConnectionId(agentContext: AgentContext, connectionId: string) {
-    const pushNotificationsFcmRecord = await this.pushNotificationsFcmRepository.getSingleByQuery(agentContext, {
+    return await this.pushNotificationsFcmRepository.getSingleByQuery(agentContext, {
       connectionId,
     })
-
-    if (!pushNotificationsFcmRecord) {
-      this.logger.error(`No device info found for connection ${connectionId}`)
-    }
-
-    return pushNotificationsFcmRecord
   }
 }

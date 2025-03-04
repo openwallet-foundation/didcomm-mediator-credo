@@ -9,13 +9,13 @@ import type {
 
 import { AgentContext, injectable, utils } from '@credo-ts/core'
 
-import { PushNotificationsFcmRecord, PushNotificationsFcmRepository } from '../push-notifications/fcm/repository'
+import { PushNotificationsFcmRepository } from '../push-notifications/fcm/repository'
 import { MessageRecord } from './MessageRecord'
 import { MessageRepository } from './MessageRepository'
 
 import config from '../config'
-import { sendFcmPushNotification } from '../push-notifications/fcm/events/PushNotificationEvent'
 import { Logger } from '../logger'
+import { sendFcmPushNotification } from '../push-notifications/fcm/events/PushNotificationEvent'
 
 export interface NotificationMessage {
   messageType: string
@@ -55,7 +55,8 @@ export class StorageServiceMessageQueue implements MessagePickupRepository {
 
     const messagesToTake = limit ?? messageRecords.length
     this.agentContext.config.logger.debug(
-      `Taking ${messagesToTake} messages from queue for connection ${connectionId} (of total ${messageRecords.length
+      `Taking ${messagesToTake} messages from queue for connection ${connectionId} (of total ${
+        messageRecords.length
       }) with deleteMessages=${String(deleteMessages)}`
     )
 
@@ -123,7 +124,7 @@ export class StorageServiceMessageQueue implements MessagePickupRepository {
       return
     }
     // Check for firebase configuration
-    if (process.env.FIREBASE_PROJECT_ID) {
+    if (config.get('agent:firebase:projectId')) {
       // Send a Firebase Cloud Message notification to the device found for a given connection
       await this.sendFcmNotification(pushNotificationFcmRecord.deviceToken)
     }
