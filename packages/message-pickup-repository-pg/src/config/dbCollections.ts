@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS ${liveSessionTableName} (
   connectionid VARCHAR(50),
   protocolVersion VARCHAR(50),
   role VARCHAR(50),
-  instance VARCHAR(50),
+  instance VARCHAR(100),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );`
 

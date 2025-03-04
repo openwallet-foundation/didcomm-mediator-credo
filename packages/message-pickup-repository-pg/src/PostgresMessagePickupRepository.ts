@@ -26,6 +26,7 @@ import {
 } from './config/dbCollections'
 import { ConnectionInfo, PostgresMessagePickupRepositoryConfig } from './interfaces'
 import { MessagePickupSession } from '@credo-ts/core/build/modules/message-pickup/MessagePickupSession'
+import { randomUUID } from 'crypto'
 
 @injectable()
 export class PostgresMessagePickupRepository implements MessagePickupRepository {
@@ -88,7 +89,10 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
 
       // Set instance variables
       this.agent = options.agent
-      this.instanceName = os.hostname() // Retrieve hostname for instance identification
+      
+      this.instanceName = `${os.hostname()}-${process.pid}-${randomUUID()}`
+      this.logger?.info(`[initialize] Instance identifier set to: ${this.instanceName}`)
+
       this.connectionInfoCallback = options.connectionInfoCallback
 
       // Register event handlers
