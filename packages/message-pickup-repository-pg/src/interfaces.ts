@@ -1,7 +1,7 @@
 import { Logger } from '@credo-ts/core'
 
 export interface ConnectionInfo {
-  sendPushNotification?: (messageId: string) => Promise<void>
+  handleNotificationEvent?: (messageId: string) => Promise<void>
 }
 
 export interface PostgresMessagePickupRepositoryConfig {

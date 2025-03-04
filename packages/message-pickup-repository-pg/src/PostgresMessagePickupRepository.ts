@@ -296,8 +296,8 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
           if (this.connectionInfoCallback) {
             const connectionInfo = await this.connectionInfoCallback(connectionId)
 
-            if (connectionInfo?.sendPushNotification) {
-              await connectionInfo.sendPushNotification(messageId)
+            if (connectionInfo?.handleNotificationEvent) {
+              await connectionInfo.handleNotificationEvent(messageId)
             }
           } else {
             this.logger?.error(`connectionInfoCallback is not defined`)

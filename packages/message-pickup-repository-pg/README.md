@@ -18,7 +18,6 @@ This package provides a simple but efficient Message Pickup Repository implement
 
 - Pluggable support for Push notifications: provide your own callback that be called whenever a message has arrived for an offline user (not connected to any instance)
 
-
 ## How does it work?
 
 `PostgresMessagePickupRepository` creates two tables in its PostgreSQL database: one to store the queued messages, and another one to keep track of Live sessions when clients connect and disconnect from it. It also registers to a [PG PubSub](https://github.com/voxpelli/node-pg-pubsub) channel to be notified when a message arrives (for any connection).
@@ -36,7 +35,6 @@ The following diagrams show the operation when messages arrive in both online an
 
 ![Message arrived for an online client](./docs/diagrams/message-arrived-online-client.png)
 
-
 ![Message arrived for an offline client](./docs/diagrams/message-arrived-offline-client.png)
 
 ## Installation
@@ -48,7 +46,8 @@ To use it, install package in your DIDComm Mediator application. For example:
 ```bash
 npm i @credo-ts/message-pickup-repository-pg
 ```
-or 
+
+or
 
 ```bash
 yarn add @credo-ts/message-pickup-repository-pg
@@ -61,7 +60,6 @@ Setting up PostgresMessagePickupRepository is quite simple if you have some prio
 ### Constructing the Repository
 
 You need to instance `PostgresMessagePickupRepository` with explicit database configuration (remember: it could be the same used for Credo wallet). If `postgresDatabaseName` is not specified, default `messagepickuprepository` will be used (if it does not exist, it will try to automatically create it using the provided credentials).
-
 
 ```ts
 const messageRepository = new PostgresMessagePickupRepository({
@@ -86,7 +84,7 @@ const connectionInfoCallback = async (connectionId) => {
           const connectionRecord = await this.agent.connections.findById(connectionId)
           const token = connectionRecord?.getTag('device_token') as string | null
           return {
-   sendPushNotification: token ? (messageId) => { this.notificationSender.send(token, messageId }: undefined,
+   handleNotificationEvent: token ? (messageId) => { this.notificationSender.send(token, messageId }: undefined,
  }
 }
 await messagePickupRepository.initialize({ agent, connectionInfoCallback })
@@ -125,7 +123,7 @@ const connectionInfoCallback = async (connectionId: string) => {
   const token = connectionRecord?.getTag('device_token') as string | null
 
   return {
-    sendPushNotification: token
+    handleNotificationEvent: token
       ? (messageId: string) => {
           notificationSender.send(token, messageId)
         }
