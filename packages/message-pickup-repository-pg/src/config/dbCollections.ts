@@ -1,6 +1,6 @@
 export const messagesTableName = 'queuedmessage'
 
-export const message_state_type = `CREATE TYPE message_state AS ENUM ('pending', 'sending');`
+export const createTypeMessageState = `CREATE TYPE message_state AS ENUM ('pending', 'sending');`
 
 export const createTableMessage = `
 CREATE TABLE IF NOT EXISTS ${messagesTableName} (
