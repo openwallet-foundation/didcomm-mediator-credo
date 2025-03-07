@@ -3,19 +3,23 @@ title Message arrived for an offline client
 
 participant CA1 as "Mediator App"
 participant CC1 as "Credo Core"
-participant CP1 as "PostgresMessagePickupRepository" 
-database PG as "Postgres DB"
+participant CC2 as "Agent Event Listener"
+participant CP1 as "PostgresMessagePickupRepository"
+participant DB as "PostgreSQL DB"
 
-CC1 -> CP1: addMessage(connection1, msg1)
-CP1 -> CP1: look into local sessions
-CP1 -> PG: Store message(connection1, msg1, 'pending')
-CP1 -> PG: look into ongoing sessions
+CC1 -> CP1: addMessage(connectionId, payload)
+CP1 -> CP1: Save message with state "pending"
+CP1 -> CP1: Check local live session
 note left
-Here we suppose that connection1
-is not connected
+No local session available
 end note
-CP1 -> CA1: connectionInfoCallback(connection1)
-CA1 --> CP1: sendPushNotification callback
-CA1 <- CP1: sendPushNotification(messageId)
+CP1 -> CP1: Check DB for ongoing sessions
+alt No ongoing sessions
+  CP1 -> CC1: emit MessageQueued event
+  CC1 -> CC2: MessageQueued event
+  CC2 -> CA1: handle event (send push notification or webhook)
+else Ongoing session exists
+  CP1 -> CP1: Notify other instances via Pub/Sub
+end
 
 @enduml
