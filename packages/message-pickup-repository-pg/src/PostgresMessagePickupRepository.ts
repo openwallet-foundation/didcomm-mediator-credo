@@ -24,7 +24,7 @@ import {
   messageTableIndex,
   createTypeMessageState
 } from './config/dbCollections'
-import { MessageQueuedEventType, PostgresMessagePickupRepositoryConfig } from './interfaces'
+import { MessageQueuedEvent, MessageQueuedEventType, PostgresMessagePickupRepositoryConfig } from './interfaces'
 import { MessagePickupSession } from '@credo-ts/core/build/modules/message-pickup/MessagePickupSession'
 import { randomUUID } from 'crypto'
 
@@ -253,60 +253,69 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
    * @throws {Error} Throws an error if the agent is not defined or if an error occurs during message insertion or processing.
    */
   public async addMessage(options: AddMessageOptions): Promise<string> {
-    const { connectionId, recipientDids, payload } = options
-    this.logger?.debug(`[addMessage] Initializing new message for connectionId: ${connectionId}`)
+    const { connectionId, recipientDids, payload } = options;
+    this.logger?.debug(`[addMessage] Initializing new message for connectionId: ${connectionId}`);
 
-    // Ensure the agent is defined
     if (!this.agent) {
-      throw new Error('Agent is not defined')
+      throw new Error('Agent is not defined');
     }
 
     try {
-      // Retrieve live session details for the given connection ID
-      const localLiveSession = await this.findLocalLiveSession(connectionId)
+      // Retrieve local live session details
+      const localLiveSession = await this.findLocalLiveSession(connectionId);
 
-      // Insert the message into the database
+      // Insert message into database
       const query = `
-      INSERT INTO ${messagesTableName}(connectionid, recipientDids, encryptedmessage, state) 
-      VALUES($1, $2, $3, $4) 
-      RETURNING id
-    `
-      const state = localLiveSession ? 'sending' : 'pending'
-      const result = await this.messagesCollection?.query(query, [connectionId, recipientDids, payload, state])
+        INSERT INTO ${messagesTableName}(connectionid, recipientDids, encryptedmessage, state) 
+        VALUES($1, $2, $3, $4) 
+        RETURNING id, created_at, encryptedmessage
+      `;
 
-      const messageId = result?.rows[0].id
-      const receivedAt = result?.rows[0].created_at
-      this.logger?.debug(`[addMessage] Message added with ID: ${messageId} for connectionId: ${connectionId}`)
+      const state = localLiveSession ? 'sending' : 'pending';
 
-      // Process the message based on live session status
+      const result = await this.messagesCollection?.query(query, [
+        connectionId,
+        recipientDids,
+        payload,
+        state,
+      ])
+
+      const messageRecord = result?.rows[0];
+
+      this.logger?.debug(
+        `[addMessage] Message added with ID: ${messageRecord.id} for connectionId: ${connectionId}`,
+      );
+
+      // Verify if a live session exists in DB (other instances)
+      const liveSessionInPostgres = await this.findLiveSessionInDb(connectionId);
+
+      // Always emit MessageQueued event with complete payload
+      await this.emitMessageQueuedEvent({
+        connectionId,
+        messageId: messageRecord.id,
+        payload: messageRecord.encryptedmessage,
+        session: localLiveSession || liveSessionInPostgres || undefined,
+      })
+
       if (localLiveSession) {
-        this.logger?.debug(`[addMessage] Live session exists for connectionId: ${connectionId}`)
+        this.logger?.debug(`[addMessage] Local live session exists for connectionId: ${connectionId}`);
 
         await this.agent.messagePickup.deliverMessages({
           pickupSessionId: localLiveSession.id,
-          messages: [{ id: messageId, encryptedMessage: payload }],
-        })
-      } else {
-        // Verify if a live session exists on another instance
-        const liveSessionInPostgres = await this.findLiveSessionInDb(connectionId)
-        this.logger?.debug(`[addMessage] Live session verification result: ${JSON.stringify(liveSessionInPostgres)}`)
+          messages: [{ id: messageRecord.id, encryptedMessage: payload }],
+        });
+      } else if (liveSessionInPostgres) {
+        this.logger?.debug(
+          `[addMessage] Publishing new message event to Pub/Sub channel for connectionId: ${connectionId}`,
+        )
 
-        if (!liveSessionInPostgres) {
-          // emit emitMessageQueuedEvent
-          this.emitMessageQueuedEvent({connectionId,messageId})
-        } else {
-          // Publish to the Pub/Sub channel if a live session exists on another instance
-          this.logger?.debug(
-            `[addMessage] Publishing new message event to Pub/Sub channel for connectionId: ${connectionId}`,
-          )
-          await this.pubSubInstance?.publish('newMessage', connectionId)
-        }
+        await this.pubSubInstance?.publish('newMessage', connectionId)
       }
 
-      return JSON.stringify({ messageId, receivedAt })
+      return JSON.stringify({ messageId: messageRecord.id, receivedAt: messageRecord.created_at })
     } catch (error) {
       this.logger?.error(`[addMessage] Error during message insertion or processing: ${error}`)
-      throw new Error(`Failed to add message: ${error}`)
+      throw new Error(`Failed to add message: ${error}`);
     }
   }
 
@@ -604,17 +613,23 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
    * @param {any} [options.*] - Additional optional properties for the event payload.
    * @throws {Error} Throws if the agent is not initialized.
    */
-  private async emitMessageQueuedEvent(options: { connectionId: string, messageId: string }) {
+  private async emitMessageQueuedEvent(options:MessageQueuedEvent) {
     if (!this.agent) {
       this.logger?.error('[emitMessageQueuedEvent] Agent is not initialized.')
       throw new Error('Agent is not initialized.')
     }
+    const {connectionId,messageId,payload,session } = options
 
     this.logger?.debug(`[emitMessageQueuedEvent] Emitting MessageQueuedEvent for connectionId: ${options.connectionId}, messageId: ${options.messageId}`)
 
     this.agent.events.emit(this.agent.context, {
       type: MessageQueuedEventType,
-      payload: options,
+      payload: {
+        connectionId,
+        messageId,
+        payload,
+        session
+      },
     })
   }
 
