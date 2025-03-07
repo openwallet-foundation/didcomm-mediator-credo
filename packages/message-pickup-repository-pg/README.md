@@ -9,14 +9,13 @@ This package provides a simple but efficient Message Pickup Repository implement
 ## Features
 
 - Message storage and retrieval: save and fetch messages from a PostgreSQL database.
+- Pub/Sub integration: automatically notify other instances about new messages that arrived to a certain client.
 
-- Pub/Sub integration: automatically notify other instances about new messages that arrived to a certain client
+- Live session management: handle [Message Pickup V2 Live sessions](https://github.com/hyperledger/aries-rfcs/tree/main/features/0685-pickup-v2#live-mode) for efficient message delivery.
 
-- Live session management: handle [Message Pickup V2 Live sessions](https://github.com/hyperledger/aries-rfcs/tree/main/features/0685-pickup-v2#live-mode) for efficient message delivery
+- Automatic database initialization: set up the database structure required for message operations at startup.
 
-- Automatic database initialization: set up the database structure required for message operations at startup
-
-- Pluggable support for Push notifications: provide your own callback that be called whenever a message has arrived for an offline user (not connected to any instance)
+- Event-driven notifications: emit a `MessageQueued` event whenever a message is queued, allowing external listeners to implement flexible notification mechanisms like push notifications or webhooks when a message has arrived for an offline user (not connected to any instance).
 
 ## How does it work?
 
@@ -27,7 +26,7 @@ When a new message for a certain DIDComm connection is added to the queue, `Post
 - If there is a local Live mode session, it will pack and deliver the message directly, adding it to the persistent queue with a particular status flag (`sending`) to reflect that it is expected to be delivered and acknowledged soon
 - If there is not any local session, the client could be connected to another instance. Therefore, it adds the message to the persistent queue and looks into the shared message pickup session database:
   - If there is a session registered to another instance, it will publish a notification
-  - If not, it will trigger the callback to send a push notification (if supported)
+  - If no session is found, it emits a `MessageQueued` event, which external listeners can use to handle notifications (push/webhooks).
 
 > **Note**: at the moment, all instances are notified when a message arrives for any online DIDComm connection. A possible improvement could be to create a channel per connection, so only the instance connected to that client is triggered. But it is uncertain for us yet how well it would scale when there is a large number of connected users at the same time.
 
@@ -80,14 +79,20 @@ This callback must return another callback function that will be called by `Post
 Note that in this example, notification token is stored as a tag in connection records, so it is used to determine whether to create a Push notification callback or not for a given DIDComm connection.
 
 ```ts
-const connectionInfoCallback = async (connectionId) => {
-          const connectionRecord = await this.agent.connections.findById(connectionId)
-          const token = connectionRecord?.getTag('device_token') as string | null
-          return {
-   handleNotificationEvent: token ? (messageId) => { this.notificationSender.send(token, messageId }: undefined,
- }
-}
-await messagePickupRepository.initialize({ agent, connectionInfoCallback })
+await messagePickupRepository.initialize({ agent })
+```
+
+### Handling `MessageQueued` Event
+
+Listeners can handle queued messages by listening for the emitted event:
+
+```typescript
+agent.events.on(MessageQueuedEventType, async ({ payload }) => {
+  const { connectionId, messageId } = payload
+
+  // Example: call external notification service
+  await notificationService.notify(connectionId, messageId)
+})
 ```
 
 ### Injecting into an Agent instance
@@ -116,23 +121,16 @@ const agent = new Agent({
   },
 })
 
-const notificationSender = // { your implementation of a Push notification service here }
-const connectionInfoCallback = async (connectionId: string) => {
-  const connectionRecord = await agent.connections.findById(connectionId)
-
-  const token = connectionRecord?.getTag('device_token') as string | null
-
-  return {
-    handleNotificationEvent: token
-      ? (messageId: string) => {
-          notificationSender.send(token, messageId)
-        }
-      : undefined,
-  }
-}
-
-await messagePickupRepository.initialize({ agent, connectionInfoCallback })
+await messagePickupRepository.initialize({ agent })
 await agent.initialize()
+
+agent.events.on('MessageQueued', async ({ payload }) => {
+  const { connectionId, messageId } = payload
+
+  // Custom logic for notification, webhook, etc here
+  
+})
+
 ```
 
 As you can see, all you have to do is to set up your Credo agent's `ForwardingStrategy` to to `QueueOnly` and provide a `PostgresMessagePickupRepository` instance (with the appropriate callbacks) to `MessagePickupModuleConfig`. Then, initialize both your agent and PostgresMessagePickupRepository` and have fun!

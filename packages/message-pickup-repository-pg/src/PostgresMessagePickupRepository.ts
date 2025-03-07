@@ -22,11 +22,12 @@ import {
   liveSessionTableName,
   liveSessionTableIndex,
   messageTableIndex,
-  message_state_type,
+  createTypeMessageState
 } from './config/dbCollections'
-import { ConnectionInfo, PostgresMessagePickupRepositoryConfig } from './interfaces'
+import { MessageQueuedEventType, PostgresMessagePickupRepositoryConfig } from './interfaces'
 import { MessagePickupSession } from '@credo-ts/core/build/modules/message-pickup/MessagePickupSession'
 import { randomUUID } from 'crypto'
+
 
 @injectable()
 export class PostgresMessagePickupRepository implements MessagePickupRepository {
@@ -39,7 +40,6 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
   private postgresPassword: string
   private postgresHost: string
   private postgresDatabaseName: string
-  private connectionInfoCallback?: (connectionId: string) => Promise<ConnectionInfo | undefined>
 
   public constructor(options: PostgresMessagePickupRepositoryConfig) {
     const { logger, postgresUser, postgresPassword, postgresHost, postgresDatabaseName } = options
@@ -63,7 +63,6 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
    */
   public async initialize(options: {
     agent: Agent
-    connectionInfoCallback?: (connectionId: string) => Promise<ConnectionInfo | undefined>
   }): Promise<void> {
     try {
       // Initialize the database
@@ -92,8 +91,6 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
       
       this.instanceName = `${os.hostname()}-${process.pid}-${randomUUID()}`
       this.logger?.info(`[initialize] Instance identifier set to: ${this.instanceName}`)
-
-      this.connectionInfoCallback = options.connectionInfoCallback
 
       // Register event handlers
       options.agent.events.on(
@@ -130,6 +127,7 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
       this.logger?.error(`[initialize] Initialization failed: ${error}`)
       throw new Error(`Failed to initialize the service: ${error}`)
     }
+
   }
 
   /**
@@ -283,6 +281,7 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
       // Process the message based on live session status
       if (localLiveSession) {
         this.logger?.debug(`[addMessage] Live session exists for connectionId: ${connectionId}`)
+
         await this.agent.messagePickup.deliverMessages({
           pickupSessionId: localLiveSession.id,
           messages: [{ id: messageId, encryptedMessage: payload }],
@@ -293,15 +292,8 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
         this.logger?.debug(`[addMessage] Live session verification result: ${JSON.stringify(liveSessionInPostgres)}`)
 
         if (!liveSessionInPostgres) {
-          if (this.connectionInfoCallback) {
-            const connectionInfo = await this.connectionInfoCallback(connectionId)
-
-            if (connectionInfo?.handleNotificationEvent) {
-              await connectionInfo.handleNotificationEvent(messageId)
-            }
-          } else {
-            this.logger?.error(`connectionInfoCallback is not defined`)
-          }
+          // emit emitMessageQueuedEvent
+          this.emitMessageQueuedEvent({connectionId,messageId})
         } else {
           // Publish to the Pub/Sub channel if a live session exists on another instance
           this.logger?.debug(
@@ -459,7 +451,7 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
         const messageTableResult = await dbClient.query(`SELECT to_regclass('${messagesTableName}')`)
         if (!messageTableResult.rows[0].to_regclass) {
           // If it doesn't exist, create the table.
-          await dbClient.query(message_state_type)
+          await dbClient.query(createTypeMessageState)
           await dbClient.query(createTableMessage)
           await dbClient.query(messageTableIndex)
           this.logger?.info(`[buildPgDatabase] PostgresDbService Table "${messagesTableName}" created.`)
@@ -602,4 +594,28 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
       this.logger?.error(`[removeLiveSessionOnDb] Error removing LiveSession: ${error}`)
     }
   }
+
+    /**
+   * Emits a MessageQueuedEvent using the agent's EventEmitter.
+   *
+   * @param {object} options - Event payload containing at least connectionId and messageId.
+   * @param {string} options.connectionId - The connection identifier.
+   * @param {string} options.messageId - The message identifier.
+   * @param {any} [options.*] - Additional optional properties for the event payload.
+   * @throws {Error} Throws if the agent is not initialized.
+   */
+  private async emitMessageQueuedEvent(options: { connectionId: string, messageId: string }) {
+    if (!this.agent) {
+      this.logger?.error('[emitMessageQueuedEvent] Agent is not initialized.')
+      throw new Error('Agent is not initialized.')
+    }
+
+    this.logger?.debug(`[emitMessageQueuedEvent] Emitting MessageQueuedEvent for connectionId: ${options.connectionId}, messageId: ${options.messageId}`)
+
+    this.agent.events.emit(this.agent.context, {
+      type: MessageQueuedEventType,
+      payload: options,
+    })
+  }
+
 }

@@ -1,8 +1,4 @@
-import { Logger } from '@credo-ts/core'
-
-export interface ConnectionInfo {
-  handleNotificationEvent?: (messageId: string) => Promise<void>
-}
+import { Logger} from '@credo-ts/core'
 
 export interface PostgresMessagePickupRepositoryConfig {
   logger?: Logger
@@ -10,4 +6,11 @@ export interface PostgresMessagePickupRepositoryConfig {
   postgresPassword: string
   postgresHost: string
   postgresDatabaseName?: string
+}
+
+export const MessageQueuedEventType = 'MessageQueued';
+
+export interface MessageQueuedEvent {
+  connectionId: string
+  messageId: string
 }
