@@ -150,7 +150,7 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
         const query = `
         SELECT id, encryptedmessage, state 
         FROM ${messagesTableName} 
-        WHERE (connectionid = $1 OR $2 = ANY (recipientKeysBase58)) AND state = 'pending' 
+        WHERE (connectionid = $1 OR $2 = ANY (recipientDids)) AND state = 'pending' 
         ORDER BY created_at 
         LIMIT $3
       `
@@ -176,7 +176,7 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
       WHERE id IN (
         SELECT id 
         FROM ${messagesTableName} 
-        WHERE (connectionid = $1 OR $2 = ANY (recipientKeysBase58)) 
+        WHERE (connectionid = $1 OR $2 = ANY (recipientDids)) 
         AND state = 'pending' 
         ORDER BY created_at 
         LIMIT $3
@@ -267,7 +267,7 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
 
       // Insert the message into the database
       const query = `
-      INSERT INTO ${messagesTableName}(connectionid, recipientKeysBase58, encryptedmessage, state) 
+      INSERT INTO ${messagesTableName}(connectionid, recipientDids, encryptedmessage, state) 
       VALUES($1, $2, $3, $4) 
       RETURNING id
     `

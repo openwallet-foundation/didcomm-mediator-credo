@@ -6,7 +6,7 @@ export const createTableMessage = `
 CREATE TABLE IF NOT EXISTS ${messagesTableName} (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   connectionId VARCHAR(255),
-  recipientKeysBase58 TEXT[],
+  recipientDids TEXT[],
   encryptedMessage JSONB,
   state message_state NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
