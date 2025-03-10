@@ -4,7 +4,7 @@
     "types": ["jest", "node"],
     "baseUrl": ".",
     "paths": {
-      "@2060.io/credo-ts-message-pickup-repository-pg": ["packages/message-pickup-repository-pg/src"]
+      "@credo-ts/credo-ts-message-pickup-repository-pg": ["packages/message-pickup-repository-pg/src"]
     }
   }
 }
