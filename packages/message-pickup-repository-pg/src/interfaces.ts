@@ -17,3 +17,7 @@ export interface MessageQueuedEvent {
   payload: EncryptedMessage
   session?: MessagePickupSession
 }
+
+export interface ExtendedMessagePickupSession extends MessagePickupSession {
+  isLocalSession: boolean;
+}

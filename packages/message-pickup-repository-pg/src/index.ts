@@ -1,2 +1,2 @@
-export { PostgresMessagePickupRepositoryConfig, MessageQueuedEventType, MessageQueuedEvent } from './interfaces'
+export { PostgresMessagePickupRepositoryConfig, MessageQueuedEventType, MessageQueuedEvent,ExtendedMessagePickupSession } from './interfaces'
 export { PostgresMessagePickupRepository } from './PostgresMessagePickupRepository'

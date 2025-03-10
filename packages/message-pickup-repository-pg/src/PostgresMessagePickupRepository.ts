@@ -26,7 +26,7 @@ import {
   messageTableIndex,
   messagesTableName,
 } from './config/dbCollections'
-import { MessageQueuedEvent, MessageQueuedEventType, PostgresMessagePickupRepositoryConfig } from './interfaces'
+import { ExtendedMessagePickupSession, MessageQueuedEvent, MessageQueuedEventType, PostgresMessagePickupRepositoryConfig } from './interfaces'
 
 @injectable()
 export class PostgresMessagePickupRepository implements MessagePickupRepository {
@@ -521,12 +521,14 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
    * @param connectionId
    * @returns
    */
-  private async findLocalLiveSession(connectionId: string): Promise<MessagePickupSession | undefined> {
+  private async findLocalLiveSession(connectionId: string): Promise<ExtendedMessagePickupSession | undefined> {
     this.logger?.debug(`[findLocalLiveSession] Verify current active live mode for connectionId ${connectionId}`)
 
     try {
       if (!this.agent) throw new Error('Agent is not defined')
-      return this.agent.messagePickup.getLiveModeSession({ connectionId })
+      const localSession = await this.agent.messagePickup.getLiveModeSession({ connectionId });
+      
+      return localSession ? { ...localSession, isLocalSession: true } : undefined;
     } catch (error) {
       this.logger?.error(`[findLocalLiveSession] error in getLocalliveSession: ${error}`)
     }
@@ -537,7 +539,7 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
    * @param connectionId
    * @returns liveSession object or false
    */
-  private async findLiveSessionInDb(connectionId: string): Promise<MessagePickupSession | undefined> {
+  private async findLiveSessionInDb(connectionId: string): Promise<ExtendedMessagePickupSession | undefined> {
     this.logger?.debug(`[findLiveSessionInDb] initializing find registry for connectionId ${connectionId}`)
     if (!connectionId) throw new Error('connectionId is not defined')
     try {
@@ -548,7 +550,7 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
       // Check if liveSession is not empty (record found)
       const recordFound = queryLiveSession?.rows && queryLiveSession.rows.length > 0
       this.logger?.debug(`[findLiveSessionInDb] record found status ${recordFound} to connectionId ${connectionId}`)
-      return recordFound ? queryLiveSession.rows[0] : undefined
+      return recordFound ? { ...queryLiveSession.rows[0], isLocalSession: false } : undefined
     } catch (error) {
       this.logger?.debug(`[findLiveSessionInDb] Error find to connectionId ${connectionId}`)
       return undefined // Return false in case of an error
