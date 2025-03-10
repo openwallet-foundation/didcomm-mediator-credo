@@ -20,7 +20,6 @@ CREATE TABLE IF NOT EXISTS ${liveSessionTableName} (
   session_id VARCHAR(255) PRIMARY KEY,
   connection_id VARCHAR(50),
   protocol_version VARCHAR(50),
-  role VARCHAR(50),
   instance VARCHAR(100),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

@@ -542,7 +542,7 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
     if (!connectionId) throw new Error('connectionId is not defined')
     try {
       const queryLiveSession = await this.messagesCollection?.query(
-        `SELECT session_id, connection_id, protocol_version, role FROM ${liveSessionTableName} WHERE connection_id = $1 LIMIT $2`,
+        `SELECT session_id, connection_id, protocol_version FROM ${liveSessionTableName} WHERE connection_id = $1 LIMIT $2`,
         [connectionId, 1]
       )
       // Check if liveSession is not empty (record found)
@@ -561,13 +561,13 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
    * @param instance
    */
   private async addLiveSessionOnDb(session: MessagePickupSession, instance: string): Promise<void> {
-    const { id, connectionId, protocolVersion, role } = session
+    const { id, connectionId, protocolVersion} = session
     this.logger?.debug(`[addLiveSessionOnDb] initializing add LiveSession DB to connectionId ${connectionId}`)
     if (!session) throw new Error('session is not defined')
     try {
       const insertMessageDB = await this.messagesCollection?.query(
-        `INSERT INTO ${liveSessionTableName} (session_id, connection_id, protocol_version, role, instance) VALUES($1, $2, $3, $4, $5) RETURNING session_id`,
-        [id, connectionId, protocolVersion, role, instance]
+        `INSERT INTO ${liveSessionTableName} (session_id, connection_id, protocol_version, instance) VALUES($1, $2, $3, $4) RETURNING session_id`,
+        [id, connectionId, protocolVersion, instance]
       )
       const liveSessionId = insertMessageDB?.rows[0].sessionid
       this.logger?.debug(`[addLiveSessionOnDb] add liveSession to ${connectionId} and result ${liveSessionId}`)
