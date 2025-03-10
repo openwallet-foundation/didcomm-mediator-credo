@@ -14,8 +14,11 @@ export const MessageQueuedEventType: string = 'MessageQueued'
 export interface MessageQueuedEvent {
   connectionId: string
   messageId: string
+  recipientDids: string[]
   payload: EncryptedMessage
+  receivedAt: Date
   session?: MessagePickupSession
+  state: string
 }
 
 export interface ExtendedMessagePickupSession extends MessagePickupSession {

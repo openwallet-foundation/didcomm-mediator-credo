@@ -250,7 +250,7 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
    * @param {string} options.connectionId - The ID of the connection.
    * @param {string[]} options.recipientDids - Recipient DIDs for the message.
    * @param {string} options.payload - The encrypted message payload.
-   * @returns {Promise<string>} - A promise resolving to the messageId of the added message.
+   * @returns {Promise<string> }- A promise resolving to the messageId and receivedAt of the added message.
    * @throws {Error} Throws an error if the agent is not defined or if an error occurs during message insertion or processing.
    */
   public async addMessage(options: AddMessageOptions): Promise<string> {
@@ -286,9 +286,12 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
       // Always emit MessageQueued event with complete payload
       await this.emitMessageQueuedEvent({
         connectionId,
+        recipientDids,
         messageId: messageRecord.id,
         payload: messageRecord.encryptedmessage,
+        receivedAt: messageRecord.created_at,
         session: localLiveSession || liveSessionInPostgres || undefined,
+        state
       })
 
       if (localLiveSession) {
@@ -614,7 +617,7 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
       this.logger?.error('[emitMessageQueuedEvent] Agent is not initialized.')
       throw new Error('Agent is not initialized.')
     }
-    const { connectionId, messageId, payload, session } = options
+    const { connectionId, messageId,recipientDids, payload, receivedAt, session, state } = options
 
     this.logger?.debug(
       `[emitMessageQueuedEvent] Emitting MessageQueuedEvent for connectionId: ${options.connectionId}, messageId: ${options.messageId}`
@@ -625,8 +628,11 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
       payload: {
         connectionId,
         messageId,
+        recipientDids,
         payload,
+        receivedAt,
         session,
+        state
       },
     })
   }
