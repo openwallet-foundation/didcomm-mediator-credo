@@ -149,9 +149,9 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
       // If deleteMessages is true, just fetch messages without updating their state
       if (deleteMessages) {
         const query = `
-        SELECT id, encryptedmessage, state 
+        SELECT id, encrypted_message, state 
         FROM ${messagesTableName} 
-        WHERE (connectionid = $1 OR $2 = ANY (recipientDids)) AND state = 'pending' 
+        WHERE (connection_id = $1 OR $2 = ANY (recipient_dids)) AND state = 'pending' 
         ORDER BY created_at 
         LIMIT $3
       `
@@ -177,7 +177,7 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
       WHERE id IN (
         SELECT id 
         FROM ${messagesTableName} 
-        WHERE (connectionid = $1 OR $2 = ANY (recipientDids)) 
+        WHERE (connection_id = $1 OR $2 = ANY (recipient_dids)) 
         AND state = 'pending' 
         ORDER BY created_at 
         LIMIT $3
@@ -222,7 +222,7 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
       const query = `
       SELECT COUNT(*) AS count 
       FROM ${messagesTableName} 
-      WHERE connectionid = $1 AND state = 'pending'
+      WHERE connection_id = $1 AND state = 'pending'
     `
       const params = [connectionId]
       const result = await this.messagesCollection?.query(query, params)
@@ -267,9 +267,9 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
 
       // Insert message into database
       const query = `
-        INSERT INTO ${messagesTableName}(connectionid, recipientDids, encryptedmessage, state) 
+        INSERT INTO ${messagesTableName}(connection_id, recipient_dids, encrypted_message, state) 
         VALUES($1, $2, $3, $4) 
-        RETURNING id, created_at, encryptedmessage
+        RETURNING id, created_at, encrypted_message
       `
 
       const state = localLiveSession ? 'sending' : 'pending'
@@ -338,7 +338,7 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
       const placeholders = messageIds.map((_, index) => `$${index + 2}`).join(', ')
 
       // Construct the SQL DELETE query
-      const query = `DELETE FROM ${messagesTableName} WHERE connectionid = $1 AND id IN (${placeholders})`
+      const query = `DELETE FROM ${messagesTableName} WHERE connection_id = $1 AND id IN (${placeholders})`
 
       // Combine connectionId with messageIds as query parameters
       const queryParams = [connectionId, ...messageIds]
@@ -495,7 +495,7 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
     try {
       this.logger?.debug(`[checkQueueMessages] Init verify messages state 'sending'`)
       const messagesToSend = await this.messagesCollection?.query(
-        `SELECT * FROM ${messagesTableName} WHERE state = $1 and connectionid = $2`,
+        `SELECT * FROM ${messagesTableName} WHERE state = $1 and connection_id = $2`,
         ['sending', connectionID]
       )
       if (messagesToSend && messagesToSend.rows.length > 0) {
@@ -542,7 +542,7 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
     if (!connectionId) throw new Error('connectionId is not defined')
     try {
       const queryLiveSession = await this.messagesCollection?.query(
-        `SELECT sessionid, connectionid, protocolVersion, role FROM ${liveSessionTableName} WHERE connectionid = $1 LIMIT $2`,
+        `SELECT session_id, connection_id, protocol_version, role FROM ${liveSessionTableName} WHERE connection_id = $1 LIMIT $2`,
         [connectionId, 1]
       )
       // Check if liveSession is not empty (record found)
@@ -566,7 +566,7 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
     if (!session) throw new Error('session is not defined')
     try {
       const insertMessageDB = await this.messagesCollection?.query(
-        `INSERT INTO ${liveSessionTableName} (sessionid, connectionid, protocolVersion, role, instance) VALUES($1, $2, $3, $4, $5) RETURNING sessionid`,
+        `INSERT INTO ${liveSessionTableName} (session_id, connection_id, protocol_version, role, instance) VALUES($1, $2, $3, $4, $5) RETURNING session_id`,
         [id, connectionId, protocolVersion, role, instance]
       )
       const liveSessionId = insertMessageDB?.rows[0].sessionid
@@ -585,7 +585,7 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
     if (!connectionId) throw new Error('connectionId is not defined')
     try {
       // Construct the SQL query with the placeholders
-      const query = `DELETE FROM ${liveSessionTableName} WHERE connectionid = $1`
+      const query = `DELETE FROM ${liveSessionTableName} WHERE connection_id = $1`
 
       // Add connectionId  for query parameters
       const queryParams = [connectionId]

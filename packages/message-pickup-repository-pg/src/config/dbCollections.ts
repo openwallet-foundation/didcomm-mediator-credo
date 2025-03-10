@@ -1,30 +1,31 @@
-export const messagesTableName = 'queuedmessage'
+export const messagesTableName = 'queued_message'
 
 export const createTypeMessageState = `CREATE TYPE message_state AS ENUM ('pending', 'sending');`
 
 export const createTableMessage = `
 CREATE TABLE IF NOT EXISTS ${messagesTableName} (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  connectionId VARCHAR(255),
-  recipientDids TEXT[],
-  encryptedMessage JSONB,
+  connection_id VARCHAR(255),
+  recipient_dids TEXT[],
+  encrypted_message JSONB,
   state message_state NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 `
 
-export const liveSessionTableName = 'livesession'
+export const liveSessionTableName = 'live_session'
 
 export const createTableLive = `
 CREATE TABLE IF NOT EXISTS ${liveSessionTableName} (
-  sessionid VARCHAR(255) PRIMARY KEY,
-  connectionid VARCHAR(50),
-  protocolVersion VARCHAR(50),
+  session_id VARCHAR(255) PRIMARY KEY,
+  connection_id VARCHAR(50),
+  protocol_version VARCHAR(50),
   role VARCHAR(50),
   instance VARCHAR(100),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);`
+);
+`
 
-export const messageTableIndex = `CREATE INDEX IF NOT EXISTS "${messagesTableName}_connectionId_index" ON "${messagesTableName}" (connectionId);`
+export const messageTableIndex = `CREATE INDEX IF NOT EXISTS "${messagesTableName}_connection_id_idx" ON "${messagesTableName}" (connection_id);`
 
-export const liveSessionTableIndex = `CREATE INDEX IF NOT EXISTS "${liveSessionTableName}_connectionid" ON "${liveSessionTableName}" USING btree ("connectionid");`
+export const liveSessionTableIndex = `CREATE INDEX IF NOT EXISTS "${liveSessionTableName}_connection_id_idx" ON "${liveSessionTableName}" USING btree (connection_id);`
