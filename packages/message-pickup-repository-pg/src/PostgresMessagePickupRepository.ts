@@ -250,7 +250,7 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
    * @param {string} options.connectionId - The ID of the connection.
    * @param {string[]} options.recipientDids - Recipient DIDs for the message.
    * @param {string} options.payload - The encrypted message payload.
-   * @returns { messageId, receivedAt:Promise<string> }- A promise resolving to the messageId and receivedAt of the added message.
+   * @returns {Promise<string>} - A promise resolving to the messageId of the added message.
    * @throws {Error} Throws an error if the agent is not defined or if an error occurs during message insertion or processing.
    */
   public async addMessage(options: AddMessageOptions): Promise<string> {
@@ -306,7 +306,7 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
         await this.pubSubInstance?.publish('newMessage', connectionId)
       }
 
-      return JSON.stringify({ messageId: messageRecord.id, receivedAt: messageRecord.created_at })
+      return messageRecord.id
     } catch (error) {
       this.logger?.error(`[addMessage] Error during message insertion or processing: ${error}`)
       throw new Error(`Failed to add message: ${error}`)
