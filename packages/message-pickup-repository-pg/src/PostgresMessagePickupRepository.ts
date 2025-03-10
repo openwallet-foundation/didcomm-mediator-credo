@@ -1,8 +1,9 @@
+import { randomUUID } from 'node:crypto'
+import * as os from 'node:os'
 import {
   AddMessageOptions,
   Agent,
   GetAvailableMessageCountOptions,
-  injectable,
   Logger,
   MessagePickupEventTypes,
   MessagePickupLiveSessionRemovedEvent,
@@ -11,23 +12,21 @@ import {
   QueuedMessage,
   RemoveMessagesOptions,
   TakeFromQueueOptions,
+  injectable,
 } from '@credo-ts/core'
-import { Pool, Client } from 'pg'
+import { MessagePickupSession } from '@credo-ts/core/build/modules/message-pickup/MessagePickupSession'
+import { Client, Pool } from 'pg'
 import PGPubsub from 'pg-pubsub'
-import * as os from 'os'
 import {
-  createTableMessage,
   createTableLive,
-  messagesTableName,
-  liveSessionTableName,
+  createTableMessage,
+  createTypeMessageState,
   liveSessionTableIndex,
+  liveSessionTableName,
   messageTableIndex,
-  createTypeMessageState
+  messagesTableName,
 } from './config/dbCollections'
 import { MessageQueuedEvent, MessageQueuedEventType, PostgresMessagePickupRepositoryConfig } from './interfaces'
-import { MessagePickupSession } from '@credo-ts/core/build/modules/message-pickup/MessagePickupSession'
-import { randomUUID } from 'crypto'
-
 
 @injectable()
 export class PostgresMessagePickupRepository implements MessagePickupRepository {
@@ -67,7 +66,7 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
     try {
       // Initialize the database
       await this.buildPgDatabase()
-      this.logger?.info(`[initialize] The database has been build successfully`)
+      this.logger?.info('[initialize] The database has been build successfully')
 
       // Configure PostgreSQL pool for the messages collections
       this.messagesCollection = new Pool({
@@ -79,16 +78,16 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
       })
 
       // Initialize Pub/Sub instance if database listener is enabled
-      this.logger?.debug(`[initialize] Initializing pubSubInstance`)
+      this.logger?.debug('[initialize] Initializing pubSubInstance')
       this.pubSubInstance = new PGPubsub(
-        `postgres://${this.postgresUser}:${this.postgresPassword}@${this.postgresHost}/${this.postgresDatabaseName}`,
+        `postgres://${this.postgresUser}:${this.postgresPassword}@${this.postgresHost}/${this.postgresDatabaseName}`
       )
 
       await this.initializeMessageListener('newMessage')
 
       // Set instance variables
       this.agent = options.agent
-      
+
       this.instanceName = `${os.hostname()}-${process.pid}-${randomUUID()}`
       this.logger?.info(`[initialize] Instance identifier set to: ${this.instanceName}`)
 
@@ -106,7 +105,7 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
           } catch (handlerError) {
             this.logger?.error(`Error handling LiveSessionRemoved: ${handlerError}`)
           }
-        },
+        }
       )
 
       options.agent.events.on(
@@ -116,18 +115,20 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
           this.logger?.info(`*** Session saved for connectionId: ${liveSessionData.connectionId} ***`)
 
           try {
+            if (!this.instanceName) {
+              throw new Error('instanceName is undefined')
+            }
             // Add the live session record to the database
-            await this.addLiveSessionOnDb(liveSessionData, this.instanceName!)
+            await this.addLiveSessionOnDb(liveSessionData, this.instanceName)
           } catch (handlerError) {
             this.logger?.error(`Error handling LiveSessionSaved: ${handlerError}`)
           }
-        },
+        }
       )
     } catch (error) {
       this.logger?.error(`[initialize] Initialization failed: ${error}`)
       throw new Error(`Failed to initialize the service: ${error}`)
     }
-
   }
 
   /**
@@ -232,7 +233,7 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
       }
 
       // Parse the count result
-      const numberMessage = parseInt(result.rows[0].count, 10)
+      const numberMessage = Number.parseInt(result.rows[0].count, 10)
       this.logger?.debug(`[getAvailableMessageCount] Count of available messages: ${numberMessage}`)
 
       return numberMessage
@@ -253,41 +254,34 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
    * @throws {Error} Throws an error if the agent is not defined or if an error occurs during message insertion or processing.
    */
   public async addMessage(options: AddMessageOptions): Promise<string> {
-    const { connectionId, recipientDids, payload } = options;
-    this.logger?.debug(`[addMessage] Initializing new message for connectionId: ${connectionId}`);
+    const { connectionId, recipientDids, payload } = options
+    this.logger?.debug(`[addMessage] Initializing new message for connectionId: ${connectionId}`)
 
     if (!this.agent) {
-      throw new Error('Agent is not defined');
+      throw new Error('Agent is not defined')
     }
 
     try {
       // Retrieve local live session details
-      const localLiveSession = await this.findLocalLiveSession(connectionId);
+      const localLiveSession = await this.findLocalLiveSession(connectionId)
 
       // Insert message into database
       const query = `
         INSERT INTO ${messagesTableName}(connectionid, recipientDids, encryptedmessage, state) 
         VALUES($1, $2, $3, $4) 
         RETURNING id, created_at, encryptedmessage
-      `;
+      `
 
-      const state = localLiveSession ? 'sending' : 'pending';
+      const state = localLiveSession ? 'sending' : 'pending'
 
-      const result = await this.messagesCollection?.query(query, [
-        connectionId,
-        recipientDids,
-        payload,
-        state,
-      ])
+      const result = await this.messagesCollection?.query(query, [connectionId, recipientDids, payload, state])
 
-      const messageRecord = result?.rows[0];
+      const messageRecord = result?.rows[0]
 
-      this.logger?.debug(
-        `[addMessage] Message added with ID: ${messageRecord.id} for connectionId: ${connectionId}`,
-      );
+      this.logger?.debug(`[addMessage] Message added with ID: ${messageRecord.id} for connectionId: ${connectionId}`)
 
       // Verify if a live session exists in DB (other instances)
-      const liveSessionInPostgres = await this.findLiveSessionInDb(connectionId);
+      const liveSessionInPostgres = await this.findLiveSessionInDb(connectionId)
 
       // Always emit MessageQueued event with complete payload
       await this.emitMessageQueuedEvent({
@@ -298,15 +292,15 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
       })
 
       if (localLiveSession) {
-        this.logger?.debug(`[addMessage] Local live session exists for connectionId: ${connectionId}`);
+        this.logger?.debug(`[addMessage] Local live session exists for connectionId: ${connectionId}`)
 
         await this.agent.messagePickup.deliverMessages({
           pickupSessionId: localLiveSession.id,
           messages: [{ id: messageRecord.id, encryptedMessage: payload }],
-        });
+        })
       } else if (liveSessionInPostgres) {
         this.logger?.debug(
-          `[addMessage] Publishing new message event to Pub/Sub channel for connectionId: ${connectionId}`,
+          `[addMessage] Publishing new message event to Pub/Sub channel for connectionId: ${connectionId}`
         )
 
         await this.pubSubInstance?.publish('newMessage', connectionId)
@@ -315,7 +309,7 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
       return JSON.stringify({ messageId: messageRecord.id, receivedAt: messageRecord.created_at })
     } catch (error) {
       this.logger?.error(`[addMessage] Error during message insertion or processing: ${error}`)
-      throw new Error(`Failed to add message: ${error}`);
+      throw new Error(`Failed to add message: ${error}`)
     }
   }
 
@@ -330,7 +324,7 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
   public async removeMessages(options: RemoveMessagesOptions): Promise<void> {
     const { connectionId, messageIds } = options
     this.logger?.debug(
-      `[removeMessages] Attempting to remove messages with IDs: ${messageIds} for ConnectionId: ${connectionId}`,
+      `[removeMessages] Attempting to remove messages with IDs: ${messageIds} for ConnectionId: ${connectionId}`
     )
 
     // Validate messageIds
@@ -353,7 +347,7 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
       await this.messagesCollection?.query(query, queryParams)
 
       this.logger?.debug(
-        `[removeMessages] Successfully removed messages with IDs: ${messageIds} for ConnectionId: ${connectionId}`,
+        `[removeMessages] Successfully removed messages with IDs: ${messageIds} for ConnectionId: ${connectionId}`
       )
     } catch (error) {
       this.logger?.error(`[removeMessages] Error occurred while removing messages: ${error}`)
@@ -362,7 +356,7 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
   }
 
   public async shutdown() {
-    this.logger?.info(`[shutdown] Close connection to postgres`)
+    this.logger?.info('[shutdown] Close connection to postgres')
     await this.messagesCollection?.end()
   }
 
@@ -379,7 +373,7 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
       // Add a listener to the specified Pub/Sub channel
       await this.pubSubInstance?.addChannel(channel, async (connectionId: string) => {
         this.logger?.debug(
-          `[initializeMessageListener] Received new message on channel: ${channel} for connectionId: ${connectionId}`,
+          `[initializeMessageListener] Received new message on channel: ${channel} for connectionId: ${connectionId}`
         )
 
         // Fetch the local live session for the given connectionId
@@ -387,7 +381,7 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
 
         if (pickupLiveSession) {
           this.logger?.debug(
-            `[initializeMessageListener] ${this.instanceName} found a LiveSession on channel: ${channel} for connectionId: ${connectionId}. Delivering messages.`,
+            `[initializeMessageListener] ${this.instanceName} found a LiveSession on channel: ${channel} for connectionId: ${connectionId}. Delivering messages.`
           )
 
           // Deliver messages from the queue for the live session
@@ -396,7 +390,7 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
           })
         } else {
           this.logger?.debug(
-            `[initializeMessageListener] No LiveSession found on channel: ${channel} for connectionId: ${connectionId}.`,
+            `[initializeMessageListener] No LiveSession found on channel: ${channel} for connectionId: ${connectionId}.`
           )
         }
       })
@@ -413,7 +407,7 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
    *
    */
   private async buildPgDatabase(): Promise<void> {
-    this.logger?.info(`[buildPgDatabase] PostgresDbService Initializing`)
+    this.logger?.info('[buildPgDatabase] PostgresDbService Initializing')
 
     const clientConfig = {
       user: this.postgresUser,
@@ -502,7 +496,7 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
       this.logger?.debug(`[checkQueueMessages] Init verify messages state 'sending'`)
       const messagesToSend = await this.messagesCollection?.query(
         `SELECT * FROM ${messagesTableName} WHERE state = $1 and connectionid = $2`,
-        ['sending', connectionID],
+        ['sending', connectionID]
       )
       if (messagesToSend && messagesToSend.rows.length > 0) {
         for (const message of messagesToSend.rows) {
@@ -549,10 +543,10 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
     try {
       const queryLiveSession = await this.messagesCollection?.query(
         `SELECT sessionid, connectionid, protocolVersion, role FROM ${liveSessionTableName} WHERE connectionid = $1 LIMIT $2`,
-        [connectionId, 1],
+        [connectionId, 1]
       )
       // Check if liveSession is not empty (record found)
-      const recordFound = queryLiveSession && queryLiveSession.rows && queryLiveSession.rows.length > 0
+      const recordFound = queryLiveSession?.rows && queryLiveSession.rows.length > 0
       this.logger?.debug(`[findLiveSessionInDb] record found status ${recordFound} to connectionId ${connectionId}`)
       return recordFound ? queryLiveSession.rows[0] : undefined
     } catch (error) {
@@ -573,7 +567,7 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
     try {
       const insertMessageDB = await this.messagesCollection?.query(
         `INSERT INTO ${liveSessionTableName} (sessionid, connectionid, protocolVersion, role, instance) VALUES($1, $2, $3, $4, $5) RETURNING sessionid`,
-        [id, connectionId, protocolVersion, role, instance],
+        [id, connectionId, protocolVersion, role, instance]
       )
       const liveSessionId = insertMessageDB?.rows[0].sessionid
       this.logger?.debug(`[addLiveSessionOnDb] add liveSession to ${connectionId} and result ${liveSessionId}`)
@@ -604,7 +598,7 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
     }
   }
 
-    /**
+  /**
    * Emits a MessageQueuedEvent using the agent's EventEmitter.
    *
    * @param {object} options - Event payload containing at least connectionId and messageId.
@@ -613,14 +607,16 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
    * @param {any} [options.*] - Additional optional properties for the event payload.
    * @throws {Error} Throws if the agent is not initialized.
    */
-  private async emitMessageQueuedEvent(options:MessageQueuedEvent) {
+  private async emitMessageQueuedEvent(options: MessageQueuedEvent) {
     if (!this.agent) {
       this.logger?.error('[emitMessageQueuedEvent] Agent is not initialized.')
       throw new Error('Agent is not initialized.')
     }
-    const {connectionId,messageId,payload,session } = options
+    const { connectionId, messageId, payload, session } = options
 
-    this.logger?.debug(`[emitMessageQueuedEvent] Emitting MessageQueuedEvent for connectionId: ${options.connectionId}, messageId: ${options.messageId}`)
+    this.logger?.debug(
+      `[emitMessageQueuedEvent] Emitting MessageQueuedEvent for connectionId: ${options.connectionId}, messageId: ${options.messageId}`
+    )
 
     this.agent.events.emit(this.agent.context, {
       type: MessageQueuedEventType,
@@ -628,9 +624,8 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
         connectionId,
         messageId,
         payload,
-        session
+        session,
       },
     })
   }
-
 }
