@@ -22,5 +22,5 @@ export interface MessageQueuedEvent {
 }
 
 export interface ExtendedMessagePickupSession extends MessagePickupSession {
-  isLocalSession: boolean;
+  isLocalSession: boolean
 }

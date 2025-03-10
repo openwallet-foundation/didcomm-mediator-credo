@@ -26,7 +26,12 @@ import {
   messageTableIndex,
   messagesTableName,
 } from './config/dbCollections'
-import { ExtendedMessagePickupSession, MessageQueuedEvent, MessageQueuedEventType, PostgresMessagePickupRepositoryConfig } from './interfaces'
+import {
+  ExtendedMessagePickupSession,
+  MessageQueuedEvent,
+  MessageQueuedEventType,
+  PostgresMessagePickupRepositoryConfig,
+} from './interfaces'
 
 @injectable()
 export class PostgresMessagePickupRepository implements MessagePickupRepository {
@@ -291,7 +296,7 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
         payload: messageRecord.encryptedmessage,
         receivedAt: messageRecord.created_at,
         session: localLiveSession || liveSessionInPostgres || undefined,
-        state
+        state,
       })
 
       if (localLiveSession) {
@@ -529,9 +534,9 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
 
     try {
       if (!this.agent) throw new Error('Agent is not defined')
-      const localSession = await this.agent.messagePickup.getLiveModeSession({ connectionId });
-      
-      return localSession ? { ...localSession, isLocalSession: true } : undefined;
+      const localSession = await this.agent.messagePickup.getLiveModeSession({ connectionId })
+
+      return localSession ? { ...localSession, isLocalSession: true } : undefined
     } catch (error) {
       this.logger?.error(`[findLocalLiveSession] error in getLocalliveSession: ${error}`)
     }
@@ -553,7 +558,7 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
       // Check if liveSession is not empty (record found)
       const recordFound = queryLiveSession?.rows && queryLiveSession.rows.length > 0
       this.logger?.debug(`[findLiveSessionInDb] record found status ${recordFound} to connectionId ${connectionId}`)
-      return recordFound ? { ...queryLiveSession.rows[0], role:"MessageHolder", isLocalSession: false } : undefined
+      return recordFound ? { ...queryLiveSession.rows[0], role: 'MessageHolder', isLocalSession: false } : undefined
     } catch (error) {
       this.logger?.debug(`[findLiveSessionInDb] Error find to connectionId ${connectionId}`)
       return undefined // Return false in case of an error
@@ -566,7 +571,7 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
    * @param instance
    */
   private async addLiveSessionOnDb(session: MessagePickupSession, instance: string): Promise<void> {
-    const { id, connectionId, protocolVersion} = session
+    const { id, connectionId, protocolVersion } = session
     this.logger?.debug(`[addLiveSessionOnDb] initializing add LiveSession DB to connectionId ${connectionId}`)
     if (!session) throw new Error('session is not defined')
     try {
@@ -617,7 +622,7 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
       this.logger?.error('[emitMessageQueuedEvent] Agent is not initialized.')
       throw new Error('Agent is not initialized.')
     }
-    const { connectionId, messageId,recipientDids, payload, receivedAt, session, state } = options
+    const { connectionId, messageId, recipientDids, payload, receivedAt, session, state } = options
 
     this.logger?.debug(
       `[emitMessageQueuedEvent] Emitting MessageQueuedEvent for connectionId: ${options.connectionId}, messageId: ${options.messageId}`
@@ -632,7 +637,7 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
         payload,
         receivedAt,
         session,
-        state
+        state,
       },
     })
   }
