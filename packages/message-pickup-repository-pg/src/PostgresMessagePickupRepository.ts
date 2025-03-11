@@ -122,9 +122,6 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
           this.logger?.info(`*** Session saved for connectionId: ${liveSessionData.connectionId} ***`)
 
           try {
-            if (!this.instanceName) {
-              throw new Error('instanceName is undefined')
-            }
             // Add the live session record to the database
             await this.addLiveSessionOnDb(liveSessionData, this.instanceName)
           } catch (handlerError) {
@@ -315,7 +312,7 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
           `[addMessage] Publishing new message event to Pub/Sub channel for connectionId: ${connectionId}`
         )
 
-        await this.pubSubInstance?.publish('newMessage', connectionId)
+        await this.pubSubInstance.publish('newMessage', connectionId)
       }
 
       return messageRecord.id
@@ -383,7 +380,7 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
 
     try {
       // Add a listener to the specified Pub/Sub channel
-      await this.pubSubInstance?.addChannel(channel, async (connectionId: string) => {
+      await this.pubSubInstance.addChannel(channel, async (connectionId: string) => {
         this.logger?.debug(
           `[initializeMessageListener] Received new message on channel: ${channel} for connectionId: ${connectionId}`
         )
