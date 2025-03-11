@@ -1,0 +1,30 @@
+@startuml
+title Message arrived for an online client
+
+box "Credo Instance 1"
+participant CC2 as "Credo Core" 
+participant CP2 as "PostgresMessagePickupRepository"
+end box
+box "Credo Instance 2"
+participant CC1 as "Credo Core"
+participant CP1 as "PostgresMessagePickupRepository" 
+end box
+database PG as "Postgres DB"
+
+CC1 -> CP1: addMessage(connection1, msg1)
+CP1 -> CP1: look into local sessions
+alt Local session found
+CP1 -> PG: Store message(connection1, msg1, 'sending')
+CP1 -> CC1: deliverQueuedMessages(connection1)
+else
+CP1 -> PG: Store message(connection1, msg1, 'pending')
+CP1 -> PG: look into ongoing sessions
+note left
+Here we suppose that connection1
+is connected to instance 1
+end note
+CP1 -> PG: Publish("new message", connection1)
+PG -> CP2: Notify("new message", connection1)
+CP2 -> CC2: deliverQueuedMessages(connection1)
+end
+@enduml
