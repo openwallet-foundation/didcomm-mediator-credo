@@ -9,7 +9,7 @@ export interface PostgresMessagePickupRepositoryConfig {
   postgresDatabaseName?: string
 }
 
-export const MessageQueuedEventType: string = 'MessageQueued'
+export const MessageQueuedEventType: string = 'MessagePickupRepositoryMessageQueued'
 
 export interface MessageQueuedEvent {
  message: {
