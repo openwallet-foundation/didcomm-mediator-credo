@@ -14,7 +14,7 @@ import {
   TakeFromQueueOptions,
   injectable,
 } from '@credo-ts/core'
-import { MessagePickupSession } from '@credo-ts/core/build/modules/message-pickup/MessagePickupSession'
+import { MessagePickupSession, MessagePickupSessionRole } from '@credo-ts/core/build/modules/message-pickup/MessagePickupSession'
 import { Client, Pool } from 'pg'
 import PGPubsub from 'pg-pubsub'
 import {
@@ -290,13 +290,15 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
 
       // Always emit MessageQueued event with complete payload
       await this.emitMessageQueuedEvent({
-        connectionId,
-        recipientDids,
-        messageId: messageRecord.id,
-        payload: messageRecord.encryptedmessage,
-        receivedAt: messageRecord.created_at,
+        message: {
+          id: messageRecord.id,
+          connectionId,
+          recipientDids,
+          encryptedMessage: messageRecord.encryptedmessage,
+          receivedAt: messageRecord.created_at,
+          state          
+        },
         session: localLiveSession || liveSessionInPostgres || undefined,
-        state,
       })
 
       if (localLiveSession) {
@@ -622,22 +624,17 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
       this.logger?.error('[emitMessageQueuedEvent] Agent is not initialized.')
       throw new Error('Agent is not initialized.')
     }
-    const { connectionId, messageId, recipientDids, payload, receivedAt, session, state } = options
+    const { message, session} = options
 
     this.logger?.debug(
-      `[emitMessageQueuedEvent] Emitting MessageQueuedEvent for connectionId: ${options.connectionId}, messageId: ${options.messageId}`
+      `[emitMessageQueuedEvent] Emitting MessageQueuedEvent for connectionId: ${options.message.connectionId}, messageId: ${options.message.id}`
     )
 
     this.agent.events.emit(this.agent.context, {
       type: MessageQueuedEventType,
       payload: {
-        connectionId,
-        messageId,
-        recipientDids,
-        payload,
-        receivedAt,
-        session,
-        state,
+        message,
+        session
       },
     })
   }
