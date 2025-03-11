@@ -15,8 +15,8 @@ No local session available
 end note
 CP1 -> CP1: Check DB for ongoing sessions
 alt No ongoing sessions
-  CP1 -> CC1: emit MessageQueued event
-  CC1 -> CC2: MessageQueued event
+  CP1 -> CC1: emit MessagePickupRepositoryMessageQueued event
+  CC1 -> CC2: MessagePickupRepositoryMessageQueued event
   CC2 -> CA1: handle event (send push notification or webhook)
 else Ongoing session exists
   CP1 -> CP1: Notify other instances via Pub/Sub

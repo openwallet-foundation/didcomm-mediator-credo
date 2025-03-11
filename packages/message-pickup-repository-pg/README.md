@@ -15,7 +15,7 @@ This package provides a simple but efficient Message Pickup Repository implement
 
 - Automatic database initialization: set up the database structure required for message operations at startup.
 
-- Event-driven notifications: emit a `MessageQueued` event whenever a message is queued, allowing external listeners to implement flexible notification mechanisms like push notifications or webhooks when a message has arrived for an offline user (not connected to any instance).
+- Event-driven notifications: emit a `MessagePickupRepositoryMessageQueued` event whenever a message is queued, allowing external listeners to implement flexible notification mechanisms like push notifications or webhooks when a message has arrived for an offline user (not connected to any instance).
 
 ## How does it work?
 
@@ -26,7 +26,7 @@ When a new message for a certain DIDComm connection is added to the queue, `Post
 - If there is a local Live mode session, it will pack and deliver the message directly, adding it to the persistent queue with a particular status flag (`sending`) to reflect that it is expected to be delivered and acknowledged soon
 - If there is not any local session, the client could be connected to another instance. Therefore, it adds the message to the persistent queue and looks into the shared message pickup session database:
   - If there is a session registered to another instance, it will publish a notification
-  - If no session is found, it emits a `MessageQueued` event, which external listeners can use to handle notifications (push/webhooks).
+  - If no session is found, it emits a `MessagePickupRepositoryMessageQueued` event, which external listeners can use to handle notifications (push/webhooks).
 
 > **Note**: at the moment, all instances are notified when a message arrives for any online DIDComm connection. A possible improvement could be to create a channel per connection, so only the instance connected to that client is triggered. But it is uncertain for us yet how well it would scale when there is a large number of connected users at the same time.
 
@@ -82,7 +82,7 @@ Note that in this example, notification token is stored as a tag in connection r
 await messagePickupRepository.initialize({ agent })
 ```
 
-### Handling `MessageQueued` Event
+### Handling `MessagePickupRepositoryMessageQueued` Event
 
 Listeners can handle queued messages by listening for the emitted event:
 
@@ -124,7 +124,7 @@ const agent = new Agent({
 await messagePickupRepository.initialize({ agent })
 await agent.initialize()
 
-agent.events.on('MessageQueued', async ({ payload }) => {
+agent.events.on('MessagePickupRepositoryMessageQueued', async ({ payload }) => {
   const { connectionId, messageId } = payload
 
   // Custom logic for notification, webhook, etc here
