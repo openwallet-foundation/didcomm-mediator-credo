@@ -14,7 +14,10 @@ import {
   TakeFromQueueOptions,
   injectable,
 } from '@credo-ts/core'
-import { MessagePickupSession, MessagePickupSessionRole } from '@credo-ts/core/build/modules/message-pickup/MessagePickupSession'
+import {
+  MessagePickupSession,
+  MessagePickupSessionRole,
+} from '@credo-ts/core/build/modules/message-pickup/MessagePickupSession'
 import { Client, Pool } from 'pg'
 import PGPubsub from 'pg-pubsub'
 import {
@@ -53,7 +56,7 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
     this.postgresPassword = postgresPassword
     this.postgresHost = postgresHost
     this.postgresDatabaseName = postgresDatabaseName || 'messagepickuprepository'
-    
+
     // Initialize instanceName
     this.instanceName = `${os.hostname()}-${process.pid}-${randomUUID()}`
     this.logger?.info(`[initialize] Instance identifier set to: ${this.instanceName}`)
@@ -295,7 +298,7 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
           recipientDids,
           encryptedMessage: messageRecord.encryptedmessage,
           receivedAt: messageRecord.created_at,
-          state          
+          state,
         },
         session: localLiveSession || liveSessionInPostgres || undefined,
       })
@@ -559,7 +562,9 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
       // Check if liveSession is not empty (record found)
       const recordFound = queryLiveSession?.rows && queryLiveSession.rows.length > 0
       this.logger?.debug(`[findLiveSessionInDb] record found status ${recordFound} to connectionId ${connectionId}`)
-      return recordFound ? { ...queryLiveSession.rows[0], role: MessagePickupSessionRole.MessageHolder, isLocalSession: false } : undefined
+      return recordFound
+        ? { ...queryLiveSession.rows[0], role: MessagePickupSessionRole.MessageHolder, isLocalSession: false }
+        : undefined
     } catch (error) {
       this.logger?.debug(`[findLiveSessionInDb] Error find to connectionId ${connectionId}`)
       return undefined // Return false in case of an error
@@ -623,7 +628,7 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
       this.logger?.error('[emitMessageQueuedEvent] Agent is not initialized.')
       throw new Error('Agent is not initialized.')
     }
-    const { message, session} = options
+    const { message, session } = options
 
     this.logger?.debug(
       `[emitMessageQueuedEvent] Emitting MessageQueuedEvent for connectionId: ${options.message.connectionId}, messageId: ${options.message.id}`
@@ -633,7 +638,7 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
       type: MessageQueuedEventType,
       payload: {
         message,
-        session
+        session,
       },
     })
   }

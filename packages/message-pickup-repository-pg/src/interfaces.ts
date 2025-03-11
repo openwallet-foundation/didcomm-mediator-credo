@@ -12,14 +12,14 @@ export interface PostgresMessagePickupRepositoryConfig {
 export const MessageQueuedEventType: string = 'MessagePickupRepositoryMessageQueued'
 
 export interface MessageQueuedEvent {
- message: {
+  message: {
     id: string
     connectionId: string
     recipientDids: string[]
     encryptedMessage: EncryptedMessage
     receivedAt: Date
     state: string
-   },
+  }
   session?: MessagePickupSession
 }
 
