@@ -558,7 +558,7 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
       // Check if liveSession is not empty (record found)
       const recordFound = queryLiveSession?.rows && queryLiveSession.rows.length > 0
       this.logger?.debug(`[findLiveSessionInDb] record found status ${recordFound} to connectionId ${connectionId}`)
-      return recordFound ? { ...queryLiveSession.rows[0], role: 'MessageHolder', isLocalSession: false } : undefined
+      return recordFound ? { ...queryLiveSession.rows[0], role: MessagePickupSessionRole.MessageHolder, isLocalSession: false } : undefined
     } catch (error) {
       this.logger?.debug(`[findLiveSessionInDb] Error find to connectionId ${connectionId}`)
       return undefined // Return false in case of an error
