@@ -38,8 +38,8 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
   private logger?: Logger
   private messagesCollection?: Pool
   private agent?: Agent
-  private pubSubInstance?: PGPubsub
-  private instanceName?: string
+  private pubSubInstance: PGPubsub
+  private instanceName: string
   private postgresUser: string
   private postgresPassword: string
   private postgresHost: string
@@ -53,6 +53,16 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
     this.postgresPassword = postgresPassword
     this.postgresHost = postgresHost
     this.postgresDatabaseName = postgresDatabaseName || 'messagepickuprepository'
+    
+    // Initialize instanceName
+    this.instanceName = `${os.hostname()}-${process.pid}-${randomUUID()}`
+    this.logger?.info(`[initialize] Instance identifier set to: ${this.instanceName}`)
+
+    // Initialize Pub/Sub instance if database listener is enabled
+    this.logger?.debug('[initialize] Initializing pubSubInstance')
+    this.pubSubInstance = new PGPubsub(
+      `postgres://${postgresUser}:${postgresPassword}@${postgresHost}/${postgresDatabaseName}`
+    )
   }
 
   /**
@@ -82,19 +92,11 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
         port: 5432,
       })
 
-      // Initialize Pub/Sub instance if database listener is enabled
-      this.logger?.debug('[initialize] Initializing pubSubInstance')
-      this.pubSubInstance = new PGPubsub(
-        `postgres://${this.postgresUser}:${this.postgresPassword}@${this.postgresHost}/${this.postgresDatabaseName}`
-      )
-
+      // Initialize Listener PUB/SUB
       await this.initializeMessageListener('newMessage')
 
       // Set instance variables
       this.agent = options.agent
-
-      this.instanceName = `${os.hostname()}-${process.pid}-${randomUUID()}`
-      this.logger?.info(`[initialize] Instance identifier set to: ${this.instanceName}`)
 
       // Register event handlers
       options.agent.events.on(
