@@ -1,0 +1,25 @@
+@startuml
+title Message arrived for an offline client
+
+participant CA1 as "Mediator App"
+participant CC1 as "Credo Core"
+participant CC2 as "Agent Event Listener"
+participant CP1 as "PostgresMessagePickupRepository"
+participant DB as "PostgreSQL DB"
+
+CC1 -> CP1: addMessage(connectionId, payload)
+CP1 -> CP1: Save message with state "pending"
+CP1 -> CP1: Check local live session
+note left
+No local session available
+end note
+CP1 -> CP1: Check DB for ongoing sessions
+alt No ongoing sessions
+  CP1 -> CC1: emit MessagePickupRepositoryMessageQueued event
+  CC1 -> CC2: MessagePickupRepositoryMessageQueued event
+  CC2 -> CA1: handle event (send push notification or webhook)
+else Ongoing session exists
+  CP1 -> CP1: Notify other instances via Pub/Sub
+end
+
+@enduml

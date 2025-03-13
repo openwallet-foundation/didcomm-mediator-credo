@@ -1,0 +1,11 @@
+@startuml
+title Minimalist multi-instance architecture
+component CI1 as "Credo instance 1"
+component CI2 as "Credo instance 2"
+component CI3 as "Credo instance 3"
+database PG as "Postgres DB"
+
+CI1 <--> PG
+CI2 <--> PG
+CI3 <--> PG
+@enduml
