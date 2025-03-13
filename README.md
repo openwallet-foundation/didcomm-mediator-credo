@@ -86,19 +86,24 @@ You can provide a number of environment variables to run the agent. The followin
 
 The `POSTGRES_` variables won't be used in development mode (`NODE_ENV=development`), but are required when `NODE_ENV` is `production`. This makes local development easier, but makes sure you have a persistent database when deploying.
 
-| Variable                  | Description                                                                                                                                                                                                                                                                       |
-| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `AGENT_ENDPOINTS`         | Comma separated list of endpoints, in order of preference. In most cases you want to provide two endpoints, where the first one is an HTTP url, and the second one is an WebSocket url                                                                                            |
-| `AGENT_NAME`              | The name of the agent. This will be used in invitations and will be publicly advertised.                                                                                                                                                                                          |
-| `AGENT_PORT`              | The port that is exposed for incoming traffic. Both the HTTP and WS inbound transport handlers are exposes on this port, and HTTP traffic will be upgraded to the WebSocket server when applicable.                                                                               |
-| `WALLET_NAME`             | The name of the wallet to use.                                                                                                                                                                                                                                                    |
-| `WALLET_KEY`              | The key to unlock the wallet.                                                                                                                                                                                                                                                     |
-| `INVITATION_URL`          | Optional URL that can be used as the base for the invitation url. This would allow you to render a certain web page that can extract the invitation form the `oob` parameter, and show the QR code, or show useful information to the end-user. Less applicable to mediator URLs. |
-| `POSTGRES_HOST`           | Host of the database to use. Should include both host and port.                                                                                                                                                                                                                   |
-| `POSTGRES_USER`           | The postgres user.                                                                                                                                                                                                                                                                |
-| `POSTGRES_PASSWORD`       | The postgres password.                                                                                                                                                                                                                                                            |
-| `POSTGRES_ADMIN_USER`     | The postgres admin user.                                                                                                                                                                                                                                                          |
-| `POSTGRES_ADMIN_PASSWORD` | The postgres admin password.                                                                                                                                                                                                                                                      |
+| Variable                   | Description                                                                                                                                                                                                                                                                       |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AGENT_ENDPOINTS`          | Comma separated list of endpoints, in order of preference. In most cases you want to provide two endpoints, where the first one is an HTTP url, and the second one is an WebSocket url                                                                                            |
+| `AGENT_NAME`               | The name of the agent. This will be used in invitations and will be publicly advertised.                                                                                                                                                                                          |
+| `AGENT_PORT`               | The port that is exposed for incoming traffic. Both the HTTP and WS inbound transport handlers are exposes on this port, and HTTP traffic will be upgraded to the WebSocket server when applicable.                                                                               |
+| `WALLET_NAME`              | The name of the wallet to use.                                                                                                                                                                                                                                                    |
+| `WALLET_KEY`               | The key to unlock the wallet.                                                                                                                                                                                                                                                     |
+| `INVITATION_URL`           | Optional URL that can be used as the base for the invitation url. This would allow you to render a certain web page that can extract the invitation form the `oob` parameter, and show the QR code, or show useful information to the end-user. Less applicable to mediator URLs. |
+| `POSTGRES_HOST`            | Host of the database to use. Should include both host and port.                                                                                                                                                                                                                   |
+| `POSTGRES_USER`            | The postgres user.                                                                                                                                                                                                                                                                |
+| `POSTGRES_PASSWORD`        | The postgres password.                                                                                                                                                                                                                                                            |
+| `POSTGRES_ADMIN_USER`      | The postgres admin user.                                                                                                                                                                                                                                                          |
+| `POSTGRES_ADMIN_PASSWORD`  | The postgres admin password.                                                                                                                                                                                                                                                      |
+| `USE_PUSH_NOTIFICATIONS`   | A boolean flag that informs the system it should send push notifications.                                                                                                                                                                                                         |
+| `FIREBASE_PROJECT_ID`      | (OPTIONAL) The firebase project ID generated when setting up a Firebase Cloud Messaging project, required if sending push notifications via Firebase Cloud Messaging.                                                                                                             |
+| `FIREBASE_CLIENT_EMAIL`    | (OPTIONAL) Firebase client email generated when setting up Firebase Cloud Messaging project, required if sending push notifications via Firebase Cloud Messaging.                                                                                                                 |
+| `FIREBASE_PRIVATE_KEY`     | (OPTIONAL) Private key generated when setting up Firebase Cloud Messaging project, required if sending push notifications via Firebase Cloud Messaging.                                                                                                                           |
+| `NOTIFICATION_WEBHOOK_URL` | (OPTIONAL) A url used for sending notifications to                                                                                                                                                                                                                                |
 
 ## Postgres Database
 
@@ -146,12 +151,12 @@ docker build \
 ```
 
 ## Using Helm
+
 ### To deploy the application on Kubernetes using Helm, follow this [installation guide](/helm/README.md) containing
 
 - Helm Chart structure
 - Quick Note
 - Helm Commands
-
 
 ## Roadmap
 
