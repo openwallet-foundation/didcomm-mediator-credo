@@ -1,0 +1,79 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{include "mediator-agent.fullname" .}}
+  labels: {{- include "mediator-agent.labels" . | nindent 4}}
+#Error: EACCES: permission denied, mkdir '/.cache/node/corepack/v1'
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}  
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: agent
+      {{- include "mediator-agent.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        app.kubernetes.io/component: agent
+        {{- include "mediator-agent.labels" . | nindent 8 }}
+	      {{- with .Values.podLabels }}
+          {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      imagePullSecrets:
+        {{- toYaml .Values.imagePullSecrets | nindent 8 }}
+      volumes:
+        - name: cache-volume
+          emptyDir:
+            sizeLimit: 1Gi
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.registry }}/{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          ports:
+            {{- range $name, $port := .Values.services.agent }}
+            - name: {{ .name }}
+              containerPort: {{ .port }}
+            {{- end }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 45
+            periodSeconds: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 45
+            timeoutSeconds: 3
+          envFrom:
+            - secretRef:
+                name: {{ include "mediator-agent.fullname" . }}-postgresql-creds
+            - secretRef:
+                name: {{ include "mediator-agent.fullname" . }}-creds
+          env:
+            - name: AGENT_ENDPOINTS
+              value: {{.Values.env.AGENT_ENDPOINTS | quote}}
+            - name: POSTGRES_HOST
+              value: mediator-postgresql.{{ .Values.namespace }}.svc
+            - name: AGENT_NAME
+              value: {{.Values.env.AGENT_NAME | quote}}
+            - name: INVITATION_URL
+              value: {{.Values.env.INVITATION_URL | quote}}
+            - name: LOG_LEVEL
+              value: {{.Values.env.LOG_LEVEL | quote}}
+            - name: USE_PUSH_NOTIFICATIONS
+              value: {{.Values.env.USE_PUSH_NOTIFICATIONS | quote}}
+            - name: NOTIFICATION_WEBHOOK_URL
+              value: {{.Values.env.NOTIFICATION_WEBHOOK_URL | quote}} 
+          volumeMounts:
+            - name: cache-volume
+              mountPath: /.cache

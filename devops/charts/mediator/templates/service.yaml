@@ -1,0 +1,17 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{include "mediator-agent.fullname" .}}
+  labels: 
+    app.kubernetes.io/component: mediator
+    {{- include "mediator-agent.labels" . | nindent 4}}
+spec:
+  ports:
+    {{- range $name, $port := .Values.services.agent }}
+    - name: {{ .name }}
+      port: {{ .port }}
+      targetPort: {{ .port }}
+      protocol: TCP
+    {{- end }}
+  selector: {{- include "mediator-agent.selectorLabels" . | nindent 4}}

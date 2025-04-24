@@ -1,0 +1,74 @@
+# Default values for attestation-controller.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 3
+
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 80
+
+podAnnotations: {}
+podLabels: {}
+
+image:
+  pullPolicy: IfNotPresent
+  registry: artifacts.developer.gov.bc.ca/github-docker-remote
+  # registry: ghcr.io
+  repository: bcgov/mobile-attestation-vc-controller/controller
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: "68a3892"
+
+netpol:
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: bc0192-prod
+
+env:
+  TRACTION_BASE_URL: "https://traction-tenant-proxy-prod.apps.silver.devops.gov.bc.ca"
+  APPLE_ATTESTATION_ROOT_CA_URL: "https://www.apple.com/certificateauthority/Apple_App_Attestation_Root_CA.pem"
+  GOOGLE_AUTH_JSON_PATH: "/opt/controller/google_oauth_key.json"
+  MESSAGE_TEMPLATES_PATH: "/opt/fixtures/"
+  # This is needed for Google Play verificaiton to accept
+  # non-production playstore builds.
+  ALLOW_TEST_BUILDS: "false"
+
+resources:
+  requests:
+    memory: 92Mi
+    cpu: 10m
+  limits:
+    memory: 128Mi
+    cpu: 100m
+
+imagePullSecrets:
+  - name: artifactory-regcred
+
+service:
+  targetPort: 5000
+
+route:
+  host: ""
+  annotations:
+    haproxy.router.openshift.io/timeout: 60s
+
+# serviceAccount:
+#   # Specifies whether a service account should be created
+#   create: true
+#   # Automatically mount a ServiceAccount's API credentials?
+#   automount: true
+#   # Annotations to add to the service account
+#   annotations: {}
+#   # The name of the service account to use.
+#   # If not set and create is true, a name is generated using the fullname template
+#   name: ""
+
+# Additional volumes on the output Deployment definition.
+volumes: []
+
+# Additional volumeMounts on the output Deployment definition.
+volumeMounts: []

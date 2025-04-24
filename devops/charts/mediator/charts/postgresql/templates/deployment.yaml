@@ -1,0 +1,55 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{include "mediator-agent.fullname" .}}
+  labels: {{- include "mediator-agent.labels" . | nindent 4}}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}  
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: postgres
+      {{- include "mediator-agent.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        app.kubernetes.io/component: postgres
+        {{- include "mediator-agent.labels" . | nindent 8 }}
+	      {{- with .Values.podLabels }}
+          {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      imagePullSecrets:
+        {{- toYaml .Values.imagePullSecrets | nindent 8 }}
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ include "mediator-agent.fullname" . }}-data
+      # initContainers:
+      #   - name: pgsql-data-permission-fix
+      #     image: artifacts.developer.gov.bc.ca/docker-remote/busybox:latest
+      #     command: ["/bin/chmod", "-R", "777", "/data"]
+      #     volumeMounts:
+      #       - name: data
+      #         mountPath: /data
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.registry }}/{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          ports:
+            - containerPort: {{.Values.service.targetPort}}
+              name: postgres
+              protocol: TCP
+          envFrom:
+            - secretRef:
+                name: {{ include "mediator-agent.fullname" . }}-creds

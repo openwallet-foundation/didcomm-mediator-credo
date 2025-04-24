@@ -1,0 +1,72 @@
+# Default values for attestation-controller.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+autoscaling:
+  enabled: false
+
+podAnnotations: {}
+podLabels: {}
+
+image:
+  pullPolicy: Always
+  registry: artifacts.developer.gov.bc.ca/github-docker-remote
+  # registry: ghcr.io
+  repository: fullboar/mediator-agent/mediator
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: "75f398b"
+
+netpol:
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: c2a2c4-dev
+
+env:
+  AGENT_ENDPOINTS: 'https://mediator-c2a2c4-dev.apps.silver.devops.gov.bc.ca,wss://mediator-c2a2c4-dev.apps.silver.devops.gov.bc.ca '
+  AGENT_NAME: "BC Mediator Dev"
+  INVITATION_URL: "https://mediator-c2a2c4-dev.apps.silver.devops.gov.bc.ca/invitation"
+  LOG_LEVEL: debug
+  USE_PUSH_NOTIFICATIONS: false
+  NOTIFICATION_WEBHOOK_URL: null
+
+resources:
+  requests:
+    memory: 256Mi
+    cpu: 20m
+  limits:
+    memory: 256Mi
+    cpu: 100m
+
+imagePullSecrets:
+  - name: artifactory-regcred
+
+services:
+  agent:
+    - name: http
+      port: 3110
+
+route:
+  host: ""
+  annotations:
+    haproxy.router.openshift.io/timeout: 60s
+
+# serviceAccount:
+#   # Specifies whether a service account should be created
+#   create: true
+#   # Automatically mount a ServiceAccount's API credentials?
+#   automount: true
+#   # Annotations to add to the service account
+#   annotations: {}
+#   # The name of the service account to use.
+#   # If not set and create is true, a name is generated using the fullname template
+#   name: ""
+
+# Additional volumes on the output Deployment definition.
+volumes: []
+
+# Additional volumeMounts on the output Deployment definition.
+volumeMounts: []
