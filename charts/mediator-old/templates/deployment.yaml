@@ -2,7 +2,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ .Values.deployment_name }}
-  namespace: {{ .Values.namespace }}
   labels:
     app: {{ .Values.deployment_name }}
 spec:
@@ -43,17 +42,11 @@ spec:
             - name: WALLET_NAME
               value: {{ .Values.environment.WALLET_NAME }}                     
             - name: WALLET_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: "{{ include "mediator-agent.fullname" . }}-creds"
-                  key: wallet-key
+              value: {{ .Values.environment.WALLET_KEY }}
             - name: POSTGRES_USER
               value: {{ .Values.environment.POSTGRES_USER }}
             - name: POSTGRES_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: "{{ include "mediator-agent.fullname" . }}-postgresql-creds"
-                  key: postgresql-password
+              value: {{ .Values.environment.POSTGRES_PASSWORD }}
             - name: POSTGRES_HOST
               value: {{ .Values.environment.POSTGRES_HOST }}
             - name: POSTGRES_ADMIN_USER

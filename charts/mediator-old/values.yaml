@@ -1,6 +1,4 @@
 ## Common Values
-namespace: 4a9599-dev
-
 
 ## Deployment Values
 deployment_name: mediator
@@ -16,7 +14,7 @@ container:
   imagePullPolicy: Always
 
 environment:
-  AGENT_PORT: 3000
+  AGENT_PORT: "3000"
   AGENT_NAME: Mediator
   WALLET_NAME: mediator
   POSTGRES_USER: ${POSTGRES_USER}
@@ -39,7 +37,7 @@ service_name: mediator
 
 
 ## Ingress Values
-ingress_name: mediator_ingress
+ingress_name: mediator-credo-dev.apps.silver.devops.gov.bc.ca
 cluster_issuer_name: nginx
 host_name: example.com
 certificate_secret_name: my-cert
