@@ -24,5 +24,8 @@
     "patchedDependencies": {
       "@credo-ts/core": "patches/@credo-ts__core.patch"
     }
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.1"
   }
 }

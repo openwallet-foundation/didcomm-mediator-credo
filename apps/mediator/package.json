@@ -5,7 +5,9 @@
   "private": true,
   "main": "build/index",
   "types": "build/index",
-  "files": ["build"],
+  "files": [
+    "build"
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/openwallet-foundation/didcomm-mediator-credo"
@@ -18,7 +20,7 @@
     "test": "jest",
     "build": "tsc -p tsconfig.build.json",
     "prepublishOnly": "pnpm build",
-    "dev": "ts-node src/index.ts",
+    "dev": "ts-node dev.ts",
     "start": "NODE_ENV=production node build/index.js"
   },
   "dependencies": {
@@ -42,7 +44,7 @@
     "@types/express": "^4.17.13",
     "@types/jest": "^29.2.0",
     "@types/nconf": "^0.10.7",
-    "@types/node": "^20.14.9",
+    "@types/node": "^20.17.12",
     "@types/ws": "^8.5.13",
     "jest": "^29.2.2",
     "ts-jest": "^29.0.3",
