@@ -11,7 +11,7 @@ image:
   # This sets the pull policy for images.
   pullPolicy: Always
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "00ec3b9"
+  tag: ""
 
 # This is for the secrets for pulling an image from a private repository more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
 imagePullSecrets: []
@@ -61,11 +61,11 @@ ingress:
   enabled: true
   className: ""
   annotations: 
-    route.openshift.io/termination: edge
+    # route.openshift.io/termination: edge
     # kubernetes.io/ingress.class: nginx
     # kubernetes.io/tls-acme: "true"
   hosts:
-    - host: mediator-credo-dev.apps.silver.devops.gov.bc.ca
+    - host: example.com
       paths:
         - path: /
           pathType: ImplementationSpecific
@@ -73,6 +73,17 @@ ingress:
   #  - secretName: chart-example-tls
   #    hosts:
   #      - chart-example.local
+
+# This block is for setting up the network policy more information can be found here: https://kubernetes.io/docs/concepts/services-networking/network-policies/
+# Network policies are responsible for allowing ingress traffic to the mediator, and access to the database from the mediator.
+networkPolicy:
+  enabled: true
+  ingress:
+    enabled: true
+    namespaceSelector: []
+    ## Example:
+    # network.openshift.io/policy-group: ingress
+    podSelector: {}
 
 resources: {}
   # We usually recommend not to specify default resources and to leave this as a conscious
@@ -93,7 +104,7 @@ environment:
   - name: AGENT_NAME
     value: Mediator
   - name: WALLET_NAME
-    value: mediator
+    value: mediator-wallet
   - name: POSTGRES_USER
     value: mediator
   - name: POSTGRES_HOST
@@ -101,7 +112,7 @@ environment:
   - name: POSTGRES_ADMIN_USER
     value: postgres
   - name: AGENT_ENDPOINTS
-    value: ""
+    value: "https://example.com,wss://example.com"
   - name: LOG_LEVEL
     value: "2"
   - name: POSTGRES_PASSWORD
@@ -149,3 +160,14 @@ nodeSelector: {}
 tolerations: []
 
 affinity: {}
+
+# Settings related to the PostgreSQL database
+postgresql:
+  commonLabels: {}
+  # Example:
+  # app.kubernetes.io/name: postgresql
+  # app.kubernetes.io/instance: mediator-credo-db
+  primary:
+    service:
+      ports:
+        postgresql: 5432
