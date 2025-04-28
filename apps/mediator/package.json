@@ -5,9 +5,7 @@
   "private": true,
   "main": "build/index",
   "types": "build/index",
-  "files": [
-    "build"
-  ],
+  "files": ["build"],
   "repository": {
     "type": "git",
     "url": "https://github.com/openwallet-foundation/didcomm-mediator-credo"
