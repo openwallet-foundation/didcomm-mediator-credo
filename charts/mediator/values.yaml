@@ -1,6 +1,5 @@
-# Default values for mediator.
-# This is a YAML-formatted file.
-# Declare variables to be passed into your templates.
+## @section Mediator Settings
+##
 
 ## @param replicaCount This will set the replicaset count more information can be found here: https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/
 replicaCount: 1
@@ -135,7 +134,7 @@ resources: {}
   #   cpu: 100m
   #   memory: 128Mi
 
-## @param environment [aray] Variables to be passed to the container
+## @param environment [array] Variables to be passed to the container
 ## ref: https://kubernetes.io/docs/concepts/configuration/overview/
 environment:
   - name: AGENT_PORT
@@ -217,6 +216,8 @@ tolerations: []
 affinity: {}
 
 # Settings related to the PostgreSQL database
+## @section PostgreSQL parameters
+##
 postgresql:
   ## @param postgresql.commonLabels [array] Add labels to all the deployed resources (sub-charts are not considered).
   commonLabels: {}
