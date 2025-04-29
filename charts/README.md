@@ -41,6 +41,10 @@ To delete the secrets and PVC's associated with `my-release`:
 kubectl delete secret,pvc --selector "app.kubernetes.io/instance"=my-release
 ```
 
+## Persistence
+
+The mediator chart assumes a PostgreSQL deployment is available. The appropriate settings must be configured in the `environment, `networkpolicy` and `postgresql` sections.
+
 ## Parameters
 
 ### Mediator Settings
