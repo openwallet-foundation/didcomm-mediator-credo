@@ -3,7 +3,7 @@ import { connect } from '@ngrok/ngrok'
 if (!process.env.NGROK_AUTH_TOKEN) {
   require('./src/index')
 } else {
-  const port = process.env.AGENT_PORT ? Number(process.env.AGENT_PORT) : 3000
+  const port = process.env.AGENT_PORT ? Number(process.env.AGENT_PORT) : 3110
   /**
    * Connect to ngrok and then set the port and url on the environment before importing
    * the index file.
