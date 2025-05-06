@@ -1,10 +1,8 @@
-import type { InboundMessageContext, Logger } from '@credo-ts/core'
-import type { FcmDeviceInfo } from '../models/FcmDeviceInfo'
-
+import type { AgentContext, InboundMessageContext, Logger } from '@credo-ts/core'
 import { CredoError, InjectionSymbols, TransportService, inject, injectable } from '@credo-ts/core'
-
 import { PushNotificationsFcmProblemReportError, PushNotificationsFcmProblemReportReason } from '../errors'
 import { PushNotificationsFcmDeviceInfoMessage, PushNotificationsFcmSetDeviceInfoMessage } from '../messages'
+import type { FcmDeviceInfo } from '../models/FcmDeviceInfo'
 import { PushNotificationsFcmRecord, PushNotificationsFcmRepository } from '../repository'
 
 @injectable()
@@ -77,5 +75,11 @@ export class PushNotificationsFcmService {
 
       await this.pushNotificationsFcmRepository.save(agentContext, pushNotificationsFcmRecord)
     }
+  }
+
+  public async getPushNotificationRecordByConnectionId(agentContext: AgentContext, connectionId: string) {
+    return await this.pushNotificationsFcmRepository.getSingleByQuery(agentContext, {
+      connectionId,
+    })
   }
 }

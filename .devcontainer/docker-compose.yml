@@ -6,7 +6,6 @@ networks:
 volumes:
   postgres-data:
 
-
 services:
   postgres:
     image: postgres:13
@@ -16,6 +15,8 @@ services:
       - postgres-data:/var/lib/postgresql/data
     networks:
       - local_credo_mediator_network
+    ports:
+      - "5432:5432"
 
   mediator:
     image: mcr.microsoft.com/devcontainers/javascript-node:22-bullseye

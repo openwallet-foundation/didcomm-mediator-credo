@@ -30,6 +30,7 @@
     "class-validator": "^0.14.1",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
+    "firebase-admin": "^13.0.2",
     "nconf": "^0.12.1",
     "tslog": "^3.3.3",
     "tsyringe": "^4.8.0",

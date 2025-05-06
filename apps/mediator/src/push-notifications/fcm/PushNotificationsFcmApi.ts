@@ -56,4 +56,14 @@ export class PushNotificationsFcmApi {
     })
     await this.messageSender.sendMessage(outbound)
   }
+
+  /**
+   * Get push notification record by `connectionId`
+   *
+   * @param connectionId The connection ID string
+   * @returns Promise<PushNotificationsFcmRecord>
+   */
+  public async getPushNotificationRecordByConnectionId(connectionId: string) {
+    return this.pushNotificationsService.getPushNotificationRecordByConnectionId(this.agentContext, connectionId)
+  }
 }

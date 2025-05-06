@@ -8,7 +8,7 @@ if (!process.env.NGROK_AUTH_TOKEN) {
    * Connect to ngrok and then set the port and url on the environment before importing
    * the index file.
    */
-  void connect({
+  connect({
     port,
     authtoken: process.env.NGROK_AUTH_TOKEN,
   }).then((app) => {
