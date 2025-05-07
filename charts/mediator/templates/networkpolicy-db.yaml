@@ -1,0 +1,23 @@
+{{- if .Values.networkPolicy.enabled -}}
+kind: NetworkPolicy
+apiVersion: {{ include "common.capabilities.networkPolicy.apiVersion" . }}
+metadata:
+  name: {{ include "mediator.fullname" . }}-wallet
+  labels:
+    {{- include "mediator.labels" . | nindent 4 }}
+spec:
+  # Allow traffic from the agent to the db
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "mediator.selectorLabels" . | nindent 14 }}
+      ports:
+        - protocol: TCP
+          port: {{ .Values.postgresql.primary.service.ports.postgresql }}
+  podSelector:
+    {{- with .Values.postgresql.commonLabels }}
+    matchLabels:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+{{- end }}
