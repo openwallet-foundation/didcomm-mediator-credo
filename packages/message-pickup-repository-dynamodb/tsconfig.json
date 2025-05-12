@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.build.json",
+  "compilerOptions": {
+    "types": ["jest", "node"],
+    "baseUrl": "../message-queue-dynamodb",
+    "paths": {
+      "@credo-ts/credo-ts-message-pickup-repository-pg": [
+        "../message-queue-dynamodb/packages/message-pickup-repository-pg/src"
+      ]
+    }
+  }
+}
