@@ -153,7 +153,7 @@ export class DynamodbClientRepository {
         ({
           ...i,
           receivedAt: new Date(i.receivedAt),
-          id: i.messageId,
+          id: i.messageId.toString(),
         }) as unknown as QueuedMessage
     )
 

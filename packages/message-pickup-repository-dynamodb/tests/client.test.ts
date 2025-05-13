@@ -133,4 +133,39 @@ suite('dynamodb client', () => {
     const countAfterDelete = await client.getMessageCount(newConnectionId)
     expect(countAfterDelete).toStrictEqual(0)
   })
+
+  test('validate sorting', async () => {
+    const now = new Date()
+    const oneHourInThePast = new Date()
+    oneHourInThePast.setHours(oneHourInThePast.getHours() - 1)
+    const oneHourInTheFuture = new Date()
+    oneHourInTheFuture.setHours(oneHourInTheFuture.getHours() + 1)
+
+    const oneHourInThePastMessageId = await client.addMessage({
+      receivedAt: oneHourInThePast,
+      connectionId,
+      encryptedMessage,
+      recipientDids,
+    })
+
+    const nowMessageId = await client.addMessage({
+      receivedAt: now,
+      connectionId,
+      encryptedMessage,
+      recipientDids,
+    })
+
+    const oneHourInTheFutureMessageId = await client.addMessage({
+      receivedAt: oneHourInTheFuture,
+      connectionId,
+      encryptedMessage,
+      recipientDids,
+    })
+
+    const messages = await client.getMessages({ connectionId, limit: 3, deleteMessages: true })
+
+    expect(messages[0].id).toStrictEqual(oneHourInThePastMessageId)
+    expect(messages[1].id).toStrictEqual(nowMessageId)
+    expect(messages[2].id).toStrictEqual(oneHourInTheFutureMessageId)
+  })
 })
