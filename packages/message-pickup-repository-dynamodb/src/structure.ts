@@ -1,8 +1,8 @@
 import { AttributeDefinition, KeySchemaElement, KeyType, ScalarAttributeType } from '@aws-sdk/client-dynamodb'
 import { QueuedMessage as CredoQueuedMessage } from '@credo-ts/core'
 
-// TODO: should this be the type from credo?
-export type QueuedMessage = CredoQueuedMessage & {
+// CredoQueuedMessage made Required right now, due to credo having them as optional, but we need it for efficient sorting
+export type QueuedMessage = Required<CredoQueuedMessage> & {
   connectionId: string
   recipientDids: Array<string>
 }
@@ -13,8 +13,8 @@ export const attributeDefinitions: Array<AttributeDefinition> = [
     AttributeType: ScalarAttributeType.S,
   },
   {
-    AttributeName: 'id',
-    AttributeType: ScalarAttributeType.S,
+    AttributeName: 'timestamp',
+    AttributeType: ScalarAttributeType.N,
   },
 ]
 
@@ -24,7 +24,7 @@ export const keySchema: Array<KeySchemaElement> = [
     KeyType: KeyType.HASH,
   },
   {
-    AttributeName: 'id',
+    AttributeName: 'timestamp',
     KeyType: KeyType.RANGE,
   },
 ]

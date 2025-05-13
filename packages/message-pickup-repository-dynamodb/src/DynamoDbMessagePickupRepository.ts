@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto'
 import {
   AddMessageOptions,
   GetAvailableMessageCountOptions,
@@ -23,25 +22,29 @@ export class DynamoDbMessagePickupRepository implements MessagePickupRepository 
   }
 
   public async getAvailableMessageCount({ connectionId }: GetAvailableMessageCountOptions): Promise<number> {
-    return await this.client.getEntriesCount(connectionId)
+    return await this.client.getMessageCount(connectionId)
   }
 
   public async takeFromQueue(options: TakeFromQueueOptions): Promise<Array<QueuedMessage>> {
-    return await this.client.getEntries(options)
+    return await this.client.getMessages(options)
   }
 
-  public async addMessage(options: AddMessageOptions): Promise<string> {
-    const id = randomUUID()
-    await this.client.addMessage({
-      id,
+  // TODO: will be added in credo
+  public async addMessage(options: AddMessageOptions & { receivedAt?: Date }): Promise<string> {
+    const id = await this.client.addMessage({
+      timestamp: options.receivedAt ?? new Date(),
       connectionId: options.connectionId,
       encryptedMessage: options.payload,
       recipientDids: options.recipientDids,
     })
+
     return id
   }
 
   public async removeMessages(options: RemoveMessagesOptions): Promise<void> {
-    await this.client.removeMessages(options)
+    await this.client.removeMessages({
+      connectionId: options.connectionId,
+      timestamps: options.messageIds.map((id) => new Date(Number(id))),
+    })
   }
 }

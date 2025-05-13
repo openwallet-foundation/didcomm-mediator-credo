@@ -19,14 +19,14 @@ import { QueuedMessage, attributeDefinitions, keySchema } from './structure'
 
 export type AddQueuedMessageOptions = {
   connectionId: string
-  id: string
+  timestamp?: Date
   recipientDids: string[]
   encryptedMessage: EncryptedMessage
 }
 
 export type RemoveQueuedMessageOptions = {
   connectionId: string
-  messageIds: string[]
+  timestamps?: Array<Date>
 }
 
 export type DynamodbClientRepositoryOptions = DynamoDBClientConfigType
@@ -101,7 +101,7 @@ export class DynamodbClientRepository {
     })
   }
 
-  async getEntriesCount(connectionId: string): Promise<number> {
+  async getMessageCount(connectionId: string): Promise<number> {
     const params: ScanCommandInput = {
       TableName: this.tableName,
       FilterExpression: 'connectionId = :connectionId',
@@ -121,7 +121,7 @@ export class DynamodbClientRepository {
     }
   }
 
-  async getEntries(options: {
+  async getMessages(options: {
     connectionId: string
     limit?: number
     recipientDid?: string
@@ -147,42 +147,57 @@ export class DynamodbClientRepository {
     const command = new QueryCommand(queryParams)
     const response = await this.dynamodbClient.send(command)
 
-    const messages = response.Items?.map((item) => unmarshall(item) as QueuedMessage) || []
+    const messages = (response.Items?.map((item) => unmarshall(item)) || []).map(
+      (i) =>
+        ({
+          ...i,
+          receivedAt: new Date(i.timestamp),
+        }) as unknown as QueuedMessage
+    )
 
     if (options.deleteMessages && messages.length > 0) {
-      await this.removeMessages({ connectionId: options.connectionId, messageIds: messages.map((m) => m.id) })
+      await this.removeMessages({
+        connectionId: options.connectionId,
+        timestamps: messages.map((m) => m.receivedAt ?? new Date()),
+      })
     }
 
     return messages
   }
 
-  async addMessage(options: AddQueuedMessageOptions): Promise<void> {
+  async addMessage(options: AddQueuedMessageOptions): Promise<string> {
+    const timestamp = options.timestamp ? options.timestamp.getTime() : new Date().getTime()
     const updateItemCommand = new UpdateItemCommand({
       TableName: this.tableName,
       Key: marshall({
         connectionId: options.connectionId,
-        id: options.id,
-        receivedAt: new Date().getTime(),
-        encryptedMessage: options.encryptedMessage,
-        recipientDids: options.recipientDids,
+        timestamp,
+      }),
+      UpdateExpression: 'set encryptedMessage = :em, recipientDids = :rd',
+      ExpressionAttributeValues: marshall({
+        ':em': options.encryptedMessage,
+        ':rd': options.recipientDids,
       }),
     })
 
     await this.dynamodbClient.send(updateItemCommand)
+
+    return timestamp.toString()
   }
 
   async removeMessages(options: RemoveQueuedMessageOptions): Promise<void> {
-    const deleteRequests = options.messageIds.map((messageId) => {
-      const deleteParams: DeleteItemCommandInput = {
-        TableName: this.tableName,
-        Key: marshall({
-          connectionId: options.connectionId,
-          id: messageId,
-        }),
-      }
+    const deleteRequests =
+      options.timestamps?.map((timestamp) => {
+        const deleteParams: DeleteItemCommandInput = {
+          TableName: this.tableName,
+          Key: marshall({
+            connectionId: options.connectionId,
+            timestamp: timestamp.getTime(),
+          }),
+        }
 
-      return this.dynamodbClient.send(new DeleteItemCommand(deleteParams))
-    })
+        return this.dynamodbClient.send(new DeleteItemCommand(deleteParams))
+      }) ?? []
 
     await Promise.all(deleteRequests)
   }
