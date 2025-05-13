@@ -1,12 +1,7 @@
 {
   "extends": "./tsconfig.build.json",
-  "ts-node": {
-    "files": true
-  },
   "compilerOptions": {
-    "jsx": "preserve",
     "baseUrl": ".",
-    "types": ["node"],
     "skipLibCheck": true
   },
   "exclude": ["node_modules", "build"]

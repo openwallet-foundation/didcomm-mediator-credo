@@ -7,7 +7,7 @@ import {
   RemoveMessagesOptions,
   TakeFromQueueOptions,
 } from '@credo-ts/core'
-import { DynamodbClientRepository } from './client'
+import { DynamodbClientRepository, DynamodbClientRepositoryOptions } from './client'
 
 export class DynamoDbMessagePickupRepository implements MessagePickupRepository {
   private client: DynamodbClientRepository
@@ -16,16 +16,18 @@ export class DynamoDbMessagePickupRepository implements MessagePickupRepository 
     this.client = client
   }
 
-  public static async initialize() {
-    new DynamoDbMessagePickupRepository(await DynamodbClientRepository.initialize({}))
+  public static async initialize(options: { dynamoDbRepositoryOptions: DynamodbClientRepositoryOptions }) {
+    return new DynamoDbMessagePickupRepository(
+      await DynamodbClientRepository.initialize(options.dynamoDbRepositoryOptions)
+    )
   }
 
   public async getAvailableMessageCount({ connectionId }: GetAvailableMessageCountOptions): Promise<number> {
-    return this.client.getEntriesCount(connectionId)
+    return await this.client.getEntriesCount(connectionId)
   }
 
-  public async takeFromQueue(options: TakeFromQueueOptions): Promise<Array<{ connectionId: string } & QueuedMessage>> {
-    return this.client.getEntries(options)
+  public async takeFromQueue(options: TakeFromQueueOptions): Promise<Array<QueuedMessage>> {
+    return await this.client.getEntries(options)
   }
 
   public async addMessage(options: AddMessageOptions): Promise<string> {
@@ -40,6 +42,6 @@ export class DynamoDbMessagePickupRepository implements MessagePickupRepository 
   }
 
   public async removeMessages(options: RemoveMessagesOptions): Promise<void> {
-    return await this.client.removeMessages(options)
+    await this.client.removeMessages(options)
   }
 }

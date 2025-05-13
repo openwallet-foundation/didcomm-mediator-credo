@@ -7,15 +7,15 @@ import {
   DescribeTableCommandInput,
   DynamoDBClient,
   DynamoDBClientConfigType,
-  PutItemCommand,
   QueryCommand,
   QueryCommandInput,
   ScanCommand,
   ScanCommandInput,
+  UpdateItemCommand,
 } from '@aws-sdk/client-dynamodb'
 import { marshall, unmarshall } from '@aws-sdk/util-dynamodb'
 import { EncryptedMessage } from '@credo-ts/core'
-import { QueuedMessage, attributeDefinitions, keySchema } from './layout.example'
+import { QueuedMessage, attributeDefinitions, keySchema } from './structure'
 
 export type AddQueuedMessageOptions = {
   connectionId: string
@@ -147,7 +147,7 @@ export class DynamodbClientRepository {
     const command = new QueryCommand(queryParams)
     const response = await this.dynamodbClient.send(command)
 
-    const messages = response.Items?.map((item) => unmarshall(item) as { connectionId: string } & QueuedMessage) || []
+    const messages = response.Items?.map((item) => unmarshall(item) as QueuedMessage) || []
 
     if (options.deleteMessages && messages.length > 0) {
       await this.removeMessages({ connectionId: options.connectionId, messageIds: messages.map((m) => m.id) })
@@ -157,19 +157,18 @@ export class DynamodbClientRepository {
   }
 
   async addMessage(options: AddQueuedMessageOptions): Promise<void> {
-    const putItemCommand = new PutItemCommand({
+    const updateItemCommand = new UpdateItemCommand({
       TableName: this.tableName,
-      Item: marshall({
+      Key: marshall({
         connectionId: options.connectionId,
         id: options.id,
-        state: 'pending',
         receivedAt: new Date().getTime(),
         encryptedMessage: options.encryptedMessage,
         recipientDids: options.recipientDids,
       }),
     })
 
-    await this.dynamodbClient.send(putItemCommand)
+    await this.dynamodbClient.send(updateItemCommand)
   }
 
   async removeMessages(options: RemoveQueuedMessageOptions): Promise<void> {
