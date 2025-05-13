@@ -32,10 +32,8 @@ export class DynamoDbMessagePickupRepository implements MessagePickupRepository 
   // TODO: will be added in credo
   public async addMessage(options: AddMessageOptions & { receivedAt?: Date }): Promise<string> {
     const id = await this.client.addMessage({
-      timestamp: options.receivedAt ?? new Date(),
-      connectionId: options.connectionId,
+      ...options,
       encryptedMessage: options.payload,
-      recipientDids: options.recipientDids,
     })
 
     return id
@@ -44,7 +42,7 @@ export class DynamoDbMessagePickupRepository implements MessagePickupRepository 
   public async removeMessages(options: RemoveMessagesOptions): Promise<void> {
     await this.client.removeMessages({
       connectionId: options.connectionId,
-      timestamps: options.messageIds.map((id) => new Date(Number(id))),
+      messageIds: options.messageIds,
     })
   }
 }

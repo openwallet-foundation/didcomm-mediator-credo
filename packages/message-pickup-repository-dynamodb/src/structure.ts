@@ -13,7 +13,7 @@ export const attributeDefinitions: Array<AttributeDefinition> = [
     AttributeType: ScalarAttributeType.S,
   },
   {
-    AttributeName: 'timestamp',
+    AttributeName: 'messageId',
     AttributeType: ScalarAttributeType.N,
   },
 ]
@@ -24,7 +24,7 @@ export const keySchema: Array<KeySchemaElement> = [
     KeyType: KeyType.HASH,
   },
   {
-    AttributeName: 'timestamp',
+    AttributeName: 'messageId',
     KeyType: KeyType.RANGE,
   },
 ]

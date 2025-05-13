@@ -1,3 +1,4 @@
+import { randomInt } from 'node:crypto'
 import {
   CreateTableCommand,
   CreateTableCommandInput,
@@ -19,14 +20,14 @@ import { QueuedMessage, attributeDefinitions, keySchema } from './structure'
 
 export type AddQueuedMessageOptions = {
   connectionId: string
-  timestamp?: Date
+  receivedAt?: Date
   recipientDids: string[]
   encryptedMessage: EncryptedMessage
 }
 
 export type RemoveQueuedMessageOptions = {
   connectionId: string
-  timestamps?: Array<Date>
+  messageIds: Array<string>
 }
 
 export type DynamodbClientRepositoryOptions = DynamoDBClientConfigType
@@ -151,14 +152,15 @@ export class DynamodbClientRepository {
       (i) =>
         ({
           ...i,
-          receivedAt: new Date(i.timestamp),
+          receivedAt: new Date(i.receivedAt),
+          id: i.messageId,
         }) as unknown as QueuedMessage
     )
 
     if (options.deleteMessages && messages.length > 0) {
       await this.removeMessages({
         connectionId: options.connectionId,
-        timestamps: messages.map((m) => m.receivedAt ?? new Date()),
+        messageIds: messages.map((m) => m.id),
       })
     }
 
@@ -166,38 +168,40 @@ export class DynamodbClientRepository {
   }
 
   async addMessage(options: AddQueuedMessageOptions): Promise<string> {
-    const timestamp = options.timestamp ? options.timestamp.getTime() : new Date().getTime()
+    const randomizer = randomInt(0, 255).toString().padStart(3, '0')
+    const receivedAt = options.receivedAt ?? new Date()
+    const messageId = `${receivedAt.getTime()}${randomizer}`
     const updateItemCommand = new UpdateItemCommand({
       TableName: this.tableName,
       Key: marshall({
         connectionId: options.connectionId,
-        timestamp,
+        messageId: Number(messageId),
       }),
-      UpdateExpression: 'set encryptedMessage = :em, recipientDids = :rd',
+      UpdateExpression: 'set encryptedMessage = :em, recipientDids = :rd, receivedAt = :ra',
       ExpressionAttributeValues: marshall({
         ':em': options.encryptedMessage,
         ':rd': options.recipientDids,
+        ':ra': receivedAt.getTime(),
       }),
     })
 
     await this.dynamodbClient.send(updateItemCommand)
 
-    return timestamp.toString()
+    return messageId
   }
 
   async removeMessages(options: RemoveQueuedMessageOptions): Promise<void> {
-    const deleteRequests =
-      options.timestamps?.map((timestamp) => {
-        const deleteParams: DeleteItemCommandInput = {
-          TableName: this.tableName,
-          Key: marshall({
-            connectionId: options.connectionId,
-            timestamp: timestamp.getTime(),
-          }),
-        }
+    const deleteRequests = options.messageIds.map((messageId) => {
+      const deleteParams: DeleteItemCommandInput = {
+        TableName: this.tableName,
+        Key: marshall({
+          connectionId: options.connectionId,
+          messageId: Number(messageId),
+        }),
+      }
 
-        return this.dynamodbClient.send(new DeleteItemCommand(deleteParams))
-      }) ?? []
+      return this.dynamodbClient.send(new DeleteItemCommand(deleteParams))
+    })
 
     await Promise.all(deleteRequests)
   }
