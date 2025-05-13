@@ -1,10 +1,7 @@
 {
   "extends": "./tsconfig.build.json",
   "compilerOptions": {
-    "types": ["jest", "node"],
-    "baseUrl": ".",
-    "paths": {
-      "@credo-ts/credo-ts-message-pickup-repository-pg": ["packages/message-pickup-repository-pg/src"]
-    }
+    "types": ["node"],
+    "baseUrl": "."
   }
 }

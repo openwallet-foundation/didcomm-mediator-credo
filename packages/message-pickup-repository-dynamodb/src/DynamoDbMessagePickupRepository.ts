@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import {
   AddMessageOptions,
   GetAvailableMessageCountOptions,
@@ -6,26 +7,39 @@ import {
   RemoveMessagesOptions,
   TakeFromQueueOptions,
 } from '@credo-ts/core'
-import { Client } from './client'
+import { DynamodbClientRepository } from './client'
 
 export class DynamoDbMessagePickupRepository implements MessagePickupRepository {
-  private client: Client
+  private client: DynamodbClientRepository
 
-  public constructor() {
-    this.client = new Client({})
-  }
-
-  getAvailableMessageCount({ connectionId }: GetAvailableMessageCountOptions): Promise<number> {
-    return this.client.getPendingMessagesCountForConnectionId(connectionId)
+  private constructor(client: DynamodbClientRepository) {
+    this.client = client
   }
 
-  takeFromQueue(options: TakeFromQueueOptions): Promise<QueuedMessage[]> {
-    return this.client.getPendingMessagesForConnectionId(options)
+  public static async initialize() {
+    new DynamoDbMessagePickupRepository(await DynamodbClientRepository.initialize({}))
   }
-  addMessage(options: AddMessageOptions): Promise<string> {
-    throw new Error('Method not implemented.')
+
+  public async getAvailableMessageCount({ connectionId }: GetAvailableMessageCountOptions): Promise<number> {
+    return this.client.getEntriesCount(connectionId)
   }
-  removeMessages(options: RemoveMessagesOptions): Promise<void> {
-    throw new Error('Method not implemented.')
+
+  public async takeFromQueue(options: TakeFromQueueOptions): Promise<Array<{ connectionId: string } & QueuedMessage>> {
+    return this.client.getEntries(options)
+  }
+
+  public async addMessage(options: AddMessageOptions): Promise<string> {
+    const id = randomUUID()
+    await this.client.addMessage({
+      id,
+      connectionId: options.connectionId,
+      encryptedMessage: options.payload,
+      recipientDids: options.recipientDids,
+    })
+    return id
+  }
+
+  public async removeMessages(options: RemoveMessagesOptions): Promise<void> {
+    return await this.client.removeMessages(options)
   }
 }

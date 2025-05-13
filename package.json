@@ -3,11 +3,11 @@
   "version": "0.0.0",
   "description": "Credo mediator agent",
   "scripts": {
-    "style:check:all": "pnpm -r style:check",
-    "types:check:all": "pnpm -r types:check",
-    "style:fix:all": "pnpm -r style:fix",
+    "types:check": "tsc --noEmit",
+    "style:check": "biome check --unsafe",
+    "style:fix": "biome check --write --unsafe",
     "build:all": "pnpm -r build",
-    "test:all": "pnpm -r test"
+    "test": "vitest"
   },
   "keywords": [],
   "author": "",
@@ -18,6 +18,7 @@
   },
   "packageManager": "pnpm@9.15.3+sha256.c1da43727ccbc1ed42aff4fd6bdb4b1e91e65a818e6efff5b240fbf070ba4eaf",
   "devDependencies": {
-    "@types/node": "^22.14.1"
+    "@types/node": "^22.14.1",
+    "vitest": "^3.1.3"
   }
 }
