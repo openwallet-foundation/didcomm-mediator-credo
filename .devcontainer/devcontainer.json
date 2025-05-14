@@ -1,8 +1,6 @@
 {
   "name": "Node.js",
-  "dockerComposeFile": [
-    "docker-compose.yml"
-  ],
+  "dockerComposeFile": ["docker-compose.yml"],
   "service": "mediator",
   "remoteUser": "node",
   "workspaceFolder": "/work",
@@ -15,9 +13,7 @@
   },
   "customizations": {
     "vscode": {
-      "extensions": [
-        "ms-azuretools.vscode-docker"
-      ]
+      "extensions": ["ms-azuretools.vscode-docker"]
     }
   }
 }

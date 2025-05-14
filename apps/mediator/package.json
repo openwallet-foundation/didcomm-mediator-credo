@@ -12,10 +12,6 @@
   },
   "packageManager": "pnpm@9.15.3+sha256.c1da43727ccbc1ed42aff4fd6bdb4b1e91e65a818e6efff5b240fbf070ba4eaf",
   "scripts": {
-    "types:check": "tsc --noEmit",
-    "style:check": "biome check --unsafe",
-    "style:fix": "biome check --write --unsafe",
-    "test": "jest",
     "build": "tsc -p tsconfig.build.json",
     "prepublishOnly": "pnpm build",
     "dev": "ts-node dev.ts",
@@ -38,19 +34,15 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
-    "@jest/types": "^29.6.3",
     "@ngrok/ngrok": "^1.2.0",
     "@types/express": "^4.17.13",
-    "@types/jest": "^29.2.0",
     "@types/nconf": "^0.10.7",
     "@types/node": "^20.17.12",
     "@types/ws": "^8.5.13",
-    "jest": "^29.2.2",
-    "ts-jest": "^29.0.3",
     "ts-node": "^10.9.1",
     "typescript": "^5.6.3"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=18"
   }
 }

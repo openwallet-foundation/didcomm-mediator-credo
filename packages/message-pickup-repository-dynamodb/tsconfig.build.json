@@ -1,28 +1,22 @@
 {
   "compilerOptions": {
     "outDir": "./build",
-    "types": [],
-    "module": "commonjs",
+    "rootDir": "./src",
+    "module": "CommonJS",
     "target": "ES2017",
     "declaration": true,
     "sourceMap": true,
     "strict": true,
     "noEmitOnError": true,
-    "lib": ["ES2015"],
+    "lib": ["ES2017"],
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "types": ["node"]
   },
-  "exclude": [
-    "node_modules",
-    "build",
-    "**/*.test.ts",
-    "**/__tests__/*.ts",
-    "**/__mocks__/*.ts",
-    "**/build/**",
-    "scripts"
-  ]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "build", "**/*.test.ts", "**/__tests__/**/*", "**/__mocks__/**/*"]
 }
