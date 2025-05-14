@@ -30,18 +30,18 @@ export type RemoveQueuedMessageOptions = {
   messageIds: Array<string>
 }
 
-export type DynamodbClientRepositoryOptions = DynamoDBClientConfigType
+export type DynamoDbClientRepositoryOptions = DynamoDBClientConfigType
 
-export class DynamodbClientRepository {
+export class DynamoDbClientRepository {
   private dynamodbClient: DynamoDBClient
   private tableName = 'queued_messages'
 
-  private constructor(options: DynamoDBClientConfigType) {
+  private constructor(options: DynamoDbClientRepositoryOptions) {
     this.dynamodbClient = new DynamoDBClient(options)
   }
 
-  public static async initialize(options: DynamoDBClientConfigType): Promise<DynamodbClientRepository> {
-    const dcr = new DynamodbClientRepository(options)
+  public static async initialize(options: DynamoDBClientConfigType): Promise<DynamoDbClientRepository> {
+    const dcr = new DynamoDbClientRepository(options)
 
     const params: CreateTableCommandInput = {
       TableName: dcr.tableName,
@@ -168,7 +168,7 @@ export class DynamodbClientRepository {
   }
 
   async addMessage(options: AddQueuedMessageOptions): Promise<string> {
-    const randomizer = randomInt(0, 255).toString().padStart(3, '0')
+    const randomizer = randomInt(0, 999).toString().padStart(3, '0')
     const receivedAt = options.receivedAt ?? new Date()
     const messageId = `${receivedAt.getTime()}${randomizer}`
     const updateItemCommand = new UpdateItemCommand({

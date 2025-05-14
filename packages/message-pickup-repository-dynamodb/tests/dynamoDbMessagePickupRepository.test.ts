@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { expect, suite, test } from 'vitest'
+import { beforeAll, expect, suite, test } from 'vitest'
 import { DynamoDbMessagePickupRepository } from '../src'
 
 suite('dynamoDbMessagePickupRepository', () => {
@@ -7,11 +7,14 @@ suite('dynamoDbMessagePickupRepository', () => {
   const connectionId = randomUUID()
   let messageId: string
 
-  test('instantiate', async () => {
+  beforeAll(async () => {
     repository = await DynamoDbMessagePickupRepository.initialize({
-      dynamoDbRepositoryOptions: { region: 'local', credentials: { accessKeyId: 'local', secretAccessKey: 'local' } },
+      region: 'local',
+      credentials: { accessKeyId: 'local', secretAccessKey: 'local' },
     })
+  })
 
+  test('instantiate', async () => {
     expect(repository).toBeDefined()
   })
 

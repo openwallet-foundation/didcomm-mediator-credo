@@ -1,6 +1,6 @@
 import { EncryptedMessage } from '@credo-ts/core'
-import { expect, suite, test } from 'vitest'
-import { DynamodbClientRepository } from '../src/client'
+import { beforeAll, expect, suite, test } from 'vitest'
+import { DynamoDbClientRepository } from '../src/client'
 
 const connectionId = '4ffdd113-117b-4827-9af5-28aa73ec4bad'
 const recipientDids = ['did:key:123', 'did:jwk:123', 'did:peer:3abba']
@@ -12,17 +12,19 @@ const encryptedMessage: EncryptedMessage = {
 }
 
 suite('dynamodb client', () => {
-  let client: DynamodbClientRepository
+  let client: DynamoDbClientRepository
 
-  test('initialize', async () => {
-    client = await DynamodbClientRepository.initialize({
+  beforeAll(async () => {
+    client = await DynamoDbClientRepository.initialize({
       region: 'local',
       credentials: {
         accessKeyId: 'local',
         secretAccessKey: 'local',
       },
     })
+  })
 
+  test('initialize', async () => {
     expect(client).toBeDefined()
   })
 
