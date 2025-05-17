@@ -5,7 +5,9 @@
   "private": true,
   "main": "build/index",
   "types": "build/index",
-  "files": ["build"],
+  "files": [
+    "build"
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/openwallet-foundation/didcomm-mediator-credo"
@@ -21,8 +23,8 @@
     "@credo-ts/askar": "catalog:",
     "@credo-ts/core": "catalog:",
     "@credo-ts/didcomm": "catalog:",
-    "@credo-ts/node": "catalog:",
     "@credo-ts/didcomm-message-pickup-dynamodb": "workspace:*",
+    "@credo-ts/node": "catalog:",
     "@credo-ts/redis-cache": "catalog:",
     "@openwallet-foundation/askar-nodejs": "^0.3.2",
     "class-transformer": "^0.5.1",
@@ -35,13 +37,14 @@
     "ws": "^8.17.1"
   },
   "devDependencies": {
-    "dotenv": "^16.4.7",
     "@ngrok/ngrok": "^1.2.0",
     "@types/express": "^4.17.13",
     "@types/nconf": "^0.10.7",
     "@types/node": "catalog:",
     "@types/ws": "^8.5.13",
+    "dotenv": "^16.4.7",
     "ts-node": "^10.9.1",
+    "tsconfig-paths": "^4.2.0",
     "typescript": "catalog:"
   },
   "engines": {

@@ -1,4 +1,4 @@
-FROM node:22 AS base
+FROM node:20.11 AS base
 
 RUN apt-get update && \
   apt-get upgrade -y && \ 
@@ -7,22 +7,20 @@ RUN apt-get update && \
   apt-get clean && \
   rm -rf /var/lib/apt/lists/*
 
-FROM base AS build
-
-WORKDIR /build
-
-COPY . /build
-
-RUN pnpm install --frozen-lockfile && \
-  pnpm --filter didcomm-mediator-service... build && \
-  pnpm prune --prod
-
-FROM base AS final
-
 WORKDIR /app
 
-# Copy build
-COPY --from=build /build /app
+COPY package.json /app/package.json
+COPY pnpm-lock.yaml /app/pnpm-lock.yaml
+COPY pnpm-workspace.yaml /app/pnpm-workspace.yaml
+COPY apps/mediator/package.json /app/apps/mediator/package.json
+COPY packages/message-pickup-dynamodb/package.json /app/packages/message-pickup-dynamodb/package.json
+COPY packages/message-pickup-postgres/package.json /app/packages/message-pickup-postgres/package.json
+
+RUN pnpm install --frozen-lockfile
+
+COPY . /app
+RUN pnpm build
+
 
 # Don't run production as root
 RUN addgroup --system --gid 1001 agent && \
