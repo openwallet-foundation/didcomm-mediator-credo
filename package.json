@@ -9,7 +9,7 @@
     "types:check": "tsc --noEmit",
     "style:check": "biome check --unsafe",
     "style:fix": "biome check --write --unsafe",
-    "build:all": "pnpm -r build",
+    "build": "pnpm -r build",
     "test": "vitest"
   },
   "devDependencies": {

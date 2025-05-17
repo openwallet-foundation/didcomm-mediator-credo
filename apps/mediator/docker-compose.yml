@@ -1,26 +1,62 @@
 version: "3.5"
 
+networks:
+  mediator-net:
+    driver: bridge
+
 services:
-  # TODO: add postgres service as example
   mediator:
     image: ghcr.io/openwallet-foundation/didcomm-mediator-credo:latest
     environment:
+      # Basic configuration
       AGENT_PORT: 3000
-      AGENT_NAME: Mediator
-      WALLET_NAME: mediator
+      AGENT_NAME: ${AGENT_NAME}
+      WALLET_NAME: ${WALLET_NAME}
       WALLET_KEY: ${WALLET_KEY}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_HOST: ${POSTGRES_HOST}
-      POSTGRES_ADMIN_USER: ${POSTGRES_ADMIN_USER}
-      POSTGRES_ADMIN_PASSWORD: ${POSTGRES_ADMIN_PASSWORD}
-      AGENT_ENDPOINTS: "https://my-mediator.com,wss://my-mediator.com"
-      LOG_LEVEL: 2
+      AGENT_ENDPOINTS: ${AGENT_ENDPOINTS}
+      LOG_LEVEL: ${LOG_LEVEL}
+
+      # Database configuration - Postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_HOST: postgres:5432
+      POSTGRES_ADMIN_USER: postgres
+      POSTGRES_ADMIN_PASSWORD: postgres
+
+      # Message Pickup configuration - DynamoDB
+      MESSAGE_PICKUP_STORAGE: dynamodb
+      MESSAGE_PICKUP_STORAGE_DYNAMODB_REGION: local
+      MESSAGE_PICKUP_STORAGE_DYNAMODB_ACCESS_KEY_ID: local
+      MESSAGE_PICKUP_STORAGE_DYNAMODB_SECRET_ACCESS_KEY: local
+
+      # Cache configuration - Redis
+      CACHE_STORAGE: redis
+      CACHE_STORAGE_REDIS_URL: redis://redis:6379
+    env_file: ./.env.local
     ports:
-      - "3000"
+      - "3000:3000"
+    depends_on:
+      - postgres
+      - redis
+      - dynamodb
+    networks:
+      - mediator-net
 
   dynamodb:
     image: amazon/dynamodb-local:latest
-    ports:
-      - "8000:8000"
+    networks:
+      - mediator-net
     command: -jar DynamoDBLocal.jar -port 8000
+
+  redis:
+    image: valkey/valkey
+    networks:
+      - mediator-net
+
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    networks:
+      - mediator-net

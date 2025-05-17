@@ -1,11 +1,13 @@
 {
   "name": "@credo-ts/didcomm-message-pickup-dynamodb",
-  "main": "build/index.js",
-  "types": "build/index.d.ts",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
   "version": "0.0.1",
   "files": ["build"],
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "main": "build/index.js",
+    "types": "build/index.d.ts"
   },
   "description": "DIDComm Message Pickup Repository using AWS Dynamodb",
   "license": "Apache-2.0",

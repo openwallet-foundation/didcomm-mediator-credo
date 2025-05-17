@@ -13,8 +13,8 @@ WORKDIR /build
 
 COPY . /build
 
-RUN pnpm install --node-linker=hoisted --frozen-lockfile && \
-  pnpm --filter didcomm-mediator-service build && \
+RUN pnpm install --frozen-lockfile && \
+  pnpm --filter didcomm-mediator-service... build && \
   pnpm prune --prod
 
 FROM base AS final
@@ -22,9 +22,7 @@ FROM base AS final
 WORKDIR /app
 
 # Copy build
-COPY --from=build /build/node_modules /app/node_modules
-COPY --from=build /build/apps/mediator/build /app/build
-COPY --from=build /build/apps/mediator/package.json /app
+COPY --from=build /build /app
 
 # Don't run production as root
 RUN addgroup --system --gid 1001 agent && \
@@ -34,4 +32,4 @@ RUN addgroup --system --gid 1001 agent && \
 
 USER agent
 
-ENTRYPOINT [ "node", "build/index.js" ]
+ENTRYPOINT [ "node", "apps/mediator/build/index.js" ]

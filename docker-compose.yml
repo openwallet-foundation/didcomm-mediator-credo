@@ -1,0 +1,21 @@
+version: "3.5"
+
+services:
+  dynamodb:
+    image: amazon/dynamodb-local:latest
+    ports:
+      - "8000:8000"
+    command: -jar DynamoDBLocal.jar -port 8000
+
+  redis:
+    image: valkey/valkey
+    ports:
+      - "6379:6379"
+
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"

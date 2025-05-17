@@ -8,4 +8,5 @@ catalog:
   "@credo-ts/core": "0.6.0-alpha-20250517210158"
   "@credo-ts/didcomm": "0.6.0-alpha-20250517210158"
   "@credo-ts/node": "0.6.0-alpha-20250517210158"
+  "@credo-ts/redis-cache": "0.6.0-alpha-20250517210158"
   "@types/node": "^22.15.17"

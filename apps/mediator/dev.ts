@@ -2,7 +2,7 @@ import { connect } from '@ngrok/ngrok'
 import dotenv from 'dotenv'
 
 dotenv.config({
-  path: '../.env.development',
+  path: '../../.env.development',
 })
 
 if (!process.env.NGROK_AUTH_TOKEN) {

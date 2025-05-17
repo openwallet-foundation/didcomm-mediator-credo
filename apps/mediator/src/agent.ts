@@ -1,11 +1,12 @@
 import type { Socket } from 'node:net'
 import { AskarModule, AskarModuleConfigStoreOptions, AskarMultiWalletDatabaseScheme } from '@credo-ts/askar'
-import { Agent } from '@credo-ts/core'
+import { Agent, CacheModule, InMemoryLruCache } from '@credo-ts/core'
 import {
   ConnectionsModule,
   DidCommMimeType,
   HttpOutboundTransport,
   MediatorModule,
+  MessagePickupModule,
   OutOfBandRole,
   OutOfBandState,
   WsOutboundTransport,
@@ -13,6 +14,8 @@ import {
 } from '@credo-ts/didcomm'
 import { HttpInboundTransport, WsInboundTransport, agentDependencies } from '@credo-ts/node'
 import { askar } from '@openwallet-foundation/askar-nodejs'
+import { DynamoDbMessagePickupRepository } from '@credo-ts/didcomm-message-pickup-dynamodb'
+import { RedisCache } from '@credo-ts/redis-cache'
 
 import express from 'express'
 import { Server } from 'ws'
@@ -25,7 +28,7 @@ import { StorageMessageQueueModule } from './storage/StorageMessageQueueModule'
 
 const logger = new Logger(config.get('agent:logLevel'))
 
-function createModules() {
+async function createModules() {
   // Only load postgres database in production
   const databaseConfig = config.get('db:host') ? askarPostgresConfig : undefined
 
@@ -46,6 +49,9 @@ function createModules() {
     })
   }
 
+  const messagePickupStorage = config.get('messagePickupStorage:type')
+  const cacheStorage = config.get('cacheStorage:type')
+
   const modules = {
     ...getDefaultDidcommModules({
       endpoints: config.get('agent:endpoints'),
@@ -55,7 +61,22 @@ function createModules() {
     connections: new ConnectionsModule({
       autoAcceptConnections: true,
     }),
-    storageModule: new StorageMessageQueueModule(),
+    ...(messagePickupStorage === 'credo'
+      ? {
+          storageModule: new StorageMessageQueueModule(),
+        }
+      : {
+          messagePickup: new MessagePickupModule({
+            messagePickupRepository: await DynamoDbMessagePickupRepository.initialize({
+              region: config.get('messagePickupStorage:region'),
+              credentials: {
+                accessKeyId: config.get('messagePickupStorage:accessKeyId'),
+                secretAccessKey: config.get('messagePickupStorage:secretAccessKey'),
+              },
+            }),
+          }),
+        }),
+
     mediator: new MediatorModule({
       autoAcceptMediationRequests: true,
     }),
@@ -63,6 +84,13 @@ function createModules() {
       askar,
       store: storeConfig,
       multiWalletDatabaseScheme: AskarMultiWalletDatabaseScheme.ProfilePerWallet,
+    }),
+    cache: new CacheModule({
+      cache:
+        cacheStorage === 'in-memory'
+          ? new InMemoryLruCache({ limit: 500 })
+          : new RedisCache(config.get('cacheStorage:url')),
+      useCachedStorageService: cacheStorage === 'redis',
     }),
     pushNotificationsFcm: new PushNotificationsFcmModule(),
   } as const
@@ -83,7 +111,7 @@ export async function createAgent() {
       autoUpdateStorageOnStartup: true,
     },
     dependencies: agentDependencies,
-    modules: createModules(),
+    modules: await createModules(),
   })
 
   // Create all transports
@@ -146,4 +174,4 @@ export async function createAgent() {
   return agent
 }
 
-export type MediatorAgent = Agent<ReturnType<typeof createModules>>
+export type MediatorAgent = Agent<Awaited<ReturnType<typeof createModules>>>
