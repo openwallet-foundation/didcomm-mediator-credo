@@ -2,7 +2,7 @@
   "extends": "./tsconfig.build.json",
   "compilerOptions": {
     "baseUrl": ".",
-    "skipLibCheck": true
+    "types": ["node"]
   },
-  "exclude": ["node_modules", "build"]
+  "exclude": ["node_modules", "**/build/**"]
 }

@@ -1,5 +1,5 @@
 {
-  "name": "@credo-ts/didcomm-msg-pickup-repository-dynamodb",
+  "name": "@credo-ts/didcomm-message-pickup-dynamodb",
   "main": "build/index.js",
   "types": "build/index.d.ts",
   "version": "0.0.1",
@@ -9,16 +9,13 @@
   },
   "description": "DIDComm Message Pickup Repository using AWS Dynamodb",
   "license": "Apache-2.0",
-  "homepage": "https://github.com/openwallet-foundation/didcomm-mediator-credo/tree/main/packages/message-pickup-repository-dynamodb",
+  "homepage": "https://github.com/openwallet-foundation/didcomm-mediator-credo/tree/main/packages/didcomm-message-pickup-dynamodb",
   "repository": {
     "type": "git",
     "url": "https://github.com/openwallet-foundation/didcomm-mediator-credo",
-    "directory": "packages/message-pickup-repository-dynamodb"
+    "directory": "packages/didcomm-message-pickup-dynamodb"
   },
   "scripts": {
-    "types:check": "tsc --noEmit",
-    "style:check": "biome check --unsafe",
-    "style:fix": "biome check --write --unsafe",
     "build": "tsc -p tsconfig.build.json",
     "prepublishOnly": "pnpm run build"
   },
@@ -27,11 +24,11 @@
     "@aws-sdk/util-dynamodb": "^3.806.0"
   },
   "devDependencies": {
-    "@credo-ts/core": "^0.5.11",
-    "@types/node": "^22.15.17",
-    "typescript": "^5.6.3"
+    "@credo-ts/didcomm": "catalog:",
+    "@types/node": "catalog:",
+    "typescript": "catalog:"
   },
   "peerDependencies": {
-    "@credo-ts/core": "^0.5.11"
+    "@credo-ts/didcomm": "catalog:"
   }
 }

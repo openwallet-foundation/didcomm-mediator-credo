@@ -5,7 +5,7 @@ import {
   QueuedMessage,
   RemoveMessagesOptions,
   TakeFromQueueOptions,
-} from '@credo-ts/core'
+} from '@credo-ts/didcomm'
 import { DynamoDbClientRepository, DynamoDbClientRepositoryOptions } from './client'
 
 export class DynamoDbMessagePickupRepository implements MessagePickupRepository {

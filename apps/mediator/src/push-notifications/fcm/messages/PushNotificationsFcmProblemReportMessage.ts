@@ -1,6 +1,6 @@
-import type { ProblemReportMessageOptions } from '@credo-ts/core'
+import type { ProblemReportMessageOptions } from '@credo-ts/didcomm'
 
-import { IsValidMessageType, ProblemReportMessage, parseMessageType } from '@credo-ts/core'
+import { IsValidMessageType, ProblemReportMessage, parseMessageType } from '@credo-ts/didcomm'
 
 export type PushNotificationsFcmProblemReportMessageOptions = ProblemReportMessageOptions
 

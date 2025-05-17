@@ -48,7 +48,7 @@ jobs:
         uses: rrainn/dynamodb-action@v4.0.0
         with:
           port: 8000
-          cors: '*'
+          cors: "*"
 
       - uses: pnpm/action-setup@v4
 

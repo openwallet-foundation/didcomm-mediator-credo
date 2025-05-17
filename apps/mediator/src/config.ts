@@ -1,22 +1,16 @@
 import path from 'node:path'
 import { LogLevel } from '@credo-ts/core'
-import dotenv from 'dotenv'
+
 import nconf from 'nconf'
 
 const dirName = __dirname
 const configFileName = 'config.json'
-const env = process.env.NODE_ENV ?? 'development'
-
-if (env === 'development') {
-  dotenv.config()
-}
 
 /**
  * These settings contain sensitive information and should not be
  * stored in the repo. They are extracted from environment variables
  * and added to the config.
  */
-
 const agentPort = Number(process.env.AGENT_PORT ?? 3110)
 
 // overrides are always as defined
@@ -45,10 +39,11 @@ nconf.overrides({
       clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
       privateKey: process.env.FIREBASE_PRIVATE_KEY,
     },
+    cache: {},
   },
   wallet: {
-    name: process.env.WALLET_NAME ?? 'mediator-dev',
-    key: process.env.WALLET_KEY ?? 'blarbzzz',
+    name: process.env.WALLET_NAME,
+    key: process.env.WALLET_KEY,
   },
 })
 

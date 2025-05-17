@@ -1,23 +1,22 @@
 import { randomUUID } from 'node:crypto'
 import * as os from 'node:os'
+import { Agent, Logger, injectable } from '@credo-ts/core'
 import {
   AddMessageOptions,
-  Agent,
   GetAvailableMessageCountOptions,
-  Logger,
   MessagePickupEventTypes,
   MessagePickupLiveSessionRemovedEvent,
   MessagePickupLiveSessionSavedEvent,
+  MessagePickupModule,
   MessagePickupRepository,
   QueuedMessage,
   RemoveMessagesOptions,
   TakeFromQueueOptions,
-  injectable,
-} from '@credo-ts/core'
+} from '@credo-ts/didcomm'
 import {
   MessagePickupSession,
   MessagePickupSessionRole,
-} from '@credo-ts/core/build/modules/message-pickup/MessagePickupSession'
+} from '@credo-ts/didcomm/build/modules/message-pickup/MessagePickupSession'
 import { Client, Pool } from 'pg'
 import PGPubsub from 'pg-pubsub'
 import {
@@ -40,7 +39,7 @@ import {
 export class PostgresMessagePickupRepository implements MessagePickupRepository {
   private logger?: Logger
   private messagesCollection?: Pool
-  private agent?: Agent
+  private agent?: Agent<{ messagePickup: MessagePickupModule }>
   private pubSubInstance: PGPubsub
   private instanceName: string
   private postgresUser: string
@@ -156,7 +155,7 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
       // If deleteMessages is true, just fetch messages without updating their state
       if (deleteMessages) {
         const query = `
-        SELECT id, encrypted_message, state 
+        SELECT id, encrypted_message, state, created_at 
         FROM ${messagesTableName} 
         WHERE (connection_id = $1 OR $2 = ANY (recipient_dids)) AND state = 'pending' 
         ORDER BY created_at 
@@ -174,6 +173,7 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
           id: message.id,
           encryptedMessage: message.encryptedmessage,
           state: message.state,
+          receivedAt: message.received_at,
         }))
       }
 
@@ -189,7 +189,7 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
         ORDER BY created_at 
         LIMIT $3
       )
-      RETURNING id, encryptedmessage, state;
+      RETURNING id, encryptedmessage, state, created_at;
     `
       const params = [connectionId, recipientDid, limit ?? 0]
       const result = await this.messagesCollection?.query(query, params)
@@ -206,6 +206,7 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
         id: message.id,
         encryptedMessage: message.encryptedmessage,
         state: 'sending',
+        receivedAt: message.created_at,
       }))
     } catch (error) {
       this.logger?.error(`[takeFromQueue] Error: ${error}`)
@@ -306,9 +307,9 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
       if (localLiveSession) {
         this.logger?.debug(`[addMessage] Local live session exists for connectionId: ${connectionId}`)
 
-        await this.agent.messagePickup.deliverMessages({
+        await this.agent.modules.messagePickup.deliverMessages({
           pickupSessionId: localLiveSession.id,
-          messages: [{ id: messageRecord.id, encryptedMessage: payload }],
+          messages: [{ id: messageRecord.id, encryptedMessage: payload, receivedAt: messageRecord.created_at }],
         })
       } else if (liveSessionInPostgres) {
         this.logger?.debug(
@@ -397,7 +398,7 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
           )
 
           // Deliver messages from the queue for the live session
-          await this.agent?.messagePickup.deliverMessagesFromQueue({
+          await this.agent?.modules.messagePickup.deliverMessagesFromQueue({
             pickupSessionId: pickupLiveSession.id,
           })
         } else {
@@ -538,7 +539,7 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
 
     try {
       if (!this.agent) throw new Error('Agent is not defined')
-      const localSession = await this.agent.messagePickup.getLiveModeSession({ connectionId })
+      const localSession = await this.agent.modules.messagePickup.getLiveModeSession({ connectionId })
 
       return localSession ? { ...localSession, isLocalSession: true } : undefined
     } catch (error) {

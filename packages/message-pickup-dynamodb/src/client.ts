@@ -15,7 +15,7 @@ import {
   UpdateItemCommand,
 } from '@aws-sdk/client-dynamodb'
 import { marshall, unmarshall } from '@aws-sdk/util-dynamodb'
-import { EncryptedMessage } from '@credo-ts/core'
+import { EncryptedMessage } from '@credo-ts/didcomm'
 import { QueuedMessage, attributeDefinitions, keySchema } from './structure'
 
 export type AddQueuedMessageOptions = {

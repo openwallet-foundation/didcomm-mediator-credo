@@ -1,4 +1,4 @@
-import { EncryptedMessage } from '@credo-ts/core'
+import { EncryptedMessage } from '@credo-ts/didcomm'
 import { beforeAll, expect, suite, test } from 'vitest'
 import { DynamoDbClientRepository } from '../src/client'
 
