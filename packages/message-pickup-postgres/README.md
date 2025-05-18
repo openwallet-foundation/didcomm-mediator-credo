@@ -43,13 +43,13 @@ This module is designed to work with Credo 0.5.X. Newer versions may include bre
 To use it, install package in your DIDComm Mediator application. For example:
 
 ```bash
-npm i @credo-ts/message-pickup-repository-pg
+npm i @credo-ts/didcomm-message-pickup-postgres
 ```
 
 or
 
 ```bash
-yarn add @credo-ts/message-pickup-repository-pg
+yarn add @credo-ts/didcomm-message-pickup-postgres
 ```
 
 ## Usage
@@ -63,11 +63,11 @@ You need to instance `PostgresMessagePickupRepository` with explicit database co
 ```ts
 const messageRepository = new PostgresMessagePickupRepository({
   logger: yourLoggerInstance,
-  postgresUser: 'your_postgres_user',
-  postgresPassword: 'your_postgres_password',
-  postgresHost: 'your_postgres_host',
-  postgresDatabaseName: 'your_database_name',
-})
+  postgresUser: "your_postgres_user",
+  postgresPassword: "your_postgres_password",
+  postgresHost: "your_postgres_host",
+  postgresDatabaseName: "your_database_name",
+});
 ```
 
 ### Initializing the Repository
@@ -79,7 +79,7 @@ This callback must return another callback function that will be called by `Post
 Note that in this example, notification token is stored as a tag in connection records, so it is used to determine whether to create a Push notification callback or not for a given DIDComm connection.
 
 ```ts
-await messagePickupRepository.initialize({ agent })
+await messagePickupRepository.initialize({ agent });
 ```
 
 ### Handling `MessagePickupRepositoryMessageQueued` Event
@@ -88,11 +88,11 @@ Listeners can handle queued messages by listening for the emitted event:
 
 ```typescript
 agent.events.on(MessageQueuedEventType, async ({ payload }) => {
-  const { connectionId, messageId } = payload
+  const { connectionId, messageId } = payload;
 
   // Example: call external notification service
-  await notificationService.notify(connectionId, messageId)
-})
+  await notificationService.notify(connectionId, messageId);
+});
 ```
 
 ### Injecting into an Agent instance
@@ -100,37 +100,37 @@ agent.events.on(MessageQueuedEventType, async ({ payload }) => {
 This full example shows how `PostgresMessagePickupRepository` is created an initialized alongside an `Agent` instance:
 
 ```javascript
-import { Agent, MediatorModule, MessagePickupModule } from '@credo-ts/core'
-import { agentDependencies } from '@credo-ts/node'
-import { MessageForwardingStrategy } from '@credo-ts/core/build/modules/routing/MessageForwardingStrategy'
-import { PostgresMessagePickupRepository } from './PostgresMessagePickupRepository'
+import { Agent, MediatorModule, MessagePickupModule } from "@credo-ts/core";
+import { agentDependencies } from "@credo-ts/node";
+import { MessageForwardingStrategy } from "@credo-ts/core/build/modules/routing/MessageForwardingStrategy";
+import { PostgresMessagePickupRepository } from "./PostgresMessagePickupRepository";
 
 const messagePickupRepository = new PostgresMessagePickupRepository({
-  postgresHost: 'postgres',
-  postgresUser: 'user',
-  postgresPassword: 'pass',
-})
+  postgresHost: "postgres",
+  postgresUser: "user",
+  postgresPassword: "pass",
+});
 const agent = new Agent({
   dependencies: agentDependencies,
-  config: { label: 'Test' },
+  config: { label: "Test" },
   modules: {
-    mediator: new MediatorModule({ messageForwardingStrategy: MessageForwardingStrategy.QueueOnly }),
+    mediator: new MediatorModule({
+      messageForwardingStrategy: MessageForwardingStrategy.QueueOnly,
+    }),
     messagePickup: new MessagePickupModule({
       messagePickupRepository,
     }),
   },
-})
+});
 
-await messagePickupRepository.initialize({ agent })
-await agent.initialize()
+await messagePickupRepository.initialize({ agent });
+await agent.initialize();
 
-agent.events.on('MessagePickupRepositoryMessageQueued', async ({ payload }) => {
-  const { connectionId, messageId } = payload
+agent.events.on("MessagePickupRepositoryMessageQueued", async ({ payload }) => {
+  const { connectionId, messageId } = payload;
 
   // Custom logic for notification, webhook, etc here
-  
-})
-
+});
 ```
 
 As you can see, all you have to do is to set up your Credo agent's `ForwardingStrategy` to to `QueueOnly` and provide a `PostgresMessagePickupRepository` instance (with the appropriate callbacks) to `MessagePickupModuleConfig`. Then, initialize both your agent and PostgresMessagePickupRepository` and have fun!

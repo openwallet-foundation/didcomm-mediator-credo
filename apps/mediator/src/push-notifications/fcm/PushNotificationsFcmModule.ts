@@ -1,7 +1,6 @@
-import type { DependencyManager, FeatureRegistry, Module } from '@credo-ts/core'
+import type { AgentContext, DependencyManager, Module } from '@credo-ts/core'
 
-import { Protocol } from '@credo-ts/core'
-
+import { FeatureRegistry, Protocol } from '@credo-ts/didcomm'
 import { PushNotificationsFcmApi } from './PushNotificationsFcmApi'
 import { PushNotificationsFcmRole } from './models'
 import { PushNotificationsFcmRepository } from './repository'
@@ -13,7 +12,7 @@ import { PushNotificationsFcmService } from './services/PushNotificationsFcmServ
 export class PushNotificationsFcmModule implements Module {
   public readonly api = PushNotificationsFcmApi
 
-  public register(dependencyManager: DependencyManager, featureRegistry: FeatureRegistry): void {
+  public register(dependencyManager: DependencyManager): void {
     // Api
     dependencyManager.registerContextScoped(PushNotificationsFcmApi)
 
@@ -22,6 +21,11 @@ export class PushNotificationsFcmModule implements Module {
 
     // Repository
     dependencyManager.registerSingleton(PushNotificationsFcmRepository)
+  }
+
+  public async initialize(agentContext: AgentContext): Promise<void> {
+    // Feature Registry
+    const featureRegistry = agentContext.dependencyManager.resolve(FeatureRegistry)
 
     // Feature Registry
     featureRegistry.register(

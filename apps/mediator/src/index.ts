@@ -1,4 +1,4 @@
-import { OutOfBandRepository, OutOfBandRole, OutOfBandState } from '@credo-ts/core'
+import { OutOfBandRepository, OutOfBandRole, OutOfBandState } from '@credo-ts/didcomm'
 
 import { createAgent } from './agent'
 import config from './config'
@@ -17,12 +17,12 @@ void createAgent().then(async (agent) => {
 
   // If it does't exist, we create a new one
   if (!outOfBandRecord) {
-    outOfBandRecord = await agent.oob.createInvitation({
+    outOfBandRecord = await agent.modules.oob.createInvitation({
       multiUseInvitation: true,
     })
   }
 
-  const httpEndpoint = agent.config.endpoints.find((e) => e.startsWith('http')) as string
+  const httpEndpoint = agent.modules.didcomm.config.endpoints.find((e) => e.startsWith('http')) as string
   const invitationEndpoint = config.get('agent:invitationUrl') ?? `${httpEndpoint}/invite`
   const mediatorInvitationUrlLong = outOfBandRecord.outOfBandInvitation.toUrl({
     domain: invitationEndpoint,

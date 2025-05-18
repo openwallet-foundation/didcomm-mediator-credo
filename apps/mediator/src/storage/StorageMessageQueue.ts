@@ -5,7 +5,7 @@ import type {
   QueuedMessage,
   RemoveMessagesOptions,
   TakeFromQueueOptions,
-} from '@credo-ts/core'
+} from '@credo-ts/didcomm'
 
 import { AgentContext, injectable, utils } from '@credo-ts/core'
 

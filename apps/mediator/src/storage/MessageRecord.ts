@@ -1,4 +1,4 @@
-import type { EncryptedMessage } from '@credo-ts/core'
+import type { EncryptedMessage } from '@credo-ts/didcomm'
 
 import { BaseRecord, utils } from '@credo-ts/core'
 

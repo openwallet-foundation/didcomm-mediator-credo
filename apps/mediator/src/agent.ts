@@ -1,18 +1,21 @@
 import type { Socket } from 'node:net'
-import { AskarModule, AskarMultiWalletDatabaseScheme } from '@credo-ts/askar'
+import { AskarModule, AskarModuleConfigStoreOptions, AskarMultiWalletDatabaseScheme } from '@credo-ts/askar'
+import { Agent, CacheModule, InMemoryLruCache } from '@credo-ts/core'
 import {
-  Agent,
   ConnectionsModule,
   DidCommMimeType,
   HttpOutboundTransport,
   MediatorModule,
+  MessagePickupModule,
   OutOfBandRole,
   OutOfBandState,
-  type WalletConfig,
   WsOutboundTransport,
-} from '@credo-ts/core'
+  getDefaultDidcommModules,
+} from '@credo-ts/didcomm'
+import { DynamoDbMessagePickupRepository } from '@credo-ts/didcomm-message-pickup-dynamodb'
 import { HttpInboundTransport, WsInboundTransport, agentDependencies } from '@credo-ts/node'
-import { ariesAskar } from '@hyperledger/aries-askar-nodejs'
+import { RedisCache } from '@credo-ts/redis-cache'
+import { askar } from '@openwallet-foundation/askar-nodejs'
 
 import express from 'express'
 import { Server } from 'ws'
@@ -23,21 +26,74 @@ import { Logger } from './logger'
 import { PushNotificationsFcmModule } from './push-notifications/fcm'
 import { StorageMessageQueueModule } from './storage/StorageMessageQueueModule'
 
-function createModules() {
+const logger = new Logger(config.get('agent:logLevel'))
+
+async function createModules() {
+  // Only load postgres database in production
+  const databaseConfig = config.get('db:host') ? askarPostgresConfig : undefined
+
+  const storeConfig: AskarModuleConfigStoreOptions = {
+    id: config.get('wallet:name'),
+    key: config.get('wallet:key'),
+    database: databaseConfig,
+  }
+
+  if (databaseConfig) {
+    logger.info('Using postgres storage', {
+      walletId: storeConfig.id,
+      host: databaseConfig.config.host,
+    })
+  } else {
+    logger.info('Using SQlite storage', {
+      walletId: storeConfig.id,
+    })
+  }
+
+  const messagePickupStorage = config.get('messagePickupStorage:type')
+  const cacheStorage = config.get('cacheStorage:type')
+
   const modules = {
-    storageModule: new StorageMessageQueueModule(),
+    ...getDefaultDidcommModules({
+      endpoints: config.get('agent:endpoints'),
+      useDidSovPrefixWhereAllowed: true,
+      didCommMimeType: DidCommMimeType.V0,
+    }),
     connections: new ConnectionsModule({
       autoAcceptConnections: true,
     }),
+    ...(messagePickupStorage === 'credo'
+      ? {
+          storageModule: new StorageMessageQueueModule(),
+        }
+      : {
+          messagePickup: new MessagePickupModule({
+            messagePickupRepository: await DynamoDbMessagePickupRepository.initialize({
+              region: config.get('messagePickupStorage:region'),
+              credentials: {
+                accessKeyId: config.get('messagePickupStorage:accessKeyId'),
+                secretAccessKey: config.get('messagePickupStorage:secretAccessKey'),
+              },
+            }),
+          }),
+        }),
+
     mediator: new MediatorModule({
       autoAcceptMediationRequests: true,
     }),
     askar: new AskarModule({
-      ariesAskar,
+      askar,
+      store: storeConfig,
       multiWalletDatabaseScheme: AskarMultiWalletDatabaseScheme.ProfilePerWallet,
     }),
+    cache: new CacheModule({
+      cache:
+        cacheStorage === 'in-memory'
+          ? new InMemoryLruCache({ limit: 500 })
+          : new RedisCache(config.get('cacheStorage:url')),
+      useCachedStorageService: cacheStorage === 'redis',
+    }),
     pushNotificationsFcm: new PushNotificationsFcmModule(),
-  }
+  } as const
 
   return modules
 }
@@ -48,43 +104,14 @@ export async function createAgent() {
   const app = express()
   const socketServer = new Server({ noServer: true })
 
-  const logger = new Logger(config.get('agent:logLevel'))
-
-  // Only load postgres database in production
-  const storageConfig = config.get('db:host') ? askarPostgresConfig : undefined
-
-  const walletConfig: WalletConfig = {
-    id: config.get('wallet:name'),
-    key: config.get('wallet:key'),
-    storage: storageConfig,
-  }
-
-  if (storageConfig) {
-    logger.info('Using postgres storage', {
-      walletId: walletConfig.id,
-      host: storageConfig.config.host,
-    })
-  } else {
-    logger.info('Using SQlite storage', {
-      walletId: walletConfig.id,
-    })
-  }
-
   const agent = new Agent({
     config: {
       label: config.get('agent:name'),
-      endpoints: config.get('agent:endpoints'),
-      walletConfig: walletConfig,
-      useDidSovPrefixWhereAllowed: true,
       logger: logger,
       autoUpdateStorageOnStartup: true,
-      backupBeforeStorageUpdate: false,
-      didCommMimeType: DidCommMimeType.V0,
     },
     dependencies: agentDependencies,
-    modules: {
-      ...createModules(),
-    },
+    modules: await createModules(),
   })
 
   // Create all transports
@@ -94,10 +121,10 @@ export async function createAgent() {
   const wsOutboundTransport = new WsOutboundTransport()
 
   // Register all Transports
-  agent.registerInboundTransport(httpInboundTransport)
-  agent.registerOutboundTransport(httpOutboundTransport)
-  agent.registerInboundTransport(wsInboundTransport)
-  agent.registerOutboundTransport(wsOutboundTransport)
+  agent.modules.didcomm.registerInboundTransport(httpInboundTransport)
+  agent.modules.didcomm.registerOutboundTransport(httpOutboundTransport)
+  agent.modules.didcomm.registerInboundTransport(wsInboundTransport)
+  agent.modules.didcomm.registerOutboundTransport(wsOutboundTransport)
 
   // Added health check endpoint
   httpInboundTransport.app.get('/health', async (_req, res) => {
@@ -109,7 +136,7 @@ export async function createAgent() {
       return res.status(400).send('Missing or invalid _oobid')
     }
 
-    const outOfBandRecord = await agent.oob.findById(req.query._oobid)
+    const outOfBandRecord = await agent.modules.oob.findById(req.query._oobid)
 
     if (
       !outOfBandRecord ||
@@ -121,6 +148,15 @@ export async function createAgent() {
 
     return res.send(outOfBandRecord.outOfBandInvitation.toJSON())
   })
+
+  try {
+    await agent.modules.askar.provisionStore()
+    agent.config.logger.info('Provisioned store')
+  } catch (error) {
+    agent.config.logger.info('Error provisioning store', {
+      error,
+    })
+  }
 
   await agent.initialize()
 
@@ -147,4 +183,4 @@ export async function createAgent() {
   return agent
 }
 
-export type MediatorAgent = Agent<ReturnType<typeof createModules>>
+export type MediatorAgent = Agent<Awaited<ReturnType<typeof createModules>>>
