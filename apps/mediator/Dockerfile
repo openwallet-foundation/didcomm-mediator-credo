@@ -9,18 +9,11 @@ RUN apt-get update && \
 
 WORKDIR /app
 
-COPY package.json /app/package.json
-COPY pnpm-lock.yaml /app/pnpm-lock.yaml
-COPY pnpm-workspace.yaml /app/pnpm-workspace.yaml
-COPY apps/mediator/package.json /app/apps/mediator/package.json
-COPY packages/message-pickup-dynamodb/package.json /app/packages/message-pickup-dynamodb/package.json
-COPY packages/message-pickup-postgres/package.json /app/packages/message-pickup-postgres/package.json
-
-RUN pnpm install --frozen-lockfile
 
 COPY . /app
-RUN pnpm build
 
+RUN pnpm install --frozen-lockfile
+RUN pnpm --filter didcomm-mediator-service... build
 
 # Don't run production as root
 RUN addgroup --system --gid 1001 agent && \

@@ -12,10 +12,10 @@ import {
   WsOutboundTransport,
   getDefaultDidcommModules,
 } from '@credo-ts/didcomm'
-import { HttpInboundTransport, WsInboundTransport, agentDependencies } from '@credo-ts/node'
-import { askar } from '@openwallet-foundation/askar-nodejs'
 import { DynamoDbMessagePickupRepository } from '@credo-ts/didcomm-message-pickup-dynamodb'
+import { HttpInboundTransport, WsInboundTransport, agentDependencies } from '@credo-ts/node'
 import { RedisCache } from '@credo-ts/redis-cache'
+import { askar } from '@openwallet-foundation/askar-nodejs'
 
 import express from 'express'
 import { Server } from 'ws'
