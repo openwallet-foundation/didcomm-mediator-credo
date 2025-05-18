@@ -149,6 +149,15 @@ export async function createAgent() {
     return res.send(outOfBandRecord.outOfBandInvitation.toJSON())
   })
 
+  try {
+    await agent.modules.askar.provisionStore()
+    agent.config.logger.info('Provisioned store')
+  } catch (error) {
+    agent.config.logger.info('Error provisioning store', {
+      error,
+    })
+  }
+
   await agent.initialize()
 
   httpInboundTransport.server?.on('listening', () => {
