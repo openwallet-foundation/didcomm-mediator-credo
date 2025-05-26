@@ -3,7 +3,9 @@
   "main": "build/index.js",
   "types": "build/index.d.ts",
   "version": "0.0.1",
-  "files": ["build"],
+  "files": [
+    "build"
+  ],
   "publishConfig": {
     "access": "public"
   },
@@ -24,7 +26,8 @@
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.806.0",
-    "@aws-sdk/util-dynamodb": "^3.806.0"
+    "@aws-sdk/util-dynamodb": "^3.806.0",
+    "didcomm-mediator-service": "file:../.."
   },
   "devDependencies": {
     "@credo-ts/core": "^0.5.11",

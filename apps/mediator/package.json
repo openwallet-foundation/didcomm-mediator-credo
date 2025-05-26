@@ -5,7 +5,9 @@
   "private": true,
   "main": "build/index",
   "types": "build/index",
-  "files": ["build"],
+  "files": [
+    "build"
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/openwallet-foundation/didcomm-mediator-credo"
@@ -24,6 +26,7 @@
     "@hyperledger/aries-askar-nodejs": "^0.2.3",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
+    "didcomm-mediator-service": "file:../..",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "firebase-admin": "^13.0.2",

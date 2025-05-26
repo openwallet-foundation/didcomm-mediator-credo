@@ -3,7 +3,9 @@
   "main": "build/index.js",
   "types": "build/index.d.ts",
   "version": "0.0.1",
-  "files": ["build"],
+  "files": [
+    "build"
+  ],
   "publishConfig": {
     "access": "public"
   },
@@ -23,6 +25,7 @@
     "prepublishOnly": "pnpm run build"
   },
   "dependencies": {
+    "didcomm-mediator-service": "file:../..",
     "pg": "^8.11.3",
     "pg-pubsub": "^0.8.1"
   },
