@@ -14,7 +14,7 @@ export const sendFcmPushNotification = async (deviceToken: string, logger: Logge
   if (!title || !body) {
     throw new Error('Push notification title or body is missing')
   }
-  
+
   try {
     const response = await firebase.messaging().send({
       token: deviceToken,

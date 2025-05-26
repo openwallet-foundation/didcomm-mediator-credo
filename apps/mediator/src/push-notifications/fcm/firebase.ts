@@ -11,4 +11,4 @@ export const firebase: admin.app.App | undefined = !config.get('agent:usePushNot
           clientEmail: config.get('agent:firebase:clientEmail'),
           privateKey: config.get('agent:firebase:privateKey')?.replace(/\\n/g, '\n'),
         }),
-      });
+      })
