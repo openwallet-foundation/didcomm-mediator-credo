@@ -172,7 +172,7 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
 
         return result.rows.map((message) => ({
           id: message.id,
-          encryptedMessage: message.encryptedmessage,
+          encryptedMessage: message.encrypted_message,
           state: message.state,
         }))
       }
@@ -189,7 +189,7 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
         ORDER BY created_at 
         LIMIT $3
       )
-      RETURNING id, encryptedmessage, state;
+      RETURNING id, encrypted_message, state;
     `
       const params = [connectionId, recipientDid, limit ?? 0]
       const result = await this.messagesCollection?.query(query, params)
@@ -204,7 +204,7 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
       // Return the messages as QueuedMessage objects
       return result.rows.map((message) => ({
         id: message.id,
-        encryptedMessage: message.encryptedmessage,
+        encryptedMessage: message.encrypted_message,
         state: 'sending',
       }))
     } catch (error) {
@@ -296,7 +296,7 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
           id: messageRecord.id,
           connectionId,
           recipientDids,
-          encryptedMessage: messageRecord.encryptedmessage,
+          encryptedMessage: messageRecord.encrypted_message,
           receivedAt: messageRecord.created_at,
           state,
         },
