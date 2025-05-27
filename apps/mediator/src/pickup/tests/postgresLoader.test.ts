@@ -22,7 +22,7 @@ describe('PostgresPickupLoader', () => {
     ;(config.get as Mock).mockImplementation((...args: any[]) => {
       const mockValues: Record<string, any> = {
         'agent:pickup': {
-          settings: JSON.stringify({ useBaseConnection: true }),
+          settings: JSON.stringify({ useBaseConnection: true, "postgresDatabaseName": 'not-the-base-db' }),
         },
         'db:host': 'base-postgres-host',
         'db:user': 'base-user',
@@ -40,7 +40,7 @@ describe('PostgresPickupLoader', () => {
       host: 'base-postgres-host',
       user: 'base-user',
       password: 'base-pass',
-      databaseName: 'base-db',
+      databaseName: 'not-the-base-db',
     })
   })
 
