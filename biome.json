@@ -1,7 +1,8 @@
 {
   "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
   "files": {
-    "maxSize": 10000000
+    "maxSize": 10000000,
+    "ignore": ["**/*.test.ts"]
   },
   "formatter": {
     "lineWidth": 120,

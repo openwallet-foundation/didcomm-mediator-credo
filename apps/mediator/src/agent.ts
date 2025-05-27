@@ -6,6 +6,8 @@ import {
   DidCommMimeType,
   HttpOutboundTransport,
   MediatorModule,
+  MessagePickupModule,
+  MessagePickupRepository,
   OutOfBandRole,
   OutOfBandState,
   type WalletConfig,
@@ -20,23 +22,40 @@ import { Server } from 'ws'
 import config from './config'
 import { askarPostgresConfig } from './database'
 import { Logger } from './logger'
+import { loadPickup } from './pickup/loader'
 import { PushNotificationsFcmModule } from './push-notifications/fcm'
 import { StorageMessageQueueModule } from './storage/StorageMessageQueueModule'
 
-function createModules() {
-  const modules = {
+function createModules(messagePickupRepository?: MessagePickupRepository) {
+  type Modules = {
+    storageModule: StorageMessageQueueModule
+    connections: ConnectionsModule
+    mediator: MediatorModule
+    askar: AskarModule
+    pushNotificationsFcm: PushNotificationsFcmModule
+    messagePickup?: MessagePickupModule
+  }
+
+  const modules: Modules = {
     storageModule: new StorageMessageQueueModule(),
     connections: new ConnectionsModule({
       autoAcceptConnections: true,
     }),
     mediator: new MediatorModule({
       autoAcceptMediationRequests: true,
+      messageForwardingStrategy: config.get('agent:pickup').strategy,
     }),
     askar: new AskarModule({
       ariesAskar,
       multiWalletDatabaseScheme: AskarMultiWalletDatabaseScheme.ProfilePerWallet,
     }),
     pushNotificationsFcm: new PushNotificationsFcmModule(),
+  }
+
+  if (messagePickupRepository) {
+    modules.messagePickup = new MessagePickupModule({
+      messagePickupRepository,
+    })
   }
 
   return modules
@@ -70,6 +89,13 @@ export async function createAgent() {
     })
   }
 
+  // Load the message pickup repository if configured
+  let messagePickupRepository = undefined
+  if (config.get('agent:pickup').type !== undefined) {
+    logger.info(`Loading ${config.get('agent:pickup').type} pickup protocol`)
+    messagePickupRepository = await loadPickup(config.get('agent:pickup').type, config.get('agent:pickup').strategy)
+  }
+
   const agent = new Agent({
     config: {
       label: config.get('agent:name'),
@@ -83,7 +109,7 @@ export async function createAgent() {
     },
     dependencies: agentDependencies,
     modules: {
-      ...createModules(),
+      ...createModules(messagePickupRepository),
     },
   })
 
@@ -121,6 +147,10 @@ export async function createAgent() {
 
     return res.send(outOfBandRecord.outOfBandInvitation.toJSON())
   })
+
+  if (messagePickupRepository) {
+    await messagePickupRepository.initialize({ agent })
+  }
 
   await agent.initialize()
 
