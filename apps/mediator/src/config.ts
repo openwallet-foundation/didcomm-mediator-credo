@@ -1,5 +1,6 @@
 import path from 'node:path'
 import { LogLevel } from '@credo-ts/core'
+import { MessageForwardingStrategy } from '@credo-ts/core/build/modules/routing/MessageForwardingStrategy'
 import dotenv from 'dotenv'
 import nconf from 'nconf'
 
@@ -44,6 +45,11 @@ nconf.overrides({
       projectId: process.env.FIREBASE_PROJECT_ID,
       clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
       privateKey: process.env.FIREBASE_PRIVATE_KEY,
+    },
+    pickup: {
+      type: process.env.PICKUP_TYPE?.toString().toLowerCase(),
+      strategy: process.env.PICKUP_STRATEGY ?? MessageForwardingStrategy.DirectDelivery,
+      settings: process.env.PICKUP_SETTINGS ?? JSON.stringify({}),
     },
   },
   wallet: {
