@@ -1,8 +1,7 @@
 {
   "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
   "files": {
-    "maxSize": 10000000,
-    "ignore": ["**/*.test.ts"]
+    "maxSize": 10000000
   },
   "formatter": {
     "lineWidth": 120,
@@ -45,5 +44,17 @@
     "useIgnoreFile": true,
     "clientKind": "git",
     "enabled": true
-  }
+  },
+  "overrides": [
+    {
+      "include": ["**/*.test.ts"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noExplicitAny": "off"
+          }
+        }
+      }
+    }
+  ]
 }
