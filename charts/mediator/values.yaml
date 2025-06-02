@@ -164,9 +164,9 @@ environment:
         name: mediator-credo-db
         key: postgres-password
   - name: PICKUP_TYPE
-    value: '' # The default is 'DirectDelivery', it can be also be 'QueueOnly' or 'QueueAndLiveModeDelivery'
+    value: '' # The default is undefined which means it will not use a pickup repository. Additionally, it can be set to 'postgres'.
   - name: PICKUP_STRATEGY
-    value: direct-delivery
+    value: DirectDelivery # The default is 'DirectDelivery', it can be also be 'QueueOnly' or 'QueueAndLiveModeDelivery'
   - name: PICKUP_SETTINGS
     value: '{}'
 
