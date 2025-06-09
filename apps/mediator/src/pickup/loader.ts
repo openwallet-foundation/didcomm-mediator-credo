@@ -12,6 +12,7 @@ type PickupConfig = {
   postgresUser?: string
   postgresPassword?: string
   postgresDatabaseName?: string
+  strategy?: MessageForwardingStrategy
 }
 
 export abstract class PickupLoader {
