@@ -14,7 +14,7 @@ type DbConfig = {
 }
 export class PostgresPickupLoader extends PickupLoader {
   constructor() {
-    super(JSON.parse(config.get('agent:pickup').settings))
+    super({ ...JSON.parse(config.get('agent:pickup').settings), strategy: config.get('agent:pickup').strategy })
   }
 
   getDatabaseConfig(): DbConfig {
@@ -52,6 +52,7 @@ export class PostgresPickupLoader extends PickupLoader {
       postgresPassword: databaseConfig.password,
       postgresDatabaseName: databaseConfig.databaseName,
       logger: logger,
+      strategy: this.pickupConfig.strategy,
     })
   }
 }

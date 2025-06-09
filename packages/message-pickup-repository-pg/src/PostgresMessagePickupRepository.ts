@@ -6,7 +6,6 @@ import {
   GetAvailableMessageCountOptions,
   Logger,
   MessagePickupEventTypes,
-  MessagePickupLiveSessionRemovedEvent,
   MessagePickupLiveSessionSavedEvent,
   MessagePickupRepository,
   QueuedMessage,
@@ -18,6 +17,8 @@ import {
   MessagePickupSession,
   MessagePickupSessionRole,
 } from '@credo-ts/core/build/modules/message-pickup/MessagePickupSession'
+import { MessageForwardingStrategy } from '@credo-ts/core/build/modules/routing/MessageForwardingStrategy'
+import { TransportEventTypes, TransportSessionRemovedEvent } from '@credo-ts/core/build/transport/TransportEventTypes'
 import { Client, Pool } from 'pg'
 import PGPubsub from 'pg-pubsub'
 import {
@@ -47,15 +48,17 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
   private postgresPassword: string
   private postgresHost: string
   private postgresDatabaseName: string
+  private strategy: MessageForwardingStrategy
 
   public constructor(options: PostgresMessagePickupRepositoryConfig) {
-    const { logger, postgresUser, postgresPassword, postgresHost, postgresDatabaseName } = options
+    const { logger, postgresUser, postgresPassword, postgresHost, postgresDatabaseName, strategy } = options
 
     this.logger = logger
     this.postgresUser = postgresUser
     this.postgresPassword = postgresPassword
     this.postgresHost = postgresHost
     this.postgresDatabaseName = postgresDatabaseName || 'messagepickuprepository'
+    this.strategy = strategy || MessageForwardingStrategy.QueueOnly
 
     // Initialize instanceName
     this.instanceName = `${os.hostname()}-${process.pid}-${randomUUID()}`
@@ -83,7 +86,7 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
   }): Promise<void> {
     try {
       // Initialize the database
-      await this.buildPgDatabase()
+      await this.buildPgDatabase(this.strategy === MessageForwardingStrategy.QueueAndLiveModeDelivery)
       this.logger?.info('[initialize] The database has been build successfully')
 
       // Configure PostgreSQL pool for the messages collections
@@ -103,14 +106,21 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
 
       // Register event handlers
       options.agent.events.on(
-        MessagePickupEventTypes.LiveSessionRemoved,
-        async (data: MessagePickupLiveSessionRemovedEvent) => {
+        TransportEventTypes.TransportSessionRemoved,
+        async (data: TransportSessionRemovedEvent) => {
           const connectionId = data.payload.session.connectionId
           this.logger?.info(`*** Session removed for connectionId: ${connectionId} ***`)
+
+          if (connectionId === undefined) return
 
           try {
             // Verify message sending method and delete session record from DB
             await this.checkQueueMessages(connectionId)
+            if (this.strategy === MessageForwardingStrategy.QueueAndLiveModeDelivery) {
+              if (data.payload.session.type === 'WebSocket') {
+                return await this.removeLiveSessionOnDb(connectionId)
+              }
+            }
             await this.removeLiveSessionOnDb(connectionId)
           } catch (handlerError) {
             this.logger?.error(`Error handling LiveSessionRemoved: ${handlerError}`)
@@ -418,7 +428,7 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
    * This method allow create database and tables they are used for the operation of the messageRepository
    *
    */
-  private async buildPgDatabase(): Promise<void> {
+  private async buildPgDatabase(isLiveMode = false): Promise<void> {
     this.logger?.info('[buildPgDatabase] PostgresDbService Initializing')
 
     const clientConfig = {
@@ -481,8 +491,11 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
           this.logger?.info(`[buildPgDatabase] PostgresDbService Table "${liveSessionTableName}" created.`)
         } else {
           // If the table exists, clean it (truncate or delete, depending on your requirements).
-          await dbClient.query(`TRUNCATE TABLE ${liveSessionTableName}`)
-          this.logger?.info(`[buildPgDatabase] PostgresDbService Table "${liveSessionTableName}" cleared.`)
+          // Don't truncate if we are in live mode, because it will remove all live sessions for other instances.
+          if (isLiveMode === false) {
+            await dbClient.query(`TRUNCATE TABLE ${liveSessionTableName}`)
+            this.logger?.info(`[buildPgDatabase] PostgresDbService Table "${liveSessionTableName}" cleared.`)
+          }
         }
 
         // Unlock after table creation
