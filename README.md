@@ -150,6 +150,15 @@ docker build \
    .
 ```
 
+## Pickup Strategy
+
+You can configure the pickup strategy of the mediator by setting the following environment variables. The following strategies are available:
+| Strategy        | Description                                                                                      |
+|------------------|--------------------------------------------------------------------------------------------------|
+| `PICKUP_TYPE` | The current types available are `postgres` and if not set, the default is `in-memory`. The `postgres` strategy will store the messages in a postgres database, while the `in-memory` strategy will store the messages in memory. The `in-memory` strategy is not recommended for production use, as it will lose all messages when the mediator is restarted. |
+| `PICKUP_STRATEGY` | The current strategies `DirectDelivery`, `QueueOnly`, and `QueueAndLiveModeDelivery`. The `DirectDelivery` strategy will deliver messages directly to the recipient, while the `QueueOnly` strategy will only queue the messages for the recipient. The `QueueAndLiveModeDelivery` strategy will queue the messages for the recipient and deliver them directly if possible. The default is `DirectDelivery`. |
+| `PICKUP_SETTINGS` | The custom settings for the pickup strategy. This is a JSON string that can be used to configure the pickup strategy. For example, you can set the `useBaseConnection` setting to `true` to use the base connection for the postgres strategy. The default is `{}`. |
+
 ## Using Helm
 
 ### To deploy the application on Kubernetes using Helm, follow this [installation guide](/helm/README.md) containing
