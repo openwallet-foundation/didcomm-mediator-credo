@@ -86,8 +86,8 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
   }): Promise<void> {
     try {
       // Initialize the database
-      await this.buildPgDatabase(this.strategy === MessageForwardingStrategy.QueueAndLiveModeDelivery)
-      this.logger?.info('[initialize] The database has been build successfully')
+      await this.buildPgDatabase()
+      this.logger?.info('[initialize] The database has been built successfully')
 
       // Configure PostgreSQL pool for the messages collections
       this.messagesCollection = new Pool({
@@ -104,24 +104,22 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
       // Set instance variables
       this.agent = options.agent
 
-      // Register event handlers
       options.agent.events.on(
         TransportEventTypes.TransportSessionRemoved,
         async (data: TransportSessionRemovedEvent) => {
           const connectionId = data.payload.session.connectionId
-          this.logger?.info(`*** Session removed for connectionId: ${connectionId} ***`)
-
           if (connectionId === undefined) return
-
+          
           try {
             // Verify message sending method and delete session record from DB
             await this.checkQueueMessages(connectionId)
-            if (this.strategy === MessageForwardingStrategy.QueueAndLiveModeDelivery) {
-              if (data.payload.session.type === 'WebSocket') {
-                return await this.removeLiveSessionOnDb(connectionId)
-              }
+            if (this.strategy === MessageForwardingStrategy.QueueAndLiveModeDelivery && data.payload.session.type === 'WebSocket') {
+              this.logger?.info(`*** Websocket pickup session removed for connectionId: ${connectionId} ***`)
+              await this.removeLiveSessionOnDb(connectionId)
+            } else {
+              this.logger?.info(`*** Http pickup session removed for connectionId: ${connectionId} ***`)
+              await this.removeLiveSessionOnDb(connectionId)
             }
-            await this.removeLiveSessionOnDb(connectionId)
           } catch (handlerError) {
             this.logger?.error(`Error handling LiveSessionRemoved: ${handlerError}`)
           }
@@ -428,7 +426,7 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
    * This method allow create database and tables they are used for the operation of the messageRepository
    *
    */
-  private async buildPgDatabase(isLiveMode = false): Promise<void> {
+  private async buildPgDatabase(): Promise<void> {
     this.logger?.info('[buildPgDatabase] PostgresDbService Initializing')
 
     const clientConfig = {
@@ -489,14 +487,7 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
           await dbClient.query(createTableLive)
           await dbClient.query(liveSessionTableIndex)
           this.logger?.info(`[buildPgDatabase] PostgresDbService Table "${liveSessionTableName}" created.`)
-        } else {
-          // If the table exists, clean it (truncate or delete, depending on your requirements).
-          // Don't truncate if we are in live mode, because it will remove all live sessions for other instances.
-          if (isLiveMode === false) {
-            await dbClient.query(`TRUNCATE TABLE ${liveSessionTableName}`)
-            this.logger?.info(`[buildPgDatabase] PostgresDbService Table "${liveSessionTableName}" cleared.`)
-          }
-        }
+        } 
 
         // Unlock after table creation
         await dbClient.query('SELECT pg_advisory_unlock(99999)')
