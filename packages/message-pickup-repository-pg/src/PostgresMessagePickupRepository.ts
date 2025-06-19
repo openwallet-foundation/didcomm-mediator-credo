@@ -1,11 +1,10 @@
-import { randomUUID } from 'node:crypto'
-import * as os from 'node:os'
 import {
   AddMessageOptions,
   Agent,
   GetAvailableMessageCountOptions,
   Logger,
   MessagePickupEventTypes,
+  MessagePickupLiveSessionRemovedEvent,
   MessagePickupLiveSessionSavedEvent,
   MessagePickupRepository,
   QueuedMessage,
@@ -18,7 +17,8 @@ import {
   MessagePickupSessionRole,
 } from '@credo-ts/core/build/modules/message-pickup/MessagePickupSession'
 import { MessageForwardingStrategy } from '@credo-ts/core/build/modules/routing/MessageForwardingStrategy'
-import { TransportEventTypes, TransportSessionRemovedEvent } from '@credo-ts/core/build/transport/TransportEventTypes'
+import { randomUUID } from 'node:crypto'
+import * as os from 'node:os'
 import { Client, Pool } from 'pg'
 import PGPubsub from 'pg-pubsub'
 import {
@@ -105,15 +105,14 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
       this.agent = options.agent
 
       options.agent.events.on(
-        TransportEventTypes.TransportSessionRemoved,
-        async (data: TransportSessionRemovedEvent) => {
+        MessagePickupEventTypes.LiveSessionRemoved,
+        async (data: MessagePickupLiveSessionRemovedEvent) => {
           const connectionId = data.payload.session.connectionId
-          if (connectionId === undefined) return
           
           try {
             // Verify message sending method and delete session record from DB
             await this.checkQueueMessages(connectionId)
-            if (this.strategy === MessageForwardingStrategy.QueueAndLiveModeDelivery && data.payload.session.type === 'WebSocket') {
+            if (this.strategy === MessageForwardingStrategy.QueueAndLiveModeDelivery && data.payload.type === 'WebSocket') {
               this.logger?.info(`*** Websocket pickup session removed for connectionId: ${connectionId} ***`)
               await this.removeLiveSessionOnDb(connectionId)
             } else {

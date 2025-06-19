@@ -1,0 +1,70 @@
+diff --git a/build/modules/message-pickup/MessagePickupEvents.d.ts b/build/modules/message-pickup/MessagePickupEvents.d.ts
+index 9e3ebaed5482fc6a169125b7955cf7dc08782db6..5d3cbc0fd82ab7fd74d97bf1107502d01b28de57 100644
+--- a/build/modules/message-pickup/MessagePickupEvents.d.ts
++++ b/build/modules/message-pickup/MessagePickupEvents.d.ts
+@@ -16,6 +16,7 @@ export interface MessagePickupLiveSessionRemovedEvent extends BaseEvent {
+     type: typeof MessagePickupEventTypes.LiveSessionRemoved;
+     payload: {
+         session: MessagePickupSession;
++        type: 'http' | 'WebSocket';
+     };
+ }
+ export interface MessagePickupCompletedEvent extends BaseEvent {
+diff --git a/build/modules/message-pickup/services/MessagePickupSessionService.js b/build/modules/message-pickup/services/MessagePickupSessionService.js
+index 701acad4e940f87a91ed313a43637eeaa7fd629e..05298ff4a2efaa01e4ab6bf48aa8a80413af9a3c 100644
+--- a/build/modules/message-pickup/services/MessagePickupSessionService.js
++++ b/build/modules/message-pickup/services/MessagePickupSessionService.js
+@@ -17,6 +17,7 @@ const plugins_1 = require("../../../plugins");
+ const transport_1 = require("../../../transport");
+ const uuid_1 = require("../../../utils/uuid");
+ const MessagePickupEvents_1 = require("../MessagePickupEvents");
++const MessagePickupModuleConfig_1 = require("../MessagePickupModuleConfig");
+ /**
+  * @internal
+  * The Message Pickup session service keeps track of all {@link MessagePickupSession}
+@@ -38,8 +39,9 @@ let MessagePickupSessionService = class MessagePickupSessionService {
+             .subscribe({
+             next: (e) => {
+                 const connectionId = e.payload.session.connectionId;
++                const type = e.payload.session.type;
+                 if (connectionId)
+-                    this.removeLiveSession(agentContext, { connectionId });
++                    this.removeLiveSession(agentContext, { connectionId, type });
+             },
+         });
+     }
+@@ -53,7 +55,7 @@ let MessagePickupSessionService = class MessagePickupSessionService {
+     saveLiveSession(agentContext, options) {
+         const { connectionId, protocolVersion, role } = options;
+         // First remove any live session for the given connection Id
+-        this.removeLiveSession(agentContext, { connectionId });
++        this.removeLiveSession(agentContext, { connectionId, undefined });
+         const session = {
+             id: (0, uuid_1.uuid)(),
+             connectionId,
+@@ -70,7 +72,16 @@ let MessagePickupSessionService = class MessagePickupSessionService {
+         });
+     }
+     removeLiveSession(agentContext, options) {
+-        const itemIndex = this.sessions.findIndex((session) => session.connectionId === options.connectionId);
++        // When in live mode, protocol version 'v2', we only remove sessions that are WebSocket based.
++        // For other protocols, we remove all sessions that match the connectionId.
++        const itemIndex = this.sessions.findIndex((session) =>
++        session.connectionId === options.connectionId &&
++        (
++            (options.type === 'WebSocket' && session.protocolVersion === 'v2') ||
++            (options.type !== 'WebSocket' && session.protocolVersion !== 'v2')
++        )
++        );
++        
+         if (itemIndex > -1) {
+             const [session] = this.sessions.splice(itemIndex, 1);
+             const eventEmitter = agentContext.dependencyManager.resolve(EventEmitter_1.EventEmitter);
+@@ -78,6 +89,7 @@ let MessagePickupSessionService = class MessagePickupSessionService {
+                 type: MessagePickupEvents_1.MessagePickupEventTypes.LiveSessionRemoved,
+                 payload: {
+                     session,
++                    type: options.type,
+                 },
+             });
+         }
