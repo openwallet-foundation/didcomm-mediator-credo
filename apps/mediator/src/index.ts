@@ -13,7 +13,7 @@ void createAgent().then(async (agent) => {
     role: OutOfBandRole.Sender,
   })
 
-  let outOfBandRecord = undefined
+  let outOfBandRecord = outOfBandRecords.find((oobRecord) => oobRecord.reusable)
 
   // If it does't exist, we create a new one
   if (!outOfBandRecord) {
