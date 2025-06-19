@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto'
+import * as os from 'node:os'
 import {
   AddMessageOptions,
   Agent,
@@ -17,8 +19,6 @@ import {
   MessagePickupSessionRole,
 } from '@credo-ts/core/build/modules/message-pickup/MessagePickupSession'
 import { MessageForwardingStrategy } from '@credo-ts/core/build/modules/routing/MessageForwardingStrategy'
-import { randomUUID } from 'node:crypto'
-import * as os from 'node:os'
 import { Client, Pool } from 'pg'
 import PGPubsub from 'pg-pubsub'
 import {
@@ -108,11 +108,14 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
         MessagePickupEventTypes.LiveSessionRemoved,
         async (data: MessagePickupLiveSessionRemovedEvent) => {
           const connectionId = data.payload.session.connectionId
-          
+
           try {
             // Verify message sending method and delete session record from DB
             await this.checkQueueMessages(connectionId)
-            if (this.strategy === MessageForwardingStrategy.QueueAndLiveModeDelivery && data.payload.type === 'WebSocket') {
+            if (
+              this.strategy === MessageForwardingStrategy.QueueAndLiveModeDelivery &&
+              data.payload.type === 'WebSocket'
+            ) {
               this.logger?.info(`*** Websocket pickup session removed for connectionId: ${connectionId} ***`)
               await this.removeLiveSessionOnDb(connectionId)
             } else {
@@ -486,7 +489,7 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
           await dbClient.query(createTableLive)
           await dbClient.query(liveSessionTableIndex)
           this.logger?.info(`[buildPgDatabase] PostgresDbService Table "${liveSessionTableName}" created.`)
-        } 
+        }
 
         // Unlock after table creation
         await dbClient.query('SELECT pg_advisory_unlock(99999)')
