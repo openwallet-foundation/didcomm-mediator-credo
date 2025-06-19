@@ -18,6 +18,7 @@ import {
   MessagePickupSession,
   MessagePickupSessionRole,
 } from '@credo-ts/core/build/modules/message-pickup/MessagePickupSession'
+import { MessageForwardingStrategy } from '@credo-ts/core/build/modules/routing/MessageForwardingStrategy'
 import { Client, Pool } from 'pg'
 import PGPubsub from 'pg-pubsub'
 import {
@@ -47,15 +48,17 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
   private postgresPassword: string
   private postgresHost: string
   private postgresDatabaseName: string
+  private strategy: MessageForwardingStrategy
 
   public constructor(options: PostgresMessagePickupRepositoryConfig) {
-    const { logger, postgresUser, postgresPassword, postgresHost, postgresDatabaseName } = options
+    const { logger, postgresUser, postgresPassword, postgresHost, postgresDatabaseName, strategy } = options
 
     this.logger = logger
     this.postgresUser = postgresUser
     this.postgresPassword = postgresPassword
     this.postgresHost = postgresHost
     this.postgresDatabaseName = postgresDatabaseName || 'messagepickuprepository'
+    this.strategy = strategy || MessageForwardingStrategy.QueueOnly
 
     // Initialize instanceName
     this.instanceName = `${os.hostname()}-${process.pid}-${randomUUID()}`
@@ -84,7 +87,7 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
     try {
       // Initialize the database
       await this.buildPgDatabase()
-      this.logger?.info('[initialize] The database has been build successfully')
+      this.logger?.info('[initialize] The database has been built successfully')
 
       // Configure PostgreSQL pool for the messages collections
       this.messagesCollection = new Pool({
@@ -101,17 +104,24 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
       // Set instance variables
       this.agent = options.agent
 
-      // Register event handlers
       options.agent.events.on(
         MessagePickupEventTypes.LiveSessionRemoved,
         async (data: MessagePickupLiveSessionRemovedEvent) => {
           const connectionId = data.payload.session.connectionId
-          this.logger?.info(`*** Session removed for connectionId: ${connectionId} ***`)
 
           try {
             // Verify message sending method and delete session record from DB
             await this.checkQueueMessages(connectionId)
-            await this.removeLiveSessionOnDb(connectionId)
+            if (
+              this.strategy === MessageForwardingStrategy.QueueAndLiveModeDelivery &&
+              data.payload.type === 'WebSocket'
+            ) {
+              this.logger?.info(`*** Websocket pickup session removed for connectionId: ${connectionId} ***`)
+              await this.removeLiveSessionOnDb(connectionId)
+            } else {
+              this.logger?.info(`*** Http pickup session removed for connectionId: ${connectionId} ***`)
+              await this.removeLiveSessionOnDb(connectionId)
+            }
           } catch (handlerError) {
             this.logger?.error(`Error handling LiveSessionRemoved: ${handlerError}`)
           }
@@ -479,10 +489,6 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
           await dbClient.query(createTableLive)
           await dbClient.query(liveSessionTableIndex)
           this.logger?.info(`[buildPgDatabase] PostgresDbService Table "${liveSessionTableName}" created.`)
-        } else {
-          // If the table exists, clean it (truncate or delete, depending on your requirements).
-          await dbClient.query(`TRUNCATE TABLE ${liveSessionTableName}`)
-          this.logger?.info(`[buildPgDatabase] PostgresDbService Table "${liveSessionTableName}" cleared.`)
         }
 
         // Unlock after table creation

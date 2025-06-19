@@ -1,5 +1,6 @@
 import { EncryptedMessage, Logger } from '@credo-ts/core'
 import { MessagePickupSession } from '@credo-ts/core/build/modules/message-pickup/MessagePickupSession'
+import { MessageForwardingStrategy } from '@credo-ts/core/build/modules/routing/MessageForwardingStrategy'
 
 export interface PostgresMessagePickupRepositoryConfig {
   logger?: Logger
@@ -7,6 +8,7 @@ export interface PostgresMessagePickupRepositoryConfig {
   postgresPassword: string
   postgresHost: string
   postgresDatabaseName?: string
+  strategy?: MessageForwardingStrategy
 }
 
 export const MessageQueuedEventType: string = 'MessagePickupRepositoryMessageQueued'
