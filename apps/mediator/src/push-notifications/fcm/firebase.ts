@@ -1,14 +1,14 @@
 import admin from 'firebase-admin'
-import config from '../../config'
+import { config } from '../../config'
 
-export const firebase: admin.app.App | undefined = !config.get('agent:usePushNotifications')
+export const firebase: admin.app.App | undefined = !config.pushNotifications?.firebase
   ? undefined
   : admin.apps.length
     ? admin.app()
     : admin.initializeApp({
         credential: admin.credential.cert({
-          projectId: config.get('agent:firebase:projectId'),
-          clientEmail: config.get('agent:firebase:clientEmail'),
-          privateKey: config.get('agent:firebase:privateKey')?.replace(/\\n/g, '\n'),
+          projectId: config.pushNotifications.firebase.projectId,
+          clientEmail: config.pushNotifications.firebase.clientEmail,
+          privateKey: config.pushNotifications.firebase.privateKey,
         }),
       })

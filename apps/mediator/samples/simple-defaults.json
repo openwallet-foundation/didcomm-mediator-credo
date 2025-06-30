@@ -1,0 +1,27 @@
+{
+  "agentPort": 3110,
+  "agentName": "Credo DIDComm Mediator",
+  "agentEndpoints": ["http://localhost:3110", "ws://localhost:3310"],
+  "invitationUrl": "http://localhost:3110/invitation",
+  "cache": {
+    "type": "in-memory"
+  },
+  "messagePickup": {
+    "storage": {
+      "type": "credo"
+    }
+  },
+  "storage": {
+    "type": "askar"
+  },
+  "kms": {
+    "type": "askar"
+  },
+  "askar": {
+    "storeId": "test",
+    "storeKey": "test",
+    "database": {
+      "type": "sqlite"
+    }
+  }
+}

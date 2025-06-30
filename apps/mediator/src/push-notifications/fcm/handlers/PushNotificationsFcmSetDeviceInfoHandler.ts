@@ -1,4 +1,4 @@
-import type { MessageHandler, MessageHandlerInboundMessage } from '@credo-ts/core'
+import type { MessageHandler, MessageHandlerInboundMessage } from '@credo-ts/didcomm'
 
 import { PushNotificationsFcmSetDeviceInfoMessage } from '../messages'
 import type { PushNotificationsFcmService } from '../services/PushNotificationsFcmService'
@@ -21,5 +21,6 @@ export class PushNotificationsFcmSetDeviceInfoHandler implements MessageHandler 
    */
   public async handle(inboundMessage: MessageHandlerInboundMessage<PushNotificationsFcmSetDeviceInfoHandler>) {
     await this.pushNotificationsFcmService.processSetDeviceInfo(inboundMessage)
+    return undefined
   }
 }

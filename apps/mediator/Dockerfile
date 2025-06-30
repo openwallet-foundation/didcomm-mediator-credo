@@ -1,4 +1,4 @@
-FROM node:22 AS base
+FROM node:20.11 AS base
 
 RUN apt-get update && \
   apt-get upgrade -y && \ 
@@ -7,24 +7,13 @@ RUN apt-get update && \
   apt-get clean && \
   rm -rf /var/lib/apt/lists/*
 
-FROM base AS build
-
-WORKDIR /build
-
-COPY . /build
-
-RUN pnpm install --node-linker=hoisted --frozen-lockfile && \
-  pnpm --filter didcomm-mediator-service build && \
-  pnpm prune --prod
-
-FROM base AS final
-
 WORKDIR /app
 
-# Copy build
-COPY --from=build /build/node_modules /app/node_modules
-COPY --from=build /build/apps/mediator/build /app/build
-COPY --from=build /build/apps/mediator/package.json /app
+
+COPY . /app
+
+RUN pnpm install --frozen-lockfile
+RUN pnpm --filter didcomm-mediator-service... build
 
 # Don't run production as root
 RUN addgroup --system --gid 1001 agent && \
@@ -34,4 +23,4 @@ RUN addgroup --system --gid 1001 agent && \
 
 USER agent
 
-ENTRYPOINT [ "node", "./build/apps/mediator/src/index.js" ]
+ENTRYPOINT [ "node", "apps/mediator/build/index.js" ]

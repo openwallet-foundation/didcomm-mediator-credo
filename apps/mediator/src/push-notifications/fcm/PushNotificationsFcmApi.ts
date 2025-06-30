@@ -1,6 +1,7 @@
 import type { FcmDeviceInfo } from './models'
 
-import { AgentContext, ConnectionService, MessageSender, OutboundMessageContext, injectable } from '@credo-ts/core'
+import { AgentContext, injectable } from '@credo-ts/core'
+import { ConnectionService, MessageHandlerRegistry, MessageSender, OutboundMessageContext } from '@credo-ts/didcomm'
 
 import {
   PushNotificationsFcmDeviceInfoHandler,
@@ -27,11 +28,13 @@ export class PushNotificationsFcmApi {
     this.connectionService = connectionService
     this.agentContext = agentContext
 
-    this.agentContext.dependencyManager.registerMessageHandlers([
-      new PushNotificationsFcmSetDeviceInfoHandler(this.pushNotificationsService),
-      new PushNotificationsFcmDeviceInfoHandler(),
-      new PushNotificationsFcmProblemReportHandler(this.pushNotificationsService),
-    ])
+    this.agentContext
+      .resolve(MessageHandlerRegistry)
+      .registerMessageHandlers([
+        new PushNotificationsFcmSetDeviceInfoHandler(this.pushNotificationsService),
+        new PushNotificationsFcmDeviceInfoHandler(),
+        new PushNotificationsFcmProblemReportHandler(),
+      ])
   }
 
   /**

@@ -52,25 +52,7 @@ Why should you use this mediator?
 - Configured to persist queued messages for recipient in a postgres.
 - Use the pre-built docker image for easy deployment of your mediator.
 
-## Getting Started
-
-> If you want to deploy the mediator based on the pre-built docker image, please see the [Using Docker](#using-docker) section.
-
-Install dependencies:
-
-```bash
-pnpm install
-```
-
-And run dev to start the development server:
-
-```bash
-pnpm dev
-```
-
-To reach the mediator externally you need to set up an ngrok tunnel. To do this, create an `.env.local` file and add an `NGROK_AUTH_TOKEN`. Read more on obtaining an auth token here: https://dashboard.ngrok.com/get-started/your-authtoken.
-
-### Connecting to the Mediator
+## Connecting to the Mediator
 
 When you've correctly started the mediator agent, and have extracted the invitation from the console, you can use the invitation to connect to the mediator agent. To connect to the mediator and start receiving messages, there's a few steps that need to be taken:
 
@@ -80,92 +62,235 @@ When you've correctly started the mediator agent, and have extracted the invitat
 
 If you're using an Credo agent as the client, you can follow the [Mediation Tutorial](https://credo.js.org/guides/tutorials/mediation) from the Credo docs.
 
-## Environment Variables
+## Development
 
-You can provide a number of environment variables to run the agent. The following table lists the environment variables that can be used.
+The mediator can be configured to use different storage backends for various components. During development, you can easily switch between these options by modifying your environment configuration.
 
-The `POSTGRES_` variables won't be used in development mode (`NODE_ENV=development`), but are required when `NODE_ENV` is `production`. This makes local development easier, but makes sure you have a persistent database when deploying.
+### Setting Up Your Development Environment
 
-| Variable                   | Description                                                                                                                                                                                                                                                                       |
-| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `AGENT_ENDPOINTS`          | Comma separated list of endpoints, in order of preference. In most cases you want to provide two endpoints, where the first one is an HTTP url, and the second one is an WebSocket url                                                                                            |
-| `AGENT_NAME`               | The name of the agent. This will be used in invitations and will be publicly advertised.                                                                                                                                                                                          |
-| `AGENT_PORT`               | The port that is exposed for incoming traffic. Both the HTTP and WS inbound transport handlers are exposes on this port, and HTTP traffic will be upgraded to the WebSocket server when applicable.                                                                               |
-| `WALLET_NAME`              | The name of the wallet to use.                                                                                                                                                                                                                                                    |
-| `WALLET_KEY`               | The key to unlock the wallet.                                                                                                                                                                                                                                                     |
-| `INVITATION_URL`           | Optional URL that can be used as the base for the invitation url. This would allow you to render a certain web page that can extract the invitation form the `oob` parameter, and show the QR code, or show useful information to the end-user. Less applicable to mediator URLs. |
-| `POSTGRES_HOST`            | Host of the database to use. Should include both host and port.                                                                                                                                                                                                                   |
-| `POSTGRES_USER`            | The postgres user.                                                                                                                                                                                                                                                                |
-| `POSTGRES_PASSWORD`        | The postgres password.                                                                                                                                                                                                                                                            |
-| `POSTGRES_ADMIN_USER`      | The postgres admin user.                                                                                                                                                                                                                                                          |
-| `POSTGRES_ADMIN_PASSWORD`  | The postgres admin password.                                                                                                                                                                                                                                                      |
-| `USE_PUSH_NOTIFICATIONS`   | A boolean flag that informs the system it should send push notifications.                                                                                                                                                                                                         |
-| `FIREBASE_PROJECT_ID`      | (OPTIONAL) The firebase project ID generated when setting up a Firebase Cloud Messaging project, required if sending push notifications via Firebase Cloud Messaging.                                                                                                             |
-| `FIREBASE_CLIENT_EMAIL`    | (OPTIONAL) Firebase client email generated when setting up Firebase Cloud Messaging project, required if sending push notifications via Firebase Cloud Messaging.                                                                                                                 |
-| `FIREBASE_PRIVATE_KEY`     | (OPTIONAL) Private key generated when setting up Firebase Cloud Messaging project, required if sending push notifications via Firebase Cloud Messaging.                                                                                                                           |
-| `NOTIFICATION_WEBHOOK_URL` | (OPTIONAL) A url used for sending notifications to                                                                                                                                                                                                                                |
+1. Install dependencies:
 
-## Postgres Database
+   ```bash
+   pnpm install
+   ```
 
-To deploy the mediator, a postgres database is required. Any postgres database will do.
+2. Modify the existing `.env.development` file to configure your preferred storage options:
 
-1. Create a postgres database and make sure it is publicly exposed.
-2. Set the `POSTGRES_HOST`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_ADMIN_USER`, `POSTGRES_ADMIN_PASSWORD` variables. For the mediator we use the same username and password for the admin user and the regular user, but you might want to create a separate user for the admin user.
+   - Database storage (SQLite or Postgres)
+   - Message pickup storage (Credo or DynamoDB)
+   - Cache storage (In-memory or Redis)
+
+3. Start the development server:
+   ```bash
+   pnpm dev
+   ```
+
+### Using Docker for External Dependencies
+
+The project includes a Docker Compose file with services for external dependencies. You can selectively start only the services you need based on your configuration:
+
+```bash
+# Start all services
+docker-compose up
+
+# Or start individual services as needed
+docker-compose up postgres
+docker-compose up redis
+docker-compose up dynamodb
+```
+
+For example:
+
+- If using Postgres for database storage, start the Postgres service
+- If using Redis for caching, start the Redis service
+- If using DynamoDB for message pickup, start the DynamoDB service
+
+### External Access
+
+To reach the mediator from external devices or for testing with mobile apps, set up an ngrok tunnel. Since the `.env.local` file isn't loaded, you'll need to provide the auth token directly with the command:
+
+```bash
+NGROK_AUTH_TOKEN=your_token_here pnpm dev
+```
+
+You can obtain an auth token from: https://dashboard.ngrok.com/get-started/your-authtoken
+
+## Configuration
+
+The mediator can be configured using **environment variables** or a **JSON configuration file**. All configuration options are available via both methods, and you can use the provided sample files for quick setup.
+
+## Configuration Methods
+
+### 1. Environment Variables
+
+- All configuration options can be set via environment variables.
+- Nested config options use double underscores (`__`) for nesting. For example:
+  - `ASKAR__STORE_ID=test`
+  - `MESSAGE_PICKUP__STORAGE__TYPE=postgres`
+  - `CACHE__TYPE=redis`
+  - `CACHE__REDIS_URL=redis://127.0.0.1:6379`
+- See the [Configuration Reference](#configuration-reference) below for all available options and their ENV names.
+
+### 2. JSON Configuration File
+
+- You can provide a JSON config file and point to it with the `CONFIG` environment variable:
+  ```sh
+  CONFIG=apps/mediator/samples/full.json pnpm dev
+  ```
+- See the [`apps/mediator/samples/`](apps/mediator/samples/) directory for example config files:
+  - `simple.json`: Minimal config (just Askar storeId/storeKey)
+  - `simple-defaults.json`: Minimal config with all defaults
+  - `full.json`: All options enabled (Postgres, Redis, DynamoDB, etc.)
+  - `cache-in-memory.json`, `cache-redis.json`: Cache backend examples
+  - `message-pickup-credo.json`, `message-pickup-dynamodb.json`, `message-pickup-postgres.json`: Message pickup storage examples
+  - `storage-askar-sqlite.json`, `storage-askar-postgres.json`, `storage-drizzle-sqlite.json`, `storage-drizzle-postgres.json`: Storage backend examples
+
+## Configuration Reference
+
+Below are the top-level configuration options. All can be set via ENV (with double underscores for nesting) or in a JSON config file.
+
+| Option              | Type/Values                                                        | Default                         | Description              |
+| ------------------- | ------------------------------------------------------------------ | ------------------------------- | ------------------------ |
+| `logLevel`          | `trace`, `debug`, `info`, `warn`, `error`, `fatal`, `off`          | `info`                          | Log verbosity            |
+| `storage`           | `{ type: 'askar' }` or `{ type: 'drizzle', dialect, databaseUrl }` | `{ type: 'askar' }`             | Main storage backend     |
+| `kms`               | `{ type: 'askar' }`                                                | `{ type: 'askar' }`             | KMS backend              |
+| `askar`             | `{ storeId, storeKey, keyDerivationMethod, database }`             |                                 | Askar config (see below) |
+| `cache`             | `{ type: 'in-memory' }` or `{ type: 'redis', redisUrl }`           | `{ type: 'in-memory'}`          | Cache backend            |
+| `messagePickup`     | `{ forwardingStrategy, storage }`                                  | See below                       | Message pickup config    |
+| `pushNotifications` | `{ webhookUrl, firebase }`                                         | `{}`                            | Push notification config |
+| `agentPort`         | Number                                                             | `3110`                          | Port for HTTP/WS         |
+| `agentEndpoints`    | Array of URLs                                                      | See below                       | Agent endpoints          |
+| `agentName`         | String                                                             | `Credo DIDComm Mediator`        | Agent name               |
+| `invitationUrl`     | URL                                                                | `/invitation` on first endpoint | Invitation URL           |
+
+### Askar Database
+
+- `database.type`: `sqlite` or `postgres`
+- For `postgres`, also set: `host`, `user`, `password`, `adminUser`, `adminPassword`
+
+### Drizzle Storage
+
+- `dialect`: `sqlite` or `postgres`
+- `databaseUrl`: Connection string
+
+### Cache
+
+- `type`: `in-memory` or `redis`
+- For `redis`, set `redisUrl`
+
+### Message Pickup
+
+- `forwardingStrategy`: `DirectDelivery`, `QueueOnly`, `QueueAndLiveModeDelivery`
+- `storage.type`: `credo`, `postgres`, or `dynamodb`
+  - For `postgres`: `host`, `user`, `password`, `database`
+  - For `dynamodb`: `region`, `accessKeyId`, `secretAccessKey`, `tableName`
+
+### Push Notifications
+
+- `webhookUrl`: URL for webhook notifications
+- `firebase`: `{ projectId, clientEmail, privateKey, notificationTitle, notificationBody }`
+
+### Example: ENV vs JSON
+
+**ENV:**
+
+```sh
+ASKAR__STORE_ID=test \
+ASKAR__STORE_KEY=test \
+CACHE__TYPE=redis \
+CACHE__REDIS_URL=redis://127.0.0.1:6379 \
+MESSAGE_PICKUP__STORAGE__TYPE=dynamodb \
+MESSAGE_PICKUP__STORAGE__REGION=local \
+MESSAGE_PICKUP__STORAGE__ACCESS_KEY_ID=local \
+MESSAGE_PICKUP__STORAGE__TABLE_NAME=queued_messages \
+MESSAGE_PICKUP__STORAGE__SECRET_ACCESS_KEY=local \
+pnpm dev
+```
+
+**JSON:**
+
+```json
+{
+  "askar": {
+    "storeId": "test",
+    "storeKey": "test"
+  },
+  "cache": {
+    "type": "redis",
+    "redisUrl": "redis://127.0.0.1:6379"
+  },
+  "messagePickup": {
+    "storage": {
+      "type": "dynamodb",
+      "region": "local",
+      "accessKeyId": "local",
+      "secretAccessKey": "local"
+    }
+  }
+}
+```
+
+For more examples, see the [`apps/mediator/samples/`](apps/mediator/samples/) directory.
 
 ## Using Docker
 
-### Using the pre-built Docker Image
+You can run the mediator using Docker with either environment variables or a JSON config file. For example:
 
-1. Make sure you're [authenticated to the Github Container Registry](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry#authenticating-to-the-container-registry)
-2. Run the docker image using the following command:
+**Using ENV:**
 
 ```sh
 docker run \
-  -e "AGENT_ENDPOINTS=http://localhost:3000,ws://localhost:3000" \
-  -e "WALLET_KEY=<your-wallet-key>" \
-  -e "WALLET_NAME=mediator" \
-  -e "AGENT_NAME=Mediator" \
-  -e "AGENT_PORT=3000" \
-  -e "POSTGRES_HOST=mediator-database-xxxx.ondigitalocean.com:25060" \
-  -e "POSTGRES_USER=postgres" \
-  -e "POSTGRES_PASSWORD=<your-postgres-password>" \
-  -e "POSTGRES_ADMIN_USER=postgres" \
-  -e "POSTGRES_ADMIN_PASSWORD=<your-postgres-password>" \
+  -e "ASKAR__STORE_ID=test" \
+  -e "ASKAR__STORE_KEY=test" \
+  -e "CACHE__TYPE=redis" \
+  -e "CACHE__REDIS_URL=redis://127.0.0.1:6379" \
+  -e "MESSAGE_PICKUP__STORAGE__TYPE=dynamodb" \
+  -e "MESSAGE_PICKUP__STORAGE__REGION=local" \
+  -e "MESSAGE_PICKUP__STORAGE__ACCESS_KEY_ID=local" \
+  -e "MESSAGE_PICKUP__STORAGE__SECRET_ACCESS_KEY=local" \
   -p 3000:3000 \
   ghcr.io/openwallet-foundation/didcomm-mediator-credo:latest
 ```
 
-Make sure to use the correct tag. By default `latest` will be used which can have unexpected breakage. See the releases for the latest stable tag. Currently the last released tag is ![GitHub release (latest by date)](https://img.shields.io/github/v/release/openwallet-foundation/didcomm-mediator-credo?display_name=tag&label=tag)
+**Using a JSON config file:**
 
-You can also adapt the `docker-compose.yml` file to your needs.
-
-### Building the Docker Image
-
-You can build the docker image using the following command:
-
-```
-docker build \
-   -t ghcr.io/openwallet-foundation/didcomm-mediator-credo \
-   -f Dockerfile \
-   .
+```sh
+docker run \
+  -e "CONFIG=/config/full.json" \
+  -v $(pwd)/apps/mediator/samples/full.json:/config/full.json \
+  -p 3000:3000 \
+  ghcr.io/openwallet-foundation/didcomm-mediator-credo:latest
 ```
 
-## Using Helm
+You can also adapt the `apps/mediator/docker-compose.yml` file to your needs.
 
-### To deploy the application on Kubernetes using Helm, follow this [installation guide](/helm/README.md) containing
+## Using Docker Compose for External Dependencies
 
-- Helm Chart structure
-- Quick Note
-- Helm Commands
+The project includes a Docker Compose file with services for external dependencies. You can selectively start only the services you need based on your configuration:
+
+```bash
+docker-compose up # Start all services
+docker-compose up postgres # Start only Postgres
+docker-compose up redis    # Start only Redis
+docker-compose up dynamodb # Start only DynamoDB
+```
+
+## External Access
+
+To reach the mediator from external devices or for testing with mobile apps, set up an ngrok tunnel. Since the `.env.local` file isn't loaded, you'll need to provide the auth token directly with the command:
+
+```bash
+NGROK_AUTH_TOKEN=your_token_here pnpm dev
+```
+
+You can obtain an auth token from: https://dashboard.ngrok.com/get-started/your-authtoken
 
 ## Roadmap
 
 The contents in this repository started out as a simple mediator built using Credo that can be used for development. Over time we've added some features, but there's still a lot we want to add to this repository over time. Some things on the roadmap:
 
 - Expose a `did:web` did, so you can directly connect to the mediator using only a did
-- Allow for customizing the message queue implementation, so it doesn't have to be stored in the Askar database, but rather in high-volume message queue like Kafka.
 - DIDComm v2 support
-- Sending push notifications to the recipient when a message is queued for them
 - Allow to control acceptance of mediation requests
 
 ## 🖇️ How To Contribute
