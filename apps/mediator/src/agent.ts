@@ -1,96 +1,50 @@
 import type { Socket } from 'node:net'
-import { AskarModule, AskarModuleConfigStoreOptions, AskarMultiWalletDatabaseScheme } from '@credo-ts/askar'
-import { Agent, CacheModule, InMemoryLruCache } from '@credo-ts/core'
+import { Agent } from '@credo-ts/core'
 import {
   ConnectionsModule,
   DidCommMimeType,
   HttpOutboundTransport,
   MediatorModule,
-  MessagePickupModule,
   OutOfBandRole,
   OutOfBandState,
   WsOutboundTransport,
   getDefaultDidcommModules,
 } from '@credo-ts/didcomm'
-import { DynamoDbMessagePickupRepository } from '@credo-ts/didcomm-message-pickup-dynamodb'
+
+// FIXME: export from askar root
+import { AskarStoreDuplicateError } from '@credo-ts/askar/build/error/AskarStoreDuplicateError'
+
 import { HttpInboundTransport, WsInboundTransport, agentDependencies } from '@credo-ts/node'
-import { RedisCache } from '@credo-ts/redis-cache'
-import { askar } from '@openwallet-foundation/askar-nodejs'
 
 import express from 'express'
 import { Server } from 'ws'
 
-import config from './config'
-import { askarPostgresConfig } from './database'
-import { Logger } from './logger'
+import { AskarModule } from '@credo-ts/askar'
+import { config, logger } from './config'
+import { loadAskar } from './config/askarLoader'
+import { loadCacheStorage } from './config/cacheLoader'
+import { ExtendedQueueTransportRepository, loadMessagePickupStorage } from './config/messagePickupLoader'
+import { loadStorage } from './config/storageLoader'
 import { PushNotificationsFcmModule } from './push-notifications/fcm'
-import { StorageMessageQueueModule } from './storage/StorageMessageQueueModule'
 
-const logger = new Logger(config.get('agent:logLevel'))
-
-async function createModules() {
-  // Only load postgres database in production
-  const databaseConfig = config.get('db:host') ? askarPostgresConfig : undefined
-
-  const storeConfig: AskarModuleConfigStoreOptions = {
-    id: config.get('wallet:name'),
-    key: config.get('wallet:key'),
-    database: databaseConfig,
-  }
-
-  if (databaseConfig) {
-    logger.info('Using postgres storage', {
-      walletId: storeConfig.id,
-      host: databaseConfig.config.host,
-    })
-  } else {
-    logger.info('Using SQlite storage', {
-      walletId: storeConfig.id,
-    })
-  }
-
-  const messagePickupStorage = config.get('messagePickupStorage:type')
-  const cacheStorage = config.get('cacheStorage:type')
-
+async function createModules({
+  queueTransportRepository,
+}: {
+  queueTransportRepository: ExtendedQueueTransportRepository
+}) {
   const modules = {
     ...getDefaultDidcommModules({
-      endpoints: config.get('agent:endpoints'),
+      endpoints: config.agentEndpoints,
       useDidSovPrefixWhereAllowed: true,
       didCommMimeType: DidCommMimeType.V0,
+      queueTransportRepository,
     }),
     connections: new ConnectionsModule({
       autoAcceptConnections: true,
     }),
-    ...(messagePickupStorage === 'credo'
-      ? {
-          storageModule: new StorageMessageQueueModule(),
-        }
-      : {
-          messagePickup: new MessagePickupModule({
-            messagePickupRepository: await DynamoDbMessagePickupRepository.initialize({
-              region: config.get('messagePickupStorage:region'),
-              credentials: {
-                accessKeyId: config.get('messagePickupStorage:accessKeyId'),
-                secretAccessKey: config.get('messagePickupStorage:secretAccessKey'),
-              },
-            }),
-          }),
-        }),
-
     mediator: new MediatorModule({
       autoAcceptMediationRequests: true,
-    }),
-    askar: new AskarModule({
-      askar,
-      store: storeConfig,
-      multiWalletDatabaseScheme: AskarMultiWalletDatabaseScheme.ProfilePerWallet,
-    }),
-    cache: new CacheModule({
-      cache:
-        cacheStorage === 'in-memory'
-          ? new InMemoryLruCache({ limit: 500 })
-          : new RedisCache(config.get('cacheStorage:url')),
-      useCachedStorageService: cacheStorage === 'redis',
+      messageForwardingStrategy: config.messagePickup.forwardingStrategy,
     }),
     pushNotificationsFcm: new PushNotificationsFcmModule(),
   } as const
@@ -104,18 +58,30 @@ export async function createAgent() {
   const app = express()
   const socketServer = new Server({ noServer: true })
 
-  const agent = new Agent({
+  const queueTransportRepository = await loadMessagePickupStorage()
+  const storageModules = loadStorage()
+  const askarModules = await loadAskar()
+  const cacheModules = loadCacheStorage()
+
+  const modules = {
+    ...storageModules,
+    ...askarModules,
+    ...cacheModules,
+    ...(await createModules({ queueTransportRepository })),
+  } as const
+
+  const agent = new Agent<typeof modules & { askar: AskarModule }>({
     config: {
-      label: config.get('agent:name'),
-      logger: logger,
+      label: config.agentName,
+      logger,
       autoUpdateStorageOnStartup: true,
     },
     dependencies: agentDependencies,
-    modules: await createModules(),
+    modules: modules as typeof modules & { askar: AskarModule },
   })
 
   // Create all transports
-  const httpInboundTransport = new HttpInboundTransport({ app, port: config.get('agent:port') })
+  const httpInboundTransport = new HttpInboundTransport({ app, port: config.agentPort })
   const httpOutboundTransport = new HttpOutboundTransport()
   const wsInboundTransport = new WsInboundTransport({ server: socketServer })
   const wsOutboundTransport = new WsOutboundTransport()
@@ -153,23 +119,31 @@ export async function createAgent() {
     await agent.modules.askar.provisionStore()
     agent.config.logger.info('Provisioned store')
   } catch (error) {
-    agent.config.logger.info('Error provisioning store', {
-      error,
-    })
+    if (error instanceof AskarStoreDuplicateError) {
+      // no-op
+    } else {
+      agent.config.logger.error('Error provisioning store', {
+        error,
+      })
+    }
   }
+
+  // Optionally initialize queue transport repository
+  // TODO: We should refactor this so it's handled by the agent.initialize (using a module?)
+  await queueTransportRepository.initialize?.(agent)
 
   await agent.initialize()
 
   httpInboundTransport.server?.on('listening', () => {
-    logger.info(`Agent listening on port ${config.get('agent:port')}`)
+    logger.info(`Agent listening on port ${config.agentPort}`)
   })
 
   httpInboundTransport.server?.on('error', (err) => {
-    logger.error(`Agent failed to start on port ${config.get('agent:port')}`, err)
+    logger.error(`Agent failed to start on port ${config.agentPort}`, err)
   })
 
   httpInboundTransport.server?.on('close', () => {
-    logger.info(`Agent stopped listening on port ${config.get('agent:port')}`)
+    logger.info(`Agent stopped listening on port ${config.agentPort}`)
   })
 
   // When an 'upgrade' to WS is made on our http server, we forward the

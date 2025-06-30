@@ -11,27 +11,32 @@ services:
       # Basic configuration
       AGENT_PORT: 3000
       AGENT_NAME: ${AGENT_NAME}
-      WALLET_NAME: ${WALLET_NAME}
-      WALLET_KEY: ${WALLET_KEY}
       AGENT_ENDPOINTS: ${AGENT_ENDPOINTS}
       LOG_LEVEL: ${LOG_LEVEL}
 
+      STORAGE__TYPE: drizzle
+      STORAGE__DIALECT: postgres
+      STORAGE__DATABASE_URL: postgresql://postgres:postgres@postgres:5432/drizzle'
+
       # Database configuration - Postgres
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_HOST: postgres:5432
-      POSTGRES_ADMIN_USER: postgres
-      POSTGRES_ADMIN_PASSWORD: postgres
+      ASKAR__STORE_ID: ${ASKAR__STORE_ID}
+      ASKAR__STORE_KEY: ${ASKAR__STORE_KEY}
+      ASKAR__DATABASE__TYPE: postgres
+      ASKAR__DATABASE__USER: postgres
+      ASKAR__DATABASE__PASSWORD: postgres
+      ASKAR__DATABASE__HOST: postgres:5432
+      ASKAR__DATABASE__ADMIN_USER: postgres
+      ASKAR__DATABASE__ADMIN_PASSWORD: postgres
 
       # Message Pickup configuration - DynamoDB
-      MESSAGE_PICKUP_STORAGE: dynamodb
-      MESSAGE_PICKUP_STORAGE_DYNAMODB_REGION: local
-      MESSAGE_PICKUP_STORAGE_DYNAMODB_ACCESS_KEY_ID: local
-      MESSAGE_PICKUP_STORAGE_DYNAMODB_SECRET_ACCESS_KEY: local
+      MESSAGE_PICKUP__STORAGE__TYPE: dynamodb
+      MESSAGE_PICKUP__STORAGE__REGION: local
+      MESSAGE_PICKUP__STORAGE__ACCESS_KEY_ID: local
+      MESSAGE_PICKUP__STORAGE__SECRET_ACCESS_KEY: local
 
       # Cache configuration - Redis
-      CACHE_STORAGE: redis
-      CACHE_STORAGE_REDIS_URL: redis://redis:6379
+      CACHE__TYPE: redis
+      CACHE__REDIS_URL: redis://redis:6379
     env_file: ./.env.local
     ports:
       - "3000:3000"
@@ -58,5 +63,7 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
+    volumes:
+      - ../../development/init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - mediator-net

@@ -1,0 +1,48 @@
+{
+  "agentPort": 3110,
+  "agentName": "Credo DIDComm Mediator",
+  "agentEndpoints": ["http://localhost:3110", "ws://localhost:3310"],
+  "invitationUrl": "http://localhost:3110/invitation",
+  "cache": {
+    "type": "redis",
+    "redisUrl": "redis://127.0.0.1:6379"
+  },
+  "askar": {
+    "storeId": "test",
+    "storeKey": "test",
+    "database": {
+      "type": "postgres",
+      "host": "localhost:5432",
+      "user": "postgres",
+      "password": "postgres",
+      "adminUser": "postgres",
+      "adminPassword": "postgres"
+    }
+  },
+  "storage": {
+    "type": "drizzle",
+    "dialect": "postgres",
+    "databaseUrl": "postgresql://postgres:postgres@localhost:5432/drizzle"
+  },
+  "kms": {
+    "type": "askar"
+  },
+  "messagePickup": {
+    "storage": {
+      "type": "dynamodb",
+      "region": "local",
+      "accessKeyId": "local",
+      "secretAccessKey": "local"
+    }
+  },
+  "pushNotifications": {
+    "webhookUrl": "https://webhook.com",
+    "firebase": {
+      "projectId": "fb315c26-b923-4f8f-b78b-2e4d7c8a66be",
+      "clientEmail": "email@email.com",
+      "priateKey": "ey...",
+      "notificationTitle": "New message",
+      "notificationBody": "New message"
+    }
+  }
+}

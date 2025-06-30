@@ -1,25 +1,14 @@
 import admin from 'firebase-admin'
-import config from '../../config'
+import { config } from '../../config'
 
-let _firebase: admin.app.App | undefined = undefined
-export const getFirebase = () => {
-  if (_firebase) return _firebase
-
-  if (admin.apps.length) {
-    _firebase = admin.app()
-    return _firebase
-  }
-
-  if (config.get('agent:firebase:projectId')) {
-    _firebase = admin.initializeApp({
-      credential: admin.credential.cert({
-        projectId: config.get('agent:firebase:projectId'),
-        clientEmail: config.get('agent:firebase:clientEmail'),
-        privateKey: config.get('agent:firebase:privateKey'),
-      }),
-    })
-    return _firebase
-  }
-
-  throw new Error('Firebase not configured.')
-}
+export const firebase: admin.app.App | undefined = !config.pushNotifications?.firebase
+  ? undefined
+  : admin.apps.length
+    ? admin.app()
+    : admin.initializeApp({
+        credential: admin.credential.cert({
+          projectId: config.pushNotifications.firebase.projectId,
+          clientEmail: config.pushNotifications.firebase.clientEmail,
+          privateKey: config.pushNotifications.firebase.privateKey,
+        }),
+      })

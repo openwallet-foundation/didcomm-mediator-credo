@@ -1,122 +1,327 @@
-import path from 'node:path'
 import { LogLevel } from '@credo-ts/core'
-
-import nconf from 'nconf'
+import { MessageForwardingStrategy } from '@credo-ts/didcomm'
+import { loadConfigSync } from 'zod-config'
+import { jsonAdapter } from 'zod-config/json-adapter'
+import { z } from 'zod/v4'
+import { $ZodError } from 'zod/v4/core'
+import { customEnvAdapter } from './config/envAdapter'
 import { Logger } from './logger'
 
-const dirName = __dirname
-const configFileName = 'config.json'
+const zConfig = z
+  .object({
+    logLevel: z
+      .enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal', 'off'] as const, {
+        error:
+          "Log level must be one of 'trace' | 'debug' | 'info' (default) | 'warn' | 'error' | 'fatal' | 'off'. Can also be set using LOG_LEVEL environment variable",
+      })
+      .default('info'),
 
-/**
- * These settings contain sensitive information and should not be
- * stored in the repo. They are extracted from environment variables
- * and added to the config.
- */
-const agentPort = Number(process.env.AGENT_PORT ?? 3110)
+    storage: z
+      .discriminatedUnion(
+        'type',
+        [
+          z.object({
+            type: z.literal('askar'),
+          }),
+          z.object({
+            type: z.literal('drizzle'),
+            dialect: z
+              .enum(['postgres', 'sqlite'], {
+                error:
+                  "Drizzle dialect must be one of 'sqlite' (default) | 'postgres'. Can also be set using DRIZZLE__DIALECT environment variable",
+              })
+              .default('sqlite'),
+            databaseUrl: z.url({
+              error:
+                "Drizzle database url must be a valid url. Can also be set using 'DRIZZLE__DATABASE_URL' environment variable",
+            }),
+          }),
+        ],
+        { error: "Storage type must be one of 'askar' (default) | 'drizzle'" }
+      )
+      .default({
+        type: 'askar',
+      }),
 
-const logLevel = process.env.LOG_LEVEL ?? LogLevel.debug
-export const logger = new Logger(logLevel as LogLevel)
+    kms: z
+      .object({
+        type: z.literal('askar', {
+          error:
+            "Kms type must be provided. Supported kms types are 'askar' (default). Can also be set using KMS__TYPE environment variable",
+        }),
+      })
+      .default({
+        type: 'askar',
+      }),
 
-const messagePickupStorage = process.env.MESSAGE_PICKUP_STORAGE ?? 'credo'
-if (messagePickupStorage === 'dynamodb') {
-  if (!process.env.MESSAGE_PICKUP_STORAGE_DYNAMODB_REGION) {
-    throw new Error(
-      `Missing reuqired MESSAGE_PICKUP_STORAGE_DYNAMODB_REGION for MESSAGE_PICKUP_STORAGE type 'dynamodb'`
-    )
-  }
-  if (!process.env.MESSAGE_PICKUP_STORAGE_DYNAMODB_ACCESS_KEY_ID) {
-    throw new Error(
-      `Missing reuqired MESSAGE_PICKUP_STORAGE_DYNAMODB_ACCESS_KEY_ID for MESSAGE_PICKUP_STORAGE type 'dynamodb'`
-    )
-  }
-  if (!process.env.MESSAGE_PICKUP_STORAGE_DYNAMODB_SECRET_ACCESS_KEY) {
-    throw new Error(
-      `Missing reuqired MESSAGE_PICKUP_STORAGE_DYNAMODB_SECRET_ACCESS_KEY for MESSAGE_PICKUP_STORAGE type 'dynamodb'`
-    )
-  }
+    askar: z.object(
+      {
+        storeId: z.string({
+          error: "Askar store id must be a string. Can also be set using 'ASKAR__STORE_ID' environment variable",
+        }),
+        storeKey: z.string({
+          error: "Askar store key must be string. Can also be set using 'ASKAR__STORE_KEY' environment variable",
+        }),
+        keyDerivationMethod: z
+          .enum(['kdf:argon2i:mod', 'kdf:argon2i:int', 'raw'], {
+            error:
+              "Askar key derivation method must be one of 'kdf:argon2i:mod' (default) | 'kdf:argon2i:int' | 'raw'. Can also be set using ASKAR__KEY_DERIVATION_METHOD environment variable",
+          })
+          .default('kdf:argon2i:mod'),
+        database: z
+          .discriminatedUnion(
+            'type',
+            [
+              z.object({
+                type: z.literal('sqlite'),
+              }),
+              z.object({
+                type: z.literal('postgres'),
+                host: z.string({
+                  error:
+                    "Askar database host must be a string when database type is 'postgres'. Can also be set using 'ASKAR__DATABASE__HOST' environment variable",
+                }),
+                user: z.string({
+                  error:
+                    "Askar database user must be a string when database type is 'postgres'. Can also be set using 'ASKAR__DATABASE__USER' environment variable",
+                }),
+                password: z.string({
+                  error:
+                    "Askar database password must be a string when database type is 'postgres'. Can also be set using 'ASKAR__DATABASE__PASSWORD' environment variable",
+                }),
+                adminUser: z
+                  .string({
+                    error:
+                      "Askar database admin user must be a string. Can also be set using 'ASKAR__DATABASE__ADMIN_USER' environment variable",
+                  })
+                  .optional(),
+                adminPassword: z
+                  .string({
+                    error:
+                      "Askar database admin password must be a string. Can also be set using 'ASKAR__DATABASE__ADMIN_PASSWORD' environment variable",
+                  })
+                  .optional(),
+              }),
+            ],
+            { error: "Askar database type must be one of 'sqlite' (default) | 'postgres'" }
+          )
+          .default({ type: 'sqlite' }),
+      },
+      {
+        error:
+          "Askar configuration must be provided. Can also be seting using 'ASKAR__<KEY>' environment variables (e.g. 'ASKAR__STORE_ID')",
+      }
+    ),
 
-  logger.info('Using dynamodb message pickup storage')
-} else if (messagePickupStorage !== 'credo') {
-  throw new Error(
-    `Unsupported message pickup storage '${messagePickupStorage}'. Supported values are 'credo' (default) and 'dynamodb'`
-  )
-} else {
-  logger.info('Using credo message pickup storage')
-}
+    cache: z
+      .discriminatedUnion(
+        'type',
+        [
+          z.object({
+            type: z.literal('in-memory'),
+          }),
+          z.object({
+            type: z.literal('redis'),
+            redisUrl: z.url({
+              error:
+                "Cache redis url must be a valid url when cache type is 'redis'. Can also be set using 'CACHE__REDIS_URL' environment variable",
+            }),
+          }),
+        ],
+        { error: "Cache type must be one of 'in-memory' (default) | 'redis'" }
+      )
+      .default({
+        type: 'in-memory',
+      }),
 
-const cacheStorage = process.env.CACHE_STORAGE ?? 'in-memory'
-if (cacheStorage === 'redis') {
-  if (!process.env.CACHE_STORAGE_REDIS_URL) {
-    throw new Error(`Missing reuqired CACHE_STORAGE_REDIS_URL for CACHE_STORAGE type 'redis'`)
-  }
-  logger.info('Using redis cache storage')
-} else if (cacheStorage !== 'in-memory') {
-  throw new Error(`Unsupported cache storage '${cacheStorage}'. Supported values are 'in-memory' (default) and 'redis'`)
-} else {
-  logger.info('Using in-memory cache storage')
-}
-
-// overrides are always as defined
-nconf.overrides({
-  db: {
-    host: process.env.POSTGRES_HOST,
-    user: process.env.POSTGRES_USER,
-    password: process.env.POSTGRES_PASSWORD,
-    adminUser: process.env.POSTGRES_ADMIN_USER,
-    adminPassword: process.env.POSTGRES_ADMIN_PASSWORD,
-  },
-  messagePickupStorage:
-    messagePickupStorage === 'credo'
-      ? {
-          type: messagePickupStorage,
-        }
-      : {
-          type: messagePickupStorage,
-          region: process.env.MESSAGE_PICKUP_STORAGE_DYNAMODB_REGION,
-          accessKeyId: process.env.MESSAGE_PICKUP_STORAGE_DYNAMODB_ACCESS_KEY_ID,
-          secretAccessKey: process.env.MESSAGE_PICKUP_STORAGE_DYNAMODB_SECRET_ACCESS_KEY,
+    messagePickup: z
+      .object({
+        forwardingStrategy: z
+          .enum(MessageForwardingStrategy, {
+            error:
+              "Message pickup forwarding strategy must be one of 'DirectDelivery' (default) | 'QueueOnly' | 'QueueAndLiveModeDelivery'. Can also be set using MESSAGE_PICKUP__FORWARDING_STRATEGRY environment variable",
+          })
+          .default(MessageForwardingStrategy.DirectDelivery),
+        storage: z
+          .discriminatedUnion(
+            'type',
+            [
+              z.object({
+                type: z.literal('credo'),
+              }),
+              z.object({
+                type: z.literal('postgres'),
+                host: z.string({
+                  error:
+                    "Message pickup storage host must be a string when message pickup storage type is 'postgres'. Can also be set using 'MESSAGE_PICKUP__STORAGE__HOST' environment variable",
+                }),
+                user: z.string({
+                  error:
+                    "Message pickup storage user must be a string when message pickup storage type is 'postgres'. Can also be set using 'MESSAGE_PICKUP__STORAGE__USER' environment variable",
+                }),
+                password: z.string({
+                  error:
+                    "Message pickup storage password must be a string when message pickup storage type is 'postgres'. Can also be set using 'MESSAGE_PICKUP__STORAGE__PASSWORD' environment variable",
+                }),
+                database: z.string({
+                  error:
+                    "Message pickup storage database must be a string when message pickup storage type is 'postgres'. Can also be set using 'MESSAGE_PICKUP__STORAGE__DATABASE' environment variable",
+                }),
+              }),
+              z.object({
+                type: z.literal('dynamodb'),
+                region: z
+                  .string({
+                    error:
+                      "Message pickup storage region must be a string when message pickup storage type is 'dynamodb'. Can also be set using 'MESSAGE_PICKUP__STORAGE__REGION' environment variable",
+                  })
+                  .optional(),
+                accessKeyId: z.string({
+                  error:
+                    "Message pickup storage access key id must be a string when message pickup storage type is 'dynamodb'. Can also be set using 'MESSAGE_PICKUP__STORAGE__ACCESS_KEY_ID' environment variable",
+                }),
+                secretAccessKey: z.string({
+                  error:
+                    "Message pickup storage secret access key must be a string when message pickup storage type is 'dynamodb'. Can also be set using 'MESSAGE_PICKUP__STORAGE__SECRET_ACCESS_KEY' environment variable",
+                }),
+              }),
+            ],
+            { error: "Message pickup storage type must be one of 'credo' (default) | 'postgres' | 'dynamodb'" }
+          )
+          .default({
+            type: 'credo',
+          }),
+      })
+      .default({
+        forwardingStrategy: MessageForwardingStrategy.DirectDelivery,
+        storage: {
+          type: 'credo',
         },
-  cacheStorage:
-    cacheStorage === 'in-memory'
-      ? {
-          type: cacheStorage,
-        }
-      : {
-          type: cacheStorage,
-          url: process.env.CACHE_STORAGE_REDIS_URL,
-        },
-  agent: {
-    port: agentPort,
-    endpoints: process.env.AGENT_ENDPOINTS
-      ? process.env.AGENT_ENDPOINTS.split(',')
-      : [`http://localhost:${agentPort}`, `ws://localhost:${agentPort}`],
-    name: process.env.AGENT_NAME ?? 'My Mediator',
-    invitationUrl: process.env.INVITATION_URL ?? `http://localhost:${agentPort}`,
-    logLevel,
-    usePushNotifications: process.env.USE_PUSH_NOTIFICATIONS === 'true',
-    notificationWebhookUrl: process.env.NOTIFICATION_WEBHOOK_URL,
-    pushNotificationTitle: process.env.PUSH_NOTIFICATION_TITLE,
-    pushNotificationBody: process.env.PUSH_NOTIFICATION_BODY,
-    firebase: {
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY,
-    },
-    cache: {},
-  },
-  wallet: {
-    name: process.env.WALLET_NAME,
-    key: process.env.WALLET_KEY,
-  },
-})
+      }),
 
-// load other properties from file.
-nconf
-  .argv({ parseValues: true })
-  .env()
-  .file({ file: path.join(dirName, '../', configFileName) })
+    pushNotifications: z
+      .object({
+        webhookUrl: z
+          .url({
+            error:
+              "Push notifications webhook url must be a valid url. Can also be set using 'PUSH_NOTIFICATIONS__WEBHOOK_URL' environment variable",
+          })
+          .optional(),
+        firebase: z
+          .object({
+            projectId: z.string({
+              error:
+                "Firebase push notifications project id must be a string when firebase is configured. Can also be set using 'PUSH_NOTIFICATIONS__FIREBASE__PROJECT_ID' environment variable",
+            }),
+            clientEmail: z.email({
+              error:
+                "Firebase push notifications client email must be a string when firebase is configured. Can also be set using 'PUSH_NOTIFICATIONS__FIREBASE__CLIENT_EMAIL' environment variable",
+            }),
+            privateKey: z
+              .string({
+                error:
+                  "Firebase push notifications private key must be a string when firebase is configured. Can also be set using 'PUSH_NOTIFICATIONS__FIREBASE__PRIVATE_KEY' environment variable",
+              })
+              .transform((key) => key.replace(/\\n/g, '\n')),
+            notificationTitle: z.string({
+              error:
+                "Firebase push notifications title must be a string when firebase is configured. Can also be set using 'PUSH_NOTIFICATIONS__FIREBASE__NOTIFICATION_TITLE' environment variable",
+            }),
+            notificationBody: z.string({
+              error:
+                "Firebase push notifications body must be a string when firebase is configured. Can also be set using 'PUSH_NOTIFICATIONS__FIREBASE__NOTIFICATION_BODY' environment variable",
+            }),
+          })
+          .optional(),
+      })
+      .default({}),
 
-// if nothing else is set, use defaults. This will be set
-// if they do not exist in overrides or the config file.
+    agentPort: z.coerce
+      .number({
+        error: "Agent port must be a number. Defaults to 3110. Can also be set using 'AGENT_PORT' environment variable",
+      })
+      .default(3110),
+    agentEndpoints: z
+      .union([z.string().transform((s) => s.split(',')), z.array(z.string())], {
+        error:
+          "Agent endpoints must be an array of valid urls. Defaults to 3110. Can also be set using 'AGENT_ENDPOINTS' environment variable (values seperated by ,)",
+      })
+      .pipe(
+        z
+          .array(
+            z.url({
+              error:
+                "Agent endpoints must be an array of valid urls. Defaults to 3110. Can also be set using 'AGENT_ENDPOINTS' environment variable (values seperated by ,)",
+            }),
+            {
+              error:
+                "Agent endpoints must be an array of valid urls. Defaults to 3110. Can also be set using 'AGENT_ENDPOINTS' environment variable (values seperated by ,)",
+            }
+          )
+          .min(1)
+      )
+      .refine((urls) => urls.some((url) => url.startsWith('http://') || url.startsWith('https://')), {
+        error: 'Agent endpoints must contain at least one http:// or https:// url',
+      })
+      .default([]),
+    agentName: z
+      .string({
+        error:
+          "Agent name must be a string. Defaults to 'Credo DIDComm Mediator'. Can also be set using 'AGENT_NAME' environment variable",
+      })
+      .default('Credo DIDComm Mediator'),
+    invitationUrl: z
+      .url({
+        error:
+          "Invitation url must be a valid url. Defaults to '/invitatin' on the first configured http(s) agent endpoint. Can also be set using 'INVITATION_URL' environment variable",
+      })
+      .optional(),
+  })
+  .transform((config) => {
+    const agentEndpoints =
+      config.agentEndpoints.length === 0
+        ? [`http://localhost:${config.agentPort}`, `ws://localhost:${config.agentPort}`]
+        : config.agentEndpoints
 
-export default nconf
+    const httpEndpoint = agentEndpoints.find(
+      (endpoint) => endpoint.startsWith('http://') || endpoint.startsWith('https://')
+    )
+    return {
+      ...config,
+      agentEndpoints,
+      invitationUrl: config.invitationUrl ?? `${httpEndpoint}/invitation`,
+    }
+  })
+
+export type Config = z.infer<typeof zConfig>
+export const config = loadMediatorConfig()
+export const logger = new Logger(LogLevel[config.logLevel])
+
+function loadMediatorConfig(): Config {
+  try {
+    const envAdapter = customEnvAdapter({
+      nestingDelimiter: '__',
+    })
+
+    const config = loadConfigSync({
+      schema: zConfig,
+      adapters: process.env.CONFIG
+        ? [
+            envAdapter,
+            jsonAdapter({
+              path: process.env.CONFIG,
+            }),
+          ]
+        : envAdapter,
+      keyMatching: 'lenient',
+    })
+
+    return config
+  } catch (error) {
+    if (error instanceof $ZodError) {
+      throw new Error(`Error while parsing configuration for mediator:\n\n${z.prettifyError(error)}\n\n`)
+    }
+
+    throw error
+  }
+}

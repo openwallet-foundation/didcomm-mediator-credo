@@ -1,14 +1,15 @@
+import { AgentContext } from '@credo-ts/core'
 import {
   AddMessageOptions,
   GetAvailableMessageCountOptions,
-  MessagePickupRepository,
+  QueueTransportRepository,
   QueuedMessage,
   RemoveMessagesOptions,
   TakeFromQueueOptions,
 } from '@credo-ts/didcomm'
 import { DynamoDbClientRepository, DynamoDbClientRepositoryOptions } from './client'
 
-export class DynamoDbMessagePickupRepository implements MessagePickupRepository {
+export class DynamoDbMessagePickupRepository implements QueueTransportRepository {
   private client: DynamoDbClientRepository
 
   private constructor(client: DynamoDbClientRepository) {
@@ -19,16 +20,19 @@ export class DynamoDbMessagePickupRepository implements MessagePickupRepository 
     return new DynamoDbMessagePickupRepository(await DynamoDbClientRepository.initialize(options))
   }
 
-  public async getAvailableMessageCount({ connectionId }: GetAvailableMessageCountOptions): Promise<number> {
+  public async getAvailableMessageCount(
+    agentContext: AgentContext,
+    { connectionId }: GetAvailableMessageCountOptions
+  ): Promise<number> {
     return await this.client.getMessageCount(connectionId)
   }
 
-  public async takeFromQueue(options: TakeFromQueueOptions): Promise<Array<QueuedMessage>> {
+  public async takeFromQueue(agentContext: AgentContext, options: TakeFromQueueOptions): Promise<Array<QueuedMessage>> {
     return await this.client.getMessages(options)
   }
 
   // TODO: will be added in credo
-  public async addMessage(options: AddMessageOptions & { receivedAt?: Date }): Promise<string> {
+  public async addMessage(agentContext: AgentContext, options: AddMessageOptions): Promise<string> {
     const id = await this.client.addMessage({
       ...options,
       encryptedMessage: options.payload,
@@ -37,7 +41,7 @@ export class DynamoDbMessagePickupRepository implements MessagePickupRepository 
     return id
   }
 
-  public async removeMessages(options: RemoveMessagesOptions): Promise<void> {
+  public async removeMessages(agentContext: AgentContext, options: RemoveMessagesOptions): Promise<void> {
     await this.client.removeMessages({
       connectionId: options.connectionId,
       messageIds: options.messageIds,

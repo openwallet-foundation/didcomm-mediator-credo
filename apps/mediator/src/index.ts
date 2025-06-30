@@ -1,7 +1,7 @@
 import { OutOfBandRepository, OutOfBandRole, OutOfBandState } from '@credo-ts/didcomm'
 
 import { createAgent } from './agent'
-import config from './config'
+import { config } from './config'
 
 void createAgent().then(async (agent) => {
   agent.config.logger.info('Agent started')
@@ -22,10 +22,8 @@ void createAgent().then(async (agent) => {
     })
   }
 
-  const httpEndpoint = agent.modules.didcomm.config.endpoints.find((e) => e.startsWith('http')) as string
-  const invitationEndpoint = config.get('agent:invitationUrl') ?? `${httpEndpoint}/invite`
   const mediatorInvitationUrlLong = outOfBandRecord.outOfBandInvitation.toUrl({
-    domain: invitationEndpoint,
+    domain: config.invitationUrl,
   })
 
   agent.config.logger.info(`Out of band invitation url: \n\n\t${mediatorInvitationUrlLong}`)

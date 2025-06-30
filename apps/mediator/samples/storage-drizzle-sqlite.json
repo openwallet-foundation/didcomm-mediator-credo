@@ -1,0 +1,11 @@
+{
+  "storage": {
+    "type": "drizzle",
+    "dialect": "sqlite",
+    "databaseUrl": "file:./database.db"
+  },
+  "askar": {
+    "storeId": "test",
+    "storeKey": "test"
+  }
+}

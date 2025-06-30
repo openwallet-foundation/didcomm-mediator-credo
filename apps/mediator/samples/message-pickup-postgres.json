@@ -1,0 +1,15 @@
+{
+  "askar": {
+    "storeId": "test",
+    "storeKey": "test"
+  },
+  "messagePickup": {
+    "storage": {
+      "type": "postgres",
+      "host": "localhost:5432",
+      "user": "postgres",
+      "password": "postgres",
+      "database": "message_pickup"
+    }
+  }
+}

@@ -55,13 +55,15 @@ podLabels: {}
 ## @param podSecurityContext Pod Security Context
 ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
 ##
-podSecurityContext: {}
+podSecurityContext:
+  {}
   # fsGroup: 2000
 
 ## @param securityContext Container Security Context
 ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
 ##
-securityContext: {}
+securityContext:
+  {}
   # capabilities:
   #   drop:
   #   - ALL
@@ -89,12 +91,13 @@ ingress:
   className: ""
   ## @param ingress.annotations Additional annotations for the Ingress resource.
   ##
-  annotations: 
+  annotations:
     # route.openshift.io/termination: edge
     # kubernetes.io/ingress.class: nginx
     # kubernetes.io/tls-acme: "true"
   ## @param ingress.hosts [array] List of hosts to be configured for the specified ingress record.
-  hosts: []
+  hosts:
+    []
     # - host: example.com
     #   paths:
     #     - path: /
@@ -122,7 +125,8 @@ networkPolicy:
 
 ## @param resources CPU/Memory resource requests/limits - unset by default
 ## ref: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
-resources: {}
+resources:
+  {}
   # We usually recommend not to specify default resources and to leave this as a conscious
   # choice for the user. This also increases chances charts run on environments with little
   # resources, such as Minikube. If you do want to specify resources, uncomment the following
@@ -137,32 +141,84 @@ resources: {}
 ## @param environment [array] Variables to be passed to the container
 ## ref: https://kubernetes.io/docs/concepts/configuration/overview/
 environment:
+  # Agent Configuration
   - name: AGENT_PORT
     value: "3000"
   - name: AGENT_NAME
     value: Mediator
-  - name: WALLET_NAME
-    value: mediator-wallet
-  - name: POSTGRES_USER
-    value: mediator
-  - name: POSTGRES_HOST
-    value: mediator-credo-db
-  - name: POSTGRES_ADMIN_USER
-    value: postgres
   - name: AGENT_ENDPOINTS
     value: "https://example.com,wss://example.com"
   - name: LOG_LEVEL
-    value: "2"
-  - name: POSTGRES_PASSWORD
+    value: debug
+
+  # Askar Configuration
+  - name: ASKAR__STORE_ID
+    value: mediator-wallet
+  - name: ASKAR__DATABASE__USER
+    value: mediator
+  - name: ASKAR__DATABASE__HOST
+    value: mediator-credo-db
+  - name: ASKAR__DATABASE__TYPE
+    value: postgres
+  - name: ASKAR__DATABASE__ADMIN_USER
+    value: postgres
+  - name: ASKAR__DATABASE__PASSWORD
     valueFrom:
       secretKeyRef:
         name: mediator-credo-db
         key: password
-  - name: POSTGRES_ADMIN_PASSWORD
+  - name: ASKAR__DATABASE__ADMIN_PASSWORD
     valueFrom:
       secretKeyRef:
         name: mediator-credo-db
         key: postgres-password
+
+  # Cache Configuration
+  - name: CACHE__TYPE
+    # The default is 'credo' which means it will use Credo's storage service as a pickup repository. Additionally, it can be set to 'redis'
+    value: redis
+  - name: CACHE__REDIS_URL
+    valueFrom:
+      secretKeyRef:
+        name: mediator-credo-redis
+        key: redis-url
+
+  # Storage Configuration
+  - name: STORAGE__TYPE
+    # The default is 'askar' which means it will use Askar as the storage service. Additionally, it can be set to 'drizzle'
+    value: drizzle
+  - name: STORAGE__DIALECT
+    # The default is 'sqlite', it can also be set to 'postgres'
+    value: postgres
+  - name: STORAGE__DATABASE_URL
+    valueFrom:
+      secretKeyRef:
+        name: mediator-credo-db
+        key: postgres-url
+
+  # KMS Configuration
+  - name: KMS__TYPE
+    # The default and only supported value is 'askar', so it is not required to set this value.
+    value: askar
+
+  # Message Pickup Configuration
+  - name: MESSAGE_PICKUP__STORAGE__TYPE
+    # The default is 'credo' which means it will use Credo's storage service as a pickup repository. Additionally, it can be set to 'postgres' or 'dynamodb'
+    # Additional params may be required
+    value: postgres
+  - name: MESSAGE_PICKUP__USER
+    value: mediator
+  - name: MESSAGE_PICKUP__HOST
+    value: mediator-credo-db
+  - name: MESSAGE_PICKUP__DATABASE
+    value: message_pickup
+  - name: MESSAGE_PICKUP__PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: mediator-credo-db
+        key: password
+  - name: MESSAGE_PICKUP__FORWARDING_STRATEGY
+    value: DirectDelivery # The default is 'DirectDelivery', it can be also be 'QueueOnly' or 'QueueAndLiveModeDelivery'
 
 # This is to setup the liveness and readiness probes more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
 ## @param livenessProbe [object] Liveness probe configuration
@@ -192,7 +248,7 @@ autoscaling:
 volumes:
   - name: cache-volume
     emptyDir:
-      sizeLimit: 1Gi 
+      sizeLimit: 1Gi
 
 ## @param volumeMounts [array] List of volumes to be mounted in the container
 volumeMounts:

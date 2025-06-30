@@ -1,0 +1,14 @@
+{
+  "askar": {
+    "storeId": "test",
+    "storeKey": "test"
+  },
+  "messagePickup": {
+    "storage": {
+      "type": "dynamodb",
+      "region": "local",
+      "accessKeyId": "local",
+      "secretAccessKey": "local"
+    }
+  }
+}

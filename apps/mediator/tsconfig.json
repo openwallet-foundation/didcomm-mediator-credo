@@ -5,7 +5,8 @@
   },
   "compilerOptions": {
     "paths": {
-      "@credo-ts/didcomm-message-pickup-dynamodb": ["../../packages/message-pickup-dynamodb/src/index.ts"]
+      "@credo-ts/didcomm-message-pickup-dynamodb": ["../../packages/message-pickup-dynamodb/src/index.ts"],
+      "@credo-ts/didcomm-message-pickup-postgres": ["../../packages/message-pickup-postgres/src/index.ts"]
     }
   }
 }

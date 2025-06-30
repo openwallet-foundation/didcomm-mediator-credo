@@ -1,0 +1,11 @@
+{
+  "storage": {
+    "type": "drizzle",
+    "dialect": "postgres",
+    "databaseUrl": "postgresql://postgres:postgres@localhost:5432/drizzle"
+  },
+  "askar": {
+    "storeId": "test",
+    "storeKey": "test"
+  }
+}
