@@ -183,7 +183,7 @@ Below are the top-level configuration options. All can be set via ENV (with doub
 - `forwardingStrategy`: `DirectDelivery`, `QueueOnly`, `QueueAndLiveModeDelivery`
 - `storage.type`: `credo`, `postgres`, or `dynamodb`
   - For `postgres`: `host`, `user`, `password`, `database`
-  - For `dynamodb`: `region`, `accessKeyId`, `secretAccessKey`
+  - For `dynamodb`: `region`, `accessKeyId`, `secretAccessKey`, `tableName`
 
 ### Push Notifications
 
@@ -202,6 +202,7 @@ CACHE__REDIS_URL=redis://127.0.0.1:6379 \
 MESSAGE_PICKUP__STORAGE__TYPE=dynamodb \
 MESSAGE_PICKUP__STORAGE__REGION=local \
 MESSAGE_PICKUP__STORAGE__ACCESS_KEY_ID=local \
+MESSAGE_PICKUP__STORAGE__TABLE_NAME=queued_messages \
 MESSAGE_PICKUP__STORAGE__SECRET_ACCESS_KEY=local \
 pnpm dev
 ```

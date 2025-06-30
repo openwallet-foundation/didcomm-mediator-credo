@@ -32,6 +32,7 @@ services:
       MESSAGE_PICKUP__STORAGE__TYPE: dynamodb
       MESSAGE_PICKUP__STORAGE__REGION: local
       MESSAGE_PICKUP__STORAGE__ACCESS_KEY_ID: local
+      MESSAGE_PICKUP__STORAGE__TABLE_NAME: queued_messages
       MESSAGE_PICKUP__STORAGE__SECRET_ACCESS_KEY: local
 
       # Cache configuration - Redis

@@ -16,6 +16,7 @@ export async function loadMessagePickupStorage(): Promise<ExtendedQueueTransport
     logger.info('Using dynamodb message pickup storage')
     return await DynamoDbMessagePickupRepository.initialize({
       region: storage.region,
+      tableName: storage.tableName,
       credentials: {
         accessKeyId: storage.accessKeyId,
         secretAccessKey: storage.secretAccessKey,

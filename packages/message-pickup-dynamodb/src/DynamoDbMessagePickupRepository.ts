@@ -31,7 +31,6 @@ export class DynamoDbMessagePickupRepository implements QueueTransportRepository
     return await this.client.getMessages(options)
   }
 
-  // TODO: will be added in credo
   public async addMessage(agentContext: AgentContext, options: AddMessageOptions): Promise<string> {
     const id = await this.client.addMessage({
       ...options,

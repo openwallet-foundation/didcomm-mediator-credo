@@ -180,6 +180,12 @@ const zConfig = z
                   error:
                     "Message pickup storage access key id must be a string when message pickup storage type is 'dynamodb'. Can also be set using 'MESSAGE_PICKUP__STORAGE__ACCESS_KEY_ID' environment variable",
                 }),
+                tableName: z
+                  .string({
+                    error:
+                      "Message pickup storage table name must be a string when message pickup storage type is 'dynamodb'. Can also be set using 'MESSAGE_PICKUP__STORAGE__TABLE_NAME' environment variable",
+                  })
+                  .optional(),
                 secretAccessKey: z.string({
                   error:
                     "Message pickup storage secret access key must be a string when message pickup storage type is 'dynamodb'. Can also be set using 'MESSAGE_PICKUP__STORAGE__SECRET_ACCESS_KEY' environment variable",

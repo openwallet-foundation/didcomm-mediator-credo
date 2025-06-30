@@ -30,14 +30,20 @@ export type RemoveQueuedMessageOptions = {
   messageIds: Array<string>
 }
 
-export type DynamoDbClientRepositoryOptions = DynamoDBClientConfigType
+export type DynamoDbClientRepositoryOptions = DynamoDBClientConfigType & {
+  /**
+   * @default queued_messages
+   */
+  tableName?: string
+}
 
 export class DynamoDbClientRepository {
   private dynamodbClient: DynamoDBClient
-  private tableName = 'queued_messages'
+  private tableName: string
 
   private constructor(options: DynamoDbClientRepositoryOptions) {
     this.dynamodbClient = new DynamoDBClient(options)
+    this.tableName = options.tableName ?? 'queued_messages'
   }
 
   public static async initialize(options: DynamoDBClientConfigType): Promise<DynamoDbClientRepository> {
