@@ -47,7 +47,7 @@
     "tsyringe": "^4.8.0",
     "ws": "^8.17.1",
     "zod": "^3.25.67",
-    "zod-config": "file:/Users/timo/Developer/Work/Projects/AFJ/zod-config"
+    "zod-config": "^1.1.0"
   },
   "devDependencies": {
     "@ngrok/ngrok": "^1.2.0",

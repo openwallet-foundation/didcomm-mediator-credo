@@ -114,8 +114,8 @@ importers:
         specifier: ^3.25.67
         version: 3.25.67
       zod-config:
-        specifier: file:/Users/timo/Developer/Work/Projects/AFJ/zod-config
-        version: file:../zod-config(dotenv@16.5.0)(zod@3.25.67)
+        specifier: ^1.1.0
+        version: 1.1.0(dotenv@16.5.0)(zod@3.25.67)
     devDependencies:
       '@ngrok/ngrok':
         specifier: ^1.2.0
@@ -5560,8 +5560,8 @@ packages:
     resolution: {integrity: sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==}
     engines: {node: '>=10'}
 
-  zod-config@file:../zod-config:
-    resolution: {directory: ../zod-config, type: directory}
+  zod-config@1.1.0:
+    resolution: {integrity: sha512-OuPCfpVzupUjK0e7l8S7wpM2zujckReH3uTHjJ76TNLAP2AwVv4sozJXSLCdnaRrVLep/AIjEDoIBFAUW1TIwA==}
     engines: {node: '>=14.0.0'}
     peerDependencies:
       dotenv: '>=15'
@@ -12617,7 +12617,7 @@ snapshots:
   yocto-queue@0.1.0:
     optional: true
 
-  zod-config@file:../zod-config(dotenv@16.5.0)(zod@3.25.67):
+  zod-config@1.1.0(dotenv@16.5.0)(zod@3.25.67):
     dependencies:
       zod: 3.25.67
     optionalDependencies:
