@@ -36,6 +36,8 @@ nconf.overrides({
       : [`http://localhost:${agentPort}`, `ws://localhost:${agentPort}`],
     name: process.env.AGENT_NAME ?? 'My Mediator',
     invitationUrl: process.env.INVITATION_URL,
+    recreateInvitation: process.env.CREATE_NEW_INVITATION === 'true',
+    goalCode: process.env.GOAL_CODE ?? 'mediator',
     logLevel: process.env.LOG_LEVEL ?? LogLevel.debug,
     usePushNotifications: process.env.USE_PUSH_NOTIFICATIONS === 'true',
     notificationWebhookUrl: process.env.NOTIFICATION_WEBHOOK_URL,
