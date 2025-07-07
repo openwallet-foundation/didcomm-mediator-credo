@@ -24,7 +24,9 @@ void createAgent().then(async (agent) => {
     })
   } else {
     // Latest Reusable Invitation
-    outOfBandRecord = outOfBandRecords.filter((oobRecord) => oobRecord.reusable).sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0]
+    outOfBandRecord = outOfBandRecords
+      .filter((oobRecord) => oobRecord.reusable)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0]
     agent.config.logger.info('Using existing out of band invitation')
     if (!outOfBandRecord) {
       agent.config.logger.warn('No reusable out of band invitation found, creating a new one')
@@ -35,7 +37,7 @@ void createAgent().then(async (agent) => {
       })
     }
   }
-  
+
   const httpEndpoint = agent.config.endpoints.find((e) => e.startsWith('http')) as string
   const invitationEndpoint = config.get('agent:invitationUrl') ?? `${httpEndpoint}/invite`
   const mediatorInvitationUrlLong = outOfBandRecord.outOfBandInvitation.toUrl({
