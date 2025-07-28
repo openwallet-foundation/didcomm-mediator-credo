@@ -1,0 +1,12 @@
+{
+  "storage": {
+    "type": "askar"
+  },
+  "askar": {
+    "storeId": "test",
+    "storeKey": "test",
+    "database": {
+      "type": "sqlite"
+    }
+  }
+}

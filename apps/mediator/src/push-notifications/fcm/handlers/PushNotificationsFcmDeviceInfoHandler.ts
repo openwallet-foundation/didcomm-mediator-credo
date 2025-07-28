@@ -1,4 +1,4 @@
-import type { MessageHandler, MessageHandlerInboundMessage } from '@credo-ts/core'
+import type { MessageHandler, MessageHandlerInboundMessage } from '@credo-ts/didcomm'
 
 import { PushNotificationsFcmDeviceInfoMessage } from '../messages'
 
@@ -14,5 +14,6 @@ export class PushNotificationsFcmDeviceInfoHandler implements MessageHandler {
    */
   public async handle(inboundMessage: MessageHandlerInboundMessage<PushNotificationsFcmDeviceInfoHandler>) {
     inboundMessage.assertReadyConnection()
+    return undefined
   }
 }
