@@ -4,7 +4,7 @@ import { loadConfigSync } from 'zod-config'
 import { jsonAdapter } from 'zod-config/json-adapter'
 import { z } from 'zod/v4'
 import { $ZodError } from 'zod/v4/core'
-import { customEnvAdapter } from './config/envAdapter'
+import { envAdapter } from 'zod-config/env-adapter'
 import { Logger } from './logger'
 
 const zConfig = z
@@ -305,21 +305,33 @@ export const logger = new Logger(LogLevel[config.logLevel])
 
 function loadMediatorConfig(): Config {
   try {
-    const envAdapter = customEnvAdapter({
-      nestingDelimiter: '__',
+    const envAdapterInstance = envAdapter({
+      nestingSeparator: '__',
+      transform: ({ key, value }) => ({
+        key: key
+          .split('__')
+          .map((word) =>
+            word
+              .toLowerCase()
+              .split('_')
+              .map((wordItem, index) => (index === 0 ? wordItem : wordItem.charAt(0).toUpperCase() + wordItem.slice(1)))
+              .join('')
+          )
+          .join('__'),
+        value,
+      }),
     })
 
     const config = loadConfigSync({
       schema: zConfig,
       adapters: process.env.CONFIG
         ? [
-            envAdapter,
+            envAdapterInstance,
             jsonAdapter({
               path: process.env.CONFIG,
             }),
           ]
-        : envAdapter,
-      keyMatching: 'lenient',
+        : envAdapterInstance,
     })
 
     return config

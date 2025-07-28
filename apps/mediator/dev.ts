@@ -9,9 +9,9 @@ if (sample) {
   console.log(`loading sample samples/${sample}.json`)
   process.env.CONFIG = path.join(__dirname, 'samples', `${sample}.json`)
 } else {
-  console.log('loading .env.development')
+  console.log('loading .env.development and .env.local')
   dotenv.config({
-    path: '../../.env.development',
+    path: ['../../.env.development', '../../.env.local'],
   })
 }
 
@@ -33,7 +33,6 @@ if (!process.env.NGROK_AUTH_TOKEN) {
     const url = app.url()
 
     process.env.AGENT_ENDPOINTS = `${url},${url?.replace('http', 'ws')}`
-    process.env.SHORTENER_BASE_URL = `${url}/s`
 
     require('./src/index')
   })

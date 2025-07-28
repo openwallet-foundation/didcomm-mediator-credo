@@ -249,7 +249,7 @@ docker run \
   -e "MESSAGE_PICKUP__STORAGE__ACCESS_KEY_ID=local" \
   -e "MESSAGE_PICKUP__STORAGE__SECRET_ACCESS_KEY=local" \
   -p 3000:3000 \
-  ghcr.io/openwallet-foundation/didcomm-mediator-credo:latest
+  ghcr.io/openwallet-foundation/didcomm-mediator-credo/mediator:latest
 ```
 
 **Using a JSON config file:**
@@ -259,7 +259,7 @@ docker run \
   -e "CONFIG=/config/full.json" \
   -v $(pwd)/apps/mediator/samples/full.json:/config/full.json \
   -p 3000:3000 \
-  ghcr.io/openwallet-foundation/didcomm-mediator-credo:latest
+  ghcr.io/openwallet-foundation/didcomm-mediator-credo/mediator:latest
 ```
 
 You can also adapt the `apps/mediator/docker-compose.yml` file to your needs.

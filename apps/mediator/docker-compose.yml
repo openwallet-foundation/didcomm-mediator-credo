@@ -6,21 +6,22 @@ networks:
 
 services:
   mediator:
-    image: ghcr.io/openwallet-foundation/didcomm-mediator-credo:latest
+    # image: ghcr.io/openwallet-foundation/didcomm-mediator-credo/mediator:latest
+    image: mediator
     environment:
       # Basic configuration
       AGENT_PORT: 3000
-      AGENT_NAME: ${AGENT_NAME}
-      AGENT_ENDPOINTS: ${AGENT_ENDPOINTS}
-      LOG_LEVEL: ${LOG_LEVEL}
+      AGENT_NAME: Credo
+      AGENT_ENDPOINTS: http://localhost:3000
+      LOG_LEVEL: debug
 
       STORAGE__TYPE: drizzle
       STORAGE__DIALECT: postgres
-      STORAGE__DATABASE_URL: postgresql://postgres:postgres@postgres:5432/drizzle'
+      STORAGE__DATABASE_URL: postgresql://postgres:postgres@postgres:5432/drizzle
 
       # Database configuration - Postgres
-      ASKAR__STORE_ID: ${ASKAR__STORE_ID}
-      ASKAR__STORE_KEY: ${ASKAR__STORE_KEY}
+      ASKAR__STORE_ID: credo
+      ASKAR__STORE_KEY: credo
       ASKAR__DATABASE__TYPE: postgres
       ASKAR__DATABASE__USER: postgres
       ASKAR__DATABASE__PASSWORD: postgres
@@ -38,13 +39,24 @@ services:
       # Cache configuration - Redis
       CACHE__TYPE: redis
       CACHE__REDIS_URL: redis://redis:6379
-    env_file: ./.env.local
     ports:
       - "3000:3000"
     depends_on:
       - postgres
       - redis
       - dynamodb
+      - mediator-migration
+    networks:
+      - mediator-net
+
+  mediator-migration:
+    image: ghcr.io/openwallet-foundation/didcomm-mediator-credo/mediator:latest
+    environment:
+      DRIZZLE_DATABASE_URL: postgresql://postgres:postgres@postgres:5432/drizzle
+    entrypoint: "sh -c"
+    command: '"apps/mediator/node_modules/.bin/drizzle-storage --bundle core --bundle didcomm --bundle /app/apps/mediator/build/drizzle/bundle.js migrate --dialect postgres"'
+    depends_on:
+      - postgres
     networks:
       - mediator-net
 

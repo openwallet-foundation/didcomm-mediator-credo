@@ -46,7 +46,7 @@ export class DynamoDbClientRepository {
     this.tableName = options.tableName ?? 'queued_messages'
   }
 
-  public static async initialize(options: DynamoDBClientConfigType): Promise<DynamoDbClientRepository> {
+  public static async initialize(options: DynamoDbClientRepositoryOptions): Promise<DynamoDbClientRepository> {
     const dcr = new DynamoDbClientRepository(options)
 
     const params: CreateTableCommandInput = {

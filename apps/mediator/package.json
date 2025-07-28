@@ -17,13 +17,14 @@
     "dev": "ts-node dev.ts",
     "sample": "ts-node sample.ts",
     "start": "node build/index.js",
-    "drizzle": "drizzle-storage --bundle core --bundle didcomm",
+    "drizzle": "drizzle-storage --bundle core --bundle didcomm --bundle ./build/drizzle/bundle.js",
+    "drizzle:generate": "drizzle-storage --bundle ./build/drizzle/bundle.js generate",
     "drizzle:migrate:sqlite": "pnpm drizzle migrate --dialect sqlite",
     "drizzle:migrate:sqlite:dev": "pnpm drizzle:migrate:sqlite --database-url 'file:./database.db'",
     "drizzle:studio:sqlite:dev": "pnpm drizzle studio --dialect sqlite --database-url 'file:./database.db'",
     "drizzle:migrate:postgres": "pnpm drizzle migrate --dialect postgres",
-    "drizzle:migrate:postgres:dev": "pnpm drizzle:migrate:postgres --database-url 'postgresql://postgres:postgres@localhost:5432/drizzle'",
-    "drizzle:studio:postgres:dev": "pnpm drizzle studio --dialect postgres --database-url 'postgresql://postgres:postgres@localhost:5432/drizzle'"
+    "drizzle:migrate:postgres:dev": "pnpm drizzle:migrate:postgres --database-url 'postgresql://postgres:postgres@0.0.0.0:5432/drizzle'",
+    "drizzle:studio:postgres:dev": "pnpm drizzle studio --dialect postgres --database-url 'postgresql://postgres:postgres@0.0.0.0:5432/drizzle'"
   },
   "dependencies": {
     "@credo-ts/askar": "catalog:",
@@ -38,21 +39,19 @@
     "@openwallet-foundation/askar-nodejs": "^0.3.2",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
-    "drizzle-orm": "^0.44.2",
+    "drizzle-orm": "^0.44.3",
     "express": "^4.21.2",
     "firebase-admin": "^13.0.2",
-    "nconf": "^0.12.1",
     "pg": "^8.11.3",
     "tslog": "^3.3.3",
     "tsyringe": "^4.8.0",
     "ws": "^8.17.1",
     "zod": "^3.25.67",
-    "zod-config": "^1.1.0"
+    "zod-config": "^1.2.0"
   },
   "devDependencies": {
     "@ngrok/ngrok": "^1.2.0",
     "@types/express": "^4.17.13",
-    "@types/nconf": "^0.10.7",
     "@types/node": "catalog:",
     "@types/pg": "^8.11.10",
     "@types/ws": "^8.5.13",
