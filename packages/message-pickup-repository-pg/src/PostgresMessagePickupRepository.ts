@@ -1,26 +1,32 @@
-import { randomUUID } from 'node:crypto'
-import * as os from 'node:os'
 import {
   AddMessageOptions,
   Agent,
+  ConnectionService,
   GetAvailableMessageCountOptions,
   Logger,
   MessagePickupEventTypes,
   MessagePickupLiveSessionRemovedEvent,
   MessagePickupLiveSessionSavedEvent,
   MessagePickupRepository,
+  MessagePickupSessionService,
+  MessageSender,
+  OutOfBandService,
   QueuedMessage,
   RemoveMessagesOptions,
   TakeFromQueueOptions,
-  injectable,
+  TransportEventTypes,
+  injectable
 } from '@credo-ts/core'
 import {
   MessagePickupSession,
   MessagePickupSessionRole,
 } from '@credo-ts/core/build/modules/message-pickup/MessagePickupSession'
 import { MessageForwardingStrategy } from '@credo-ts/core/build/modules/routing/MessageForwardingStrategy'
+import { randomUUID } from 'node:crypto'
+import * as os from 'node:os'
 import { Client, Pool } from 'pg'
 import PGPubsub from 'pg-pubsub'
+
 import {
   createTableLive,
   createTableMessage,
@@ -49,6 +55,10 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
   private postgresHost: string
   private postgresDatabaseName: string
   private strategy: MessageForwardingStrategy
+  private sessionService?: MessagePickupSessionService
+  private connectionService?: ConnectionService
+  private messageSender?: MessageSender
+  private outOfBandService?: OutOfBandService
 
   public constructor(options: PostgresMessagePickupRepositoryConfig) {
     const { logger, postgresUser, postgresPassword, postgresHost, postgresDatabaseName, strategy } = options
@@ -103,6 +113,10 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
 
       // Set instance variables
       this.agent = options.agent
+      this.sessionService = this.agent.context.dependencyManager.resolve(MessagePickupSessionService)
+      this.connectionService = this.agent.context.dependencyManager.resolve(ConnectionService)
+      this.messageSender = this.agent.context.dependencyManager.resolve(MessageSender)
+      this.outOfBandService = this.agent.context.dependencyManager.resolve(OutOfBandService)
 
       options.agent.events.on(
         MessagePickupEventTypes.LiveSessionRemoved,
@@ -142,6 +156,51 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
           }
         }
       )
+
+      // This is to allow legacy implicit pickup agents to save their live sessions and work with QueueAndLiveModeDelivery
+      options.agent.events.on(TransportEventTypes.TransportSessionSaved, async (data) => {
+        const session = data.payload.session as { type?: string; connectionId?: string; keys?: { recipientKeys: string[] } }
+        let connectionRecord
+        if (session.type === 'WebSocket') {
+          if (!this.connectionService) {
+            throw new Error('ConnectionService is not defined')
+          }
+          if (this.sessionService && this.agent && this.messageSender) {
+            connectionRecord = await this.connectionService.getById(this.agent.context, session.connectionId as string)
+            const oobRecord = await this.outOfBandService?.findById(this.agent.context, connectionRecord.outOfBandId as string)
+            if (
+              oobRecord?.outOfBandInvitation.handshakeProtocols &&
+              !oobRecord.outOfBandInvitation.handshakeProtocols.includes("https://didcomm.org/didexchange/1.1")
+            ) {
+              this.sessionService.saveLiveSession(this.agent.context, {
+                connectionId: session.connectionId as string,
+                role: MessagePickupSessionRole.MessageHolder,
+                protocolVersion: 'v2',
+              })
+              const messagesToDeliver = (await this.takeFromQueue({
+                connectionId: session.connectionId as string,
+                limit: 10, // Default limit, can be adjusted
+                deleteMessages: true,
+              }).catch((error) => {
+                this.logger?.error(`[initialize] Error taking messages from queue: ${error}`)
+              })) as QueuedMessage[]
+
+
+              if (messagesToDeliver.length > 0) {
+                  connectionRecord = await this.connectionService.getById(this.agent.context, session.connectionId as string)
+
+                for (const message of messagesToDeliver) {
+                  await this.messageSender?.sendPackage(this.agent.context, {
+                    connection: connectionRecord,
+                    recipientKey: session.keys?.recipientKeys[0] as string,
+                    encryptedMessage: message.encryptedMessage,
+                  })
+                }
+              }
+            }
+          }
+        }
+      })
     } catch (error) {
       this.logger?.error(`[initialize] Initialization failed: ${error}`)
       throw new Error(`Failed to initialize the service: ${error}`)
@@ -591,7 +650,7 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
         `INSERT INTO ${liveSessionTableName} (session_id, connection_id, protocol_version, instance) VALUES($1, $2, $3, $4) RETURNING session_id`,
         [id, connectionId, protocolVersion, instance]
       )
-      const liveSessionId = insertMessageDB?.rows[0].sessionid
+      const liveSessionId = insertMessageDB?.rows[0].session_id
       this.logger?.debug(`[addLiveSessionOnDb] add liveSession to ${connectionId} and result ${liveSessionId}`)
     } catch (error) {
       this.logger?.debug(`[addLiveSessionOnDb] error add liveSession DB ${connectionId}`)
