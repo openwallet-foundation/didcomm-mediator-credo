@@ -34,4 +34,4 @@ RUN addgroup --system --gid 1001 agent && \
 
 USER agent
 
-ENTRYPOINT [ "node", "./build/apps/mediator/src/index.js" ]
+ENTRYPOINT [ "node", "--max-old-space-size=320", "--optimize-for-size", "--gc-interval=100", "./build/apps/mediator/src/index.js" ]
