@@ -1,0 +1,80 @@
+diff --git a/build/transport/HttpInboundTransport.js b/build/transport/HttpInboundTransport.js
+index d01e3f5d9011307413c3b12aa00776562fb93248..283f3b850ce1860edebd73cf30159b5b2e210280 100644
+--- a/build/transport/HttpInboundTransport.js
++++ b/build/transport/HttpInboundTransport.js
+@@ -49,45 +49,51 @@ class HttpInboundTransport {
+             const contentType = req.headers['content-type'];
+             if (!contentType || !supportedContentTypes.includes(contentType)) {
+                 return res
+-                    .status(415)
+-                    .send('Unsupported content-type. Supported content-types are: ' + supportedContentTypes.join(', '));
++                .status(415)
++                .send('Unsupported content-type. Supported content-types are: ' + supportedContentTypes.join(', '));
+             }
++
+             const session = new HttpTransportSession(core_1.utils.uuid(), req, res);
+-            // We want to make sure the session is removed if the connection is closed, as it
+-            // can't be used anymore then. This could happen if the client abruptly closes the connection.
++
++            // Ensure session gets removed if client closes abruptly
+             req.once('close', () => transportService.removeSession(session));
++
+             try {
+                 const message = req.body;
+                 const encryptedMessage = JSON.parse(message);
+-                const observable = agent.events.observable(core_1.AgentEventTypes.AgentMessageProcessed);
+-                const subject = new rxjs_1.ReplaySubject(1);
+-                observable
+-                    .pipe((0, rxjs_1.filter)((e) => e.type === core_1.AgentEventTypes.AgentMessageProcessed), (0, rxjs_1.filter)((e) => e.payload.encryptedMessage === encryptedMessage), (0, rxjs_1.timeout)({
++
++                // Build the pipeline first, then start waiting before emit
++                const observable = agent.events
++                .observable(core_1.AgentEventTypes.AgentMessageProcessed)
++                .pipe(
++                    (0, rxjs_1.filter)((e) => e.payload.encryptedMessage === encryptedMessage),
++                    (0, rxjs_1.timeout)({
+                     first: this.processedMessageListenerTimeoutMs,
+                     meta: 'HttpInboundTransport.start',
+-                }))
+-                    .subscribe(subject);
++                    }),
++                    (0, rxjs_1.take)(1) // auto-unsubscribe after first match
++                );
++
++                const waitForProcessed = (0, rxjs_1.firstValueFrom)(observable);
++
++                // Now emit the "received" event
+                 agent.events.emit(agent.context, {
+-                    type: core_1.AgentEventTypes.AgentMessageReceived,
+-                    payload: {
+-                        message: encryptedMessage,
+-                        session: session,
+-                    },
++                type: core_1.AgentEventTypes.AgentMessageReceived,
++                payload: { message: encryptedMessage, session },
+                 });
+-                // Wait for message to be processed
+-                await (0, rxjs_1.firstValueFrom)(subject);
+-                // If agent did not use session when processing message we need to send response here.
++
++                // Wait until processed
++                await waitForProcessed;
++
+                 if (!res.headersSent) {
+-                    res.status(200).end();
++                res.status(200).end();
+                 }
+-            }
+-            catch (error) {
++            } catch (error) {
+                 agent.config.logger.error(`Error processing inbound message: ${error.message}`, error);
+                 if (!res.headersSent) {
+-                    res.status(500).send('Error processing message');
++                res.status(500).send('Error processing message');
+                 }
+-            }
+-            finally {
++            } finally {
+                 transportService.removeSession(session);
+             }
+         });

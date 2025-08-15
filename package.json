@@ -22,7 +22,8 @@
   },
   "pnpm": {
     "patchedDependencies": {
-      "@credo-ts/core": "patches/@credo-ts__core.patch"
+      "@credo-ts/core": "patches/@credo-ts__core.patch",
+      "@credo-ts/node": "patches/@credo-ts__node.patch"
     }
   }
 }

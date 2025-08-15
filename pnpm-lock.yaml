@@ -8,6 +8,9 @@ patchedDependencies:
   '@credo-ts/core':
     hash: phhxwtcfajyvmj3xef2nxx6pde
     path: patches/@credo-ts__core.patch
+  '@credo-ts/node':
+    hash: 5yalzdafhpte35coy3dakv5mdy
+    path: patches/@credo-ts__node.patch
 
 importers:
 
@@ -30,7 +33,7 @@ importers:
         version: 0.5.15(patch_hash=phhxwtcfajyvmj3xef2nxx6pde)(expo@53.0.9(@babel/core@7.27.1)(react-native@0.79.2(@babel/core@7.27.1)(react@19.1.0))(react@19.1.0))(react-native@0.79.2(@babel/core@7.27.1)(react@19.1.0))(web-streams-polyfill@3.3.3)
       '@credo-ts/node':
         specifier: ^0.5.13
-        version: 0.5.15(expo@53.0.9(@babel/core@7.27.1)(react-native@0.79.2(@babel/core@7.27.1)(react@19.1.0))(react@19.1.0))(react-native@0.79.2(@babel/core@7.27.1)(react@19.1.0))(web-streams-polyfill@3.3.3)
+        version: 0.5.15(patch_hash=5yalzdafhpte35coy3dakv5mdy)(expo@53.0.9(@babel/core@7.27.1)(react-native@0.79.2(@babel/core@7.27.1)(react@19.1.0))(react@19.1.0))(react-native@0.79.2(@babel/core@7.27.1)(react@19.1.0))(web-streams-polyfill@3.3.3)
       '@hyperledger/aries-askar-nodejs':
         specifier: ^0.2.3
         version: 0.2.3
@@ -6601,7 +6604,7 @@ snapshots:
       - supports-color
       - web-streams-polyfill
 
-  '@credo-ts/node@0.5.15(expo@53.0.9(@babel/core@7.27.1)(react-native@0.79.2(@babel/core@7.27.1)(react@19.1.0))(react@19.1.0))(react-native@0.79.2(@babel/core@7.27.1)(react@19.1.0))(web-streams-polyfill@3.3.3)':
+  '@credo-ts/node@0.5.15(patch_hash=5yalzdafhpte35coy3dakv5mdy)(expo@53.0.9(@babel/core@7.27.1)(react-native@0.79.2(@babel/core@7.27.1)(react@19.1.0))(react@19.1.0))(react-native@0.79.2(@babel/core@7.27.1)(react@19.1.0))(web-streams-polyfill@3.3.3)':
     dependencies:
       '@2060.io/ffi-napi': 4.0.9
       '@2060.io/ref-napi': 3.0.6
