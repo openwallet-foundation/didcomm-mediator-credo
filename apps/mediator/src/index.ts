@@ -45,4 +45,15 @@ void createAgent().then(async (agent) => {
   })
 
   agent.config.logger.info(`Out of band invitation url: \n\n\t${mediatorInvitationUrlLong}`)
+
+  setInterval(() => {
+    const used = process.memoryUsage();
+
+    const formatMB = (bytes: any) => (bytes / 1024 / 1024).toFixed(2) + ' MB';
+
+    console.log(
+      `[TIME] ${new Date().toLocaleString()} [MEMORY] RSS: ${formatMB(used.rss)} | Heap Used: ${formatMB(used.heapUsed)} / Heap Total: ${formatMB(used.heapTotal)} | External: ${formatMB(used.external)}`
+    );
+  }, 5_000);
+
 })
