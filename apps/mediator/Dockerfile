@@ -21,7 +21,7 @@ FROM base AS final
 
 WORKDIR /app
 
-# Copy build
+# Copy build artifacts
 COPY --from=build /build/node_modules /app/node_modules
 COPY --from=build /build/apps/mediator/build /app/build
 COPY --from=build /build/apps/mediator/package.json /app
@@ -34,4 +34,4 @@ RUN addgroup --system --gid 1001 agent && \
 
 USER agent
 
-ENTRYPOINT [ "node", "--max-old-space-size=320", "--optimize-for-size", "--gc-interval=100", "./build/apps/mediator/src/index.js" ]
+ENTRYPOINT [ "NODE_ENV=production", "MALLOC_TRIM_THRESHOLD_=262144", "node", "--max-old-space-size=240", "--optimize-for-size", "--gc-interval=100", "./build/apps/mediator/src/index.js" ]

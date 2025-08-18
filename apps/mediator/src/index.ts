@@ -3,6 +3,8 @@ import { OutOfBandRepository, OutOfBandRole, OutOfBandState } from '@credo-ts/co
 import { createAgent } from './agent'
 import config from './config'
 
+Buffer.poolSize = 0
+
 void createAgent().then(async (agent) => {
   agent.config.logger.info('Agent started')
 

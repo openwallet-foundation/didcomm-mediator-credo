@@ -1,80 +1,162 @@
 diff --git a/build/transport/HttpInboundTransport.js b/build/transport/HttpInboundTransport.js
-index d01e3f5d9011307413c3b12aa00776562fb93248..283f3b850ce1860edebd73cf30159b5b2e210280 100644
+index d01e3f5d9011307413c3b12aa00776562fb93248..775ab811db51ff736b709ad4a7c87c60d98fa237 100644
 --- a/build/transport/HttpInboundTransport.js
 +++ b/build/transport/HttpInboundTransport.js
-@@ -49,45 +49,51 @@ class HttpInboundTransport {
+@@ -37,63 +37,111 @@ class HttpInboundTransport {
+         this.processedMessageListenerTimeoutMs = processedMessageListenerTimeoutMs ?? 10000; // timeout after 10 seconds
+         // Create Express App
+         this.app = app ?? (0, express_1.default)();
++        // Reduce extra native buffers/overheads
++        this.app.set('etag', false);
+         this.path = path ?? '/';
+-        this.app.use((0, express_1.text)({ type: supportedContentTypes, limit: '5mb' }));
++        // Use raw body to avoid extra string copies/decoding churn
++        this.app.use((0, express_1.raw)({ type: supportedContentTypes, limit: '1mb' }));
+     }
+     async start(agent) {
+         const transportService = agent.dependencyManager.resolve(core_1.TransportService);
+         agent.config.logger.debug(`Starting HTTP inbound transport`, {
+             port: this.port,
+         });
++        // Main POST handler
+         this.app.post(this.path, async (req, res) => {
              const contentType = req.headers['content-type'];
              if (!contentType || !supportedContentTypes.includes(contentType)) {
                  return res
--                    .status(415)
+                     .status(415)
 -                    .send('Unsupported content-type. Supported content-types are: ' + supportedContentTypes.join(', '));
-+                .status(415)
-+                .send('Unsupported content-type. Supported content-types are: ' + supportedContentTypes.join(', '));
++                    .end('Unsupported content-type. Supported content-types are: ' + supportedContentTypes.join(', '));
              }
-+
++            // Track client aborts to avoid writing responses & leaking listeners
++            let aborted = false;
++            const onAborted = () => {
++                aborted = true;
++            };
++            req.once('aborted', onAborted);
              const session = new HttpTransportSession(core_1.utils.uuid(), req, res);
 -            // We want to make sure the session is removed if the connection is closed, as it
 -            // can't be used anymore then. This could happen if the client abruptly closes the connection.
-+
+-            req.once('close', () => transportService.removeSession(session));
 +            // Ensure session gets removed if client closes abruptly
-             req.once('close', () => transportService.removeSession(session));
-+
++            const onReqClose = () => transportService.removeSession(session);
++            req.once('close', onReqClose);
++            // Also tie cleanup to response lifecycle
++            const onResFinish = () => transportService.removeSession(session);
++            const onResClose = () => transportService.removeSession(session);
++            res.once('finish', onResFinish);
++            res.once('close', onResClose);
++            // Helper to ensure we drop all listeners no matter what
++            const removeAllLifecycleListeners = () => {
++                req.off('aborted', onAborted);
++                req.off('close', onReqClose);
++                res.off('finish', onResFinish);
++                res.off('close', onResClose);
++            };
              try {
-                 const message = req.body;
-                 const encryptedMessage = JSON.parse(message);
+-                const message = req.body;
+-                const encryptedMessage = JSON.parse(message);
 -                const observable = agent.events.observable(core_1.AgentEventTypes.AgentMessageProcessed);
 -                const subject = new rxjs_1.ReplaySubject(1);
 -                observable
 -                    .pipe((0, rxjs_1.filter)((e) => e.type === core_1.AgentEventTypes.AgentMessageProcessed), (0, rxjs_1.filter)((e) => e.payload.encryptedMessage === encryptedMessage), (0, rxjs_1.timeout)({
-+
-+                // Build the pipeline first, then start waiting before emit
++                // req.body is a Buffer thanks to express.raw
++                const buf = req.body;
++                const messageStr = Buffer.isBuffer(buf) ? buf.toString('utf8') : String(buf ?? '');
++                const encryptedMessage = JSON.parse(messageStr);
++                // Build the pipeline first, then await BEFORE emitting to avoid races & leaks
 +                const observable = agent.events
-+                .observable(core_1.AgentEventTypes.AgentMessageProcessed)
-+                .pipe(
-+                    (0, rxjs_1.filter)((e) => e.payload.encryptedMessage === encryptedMessage),
-+                    (0, rxjs_1.timeout)({
++                    .observable(core_1.AgentEventTypes.AgentMessageProcessed)
++                    .pipe((0, rxjs_1.filter)((e) => e.payload.encryptedMessage === encryptedMessage), (0, rxjs_1.timeout)({
                      first: this.processedMessageListenerTimeoutMs,
                      meta: 'HttpInboundTransport.start',
 -                }))
 -                    .subscribe(subject);
-+                    }),
-+                    (0, rxjs_1.take)(1) // auto-unsubscribe after first match
-+                );
-+
++                }), (0, rxjs_1.take)(1));
 +                const waitForProcessed = (0, rxjs_1.firstValueFrom)(observable);
-+
 +                // Now emit the "received" event
                  agent.events.emit(agent.context, {
--                    type: core_1.AgentEventTypes.AgentMessageReceived,
+                     type: core_1.AgentEventTypes.AgentMessageReceived,
 -                    payload: {
 -                        message: encryptedMessage,
 -                        session: session,
 -                    },
-+                type: core_1.AgentEventTypes.AgentMessageReceived,
-+                payload: { message: encryptedMessage, session },
++                    payload: { message: encryptedMessage, session },
                  });
 -                // Wait for message to be processed
 -                await (0, rxjs_1.firstValueFrom)(subject);
 -                // If agent did not use session when processing message we need to send response here.
-+
-+                // Wait until processed
+-                if (!res.headersSent) {
++                // Wait until processed (throws on timeout)
 +                await waitForProcessed;
-+
-                 if (!res.headersSent) {
--                    res.status(200).end();
-+                res.status(200).end();
++                if (!res.headersSent && !aborted) {
+                     res.status(200).end();
                  }
--            }
--            catch (error) {
-+            } catch (error) {
+             }
+             catch (error) {
                  agent.config.logger.error(`Error processing inbound message: ${error.message}`, error);
-                 if (!res.headersSent) {
+-                if (!res.headersSent) {
 -                    res.status(500).send('Error processing message');
-+                res.status(500).send('Error processing message');
++                if (!res.headersSent && !aborted) {
++                    res.status(500).end('Error processing message');
                  }
--            }
--            finally {
-+            } finally {
+             }
+             finally {
++                removeAllLifecycleListeners();
                  transportService.removeSession(session);
              }
          });
++        // Start server and tighten timeouts to avoid idle native resource buildup
++        const sockets = new Set();
+         this._server = this.app.listen(this.port);
++        // Tune server timeouts
++        this._server.keepAliveTimeout = 5000;
++        this._server.headersTimeout = 8000;
++        this._server.requestTimeout = 15000;
++        // Track sockets so we can destroy them on stop()
++        this._server.on('connection', (socket) => {
++            sockets.add(socket);
++            try {
++                socket.setNoDelay(true);
++            }
++            catch { /* ignore */ }
++            socket.on('close', () => sockets.delete(socket));
++        });
++        this._trackedSockets = sockets;
+     }
+     async stop() {
++        // Proactively close remaining sockets to free native memory
++        if (this._trackedSockets) {
++            for (const s of this._trackedSockets) {
++                try {
++                    s.destroy();
++                }
++                catch { /* ignore */ }
++            }
++            this._trackedSockets.clear();
++        }
+         return new Promise((resolve, reject) => this._server?.close((err) => (err ? reject(err) : resolve())));
+     }
+ }
+@@ -122,7 +170,8 @@ class HttpTransportSession {
+         if (requestMimeType && supportedContentTypes.includes(requestMimeType)) {
+             responseMimeType = requestMimeType;
+         }
+-        this.res.status(200).contentType(responseMimeType).json(encryptedMessage).end();
++        // Avoid extra copies: write once and end
++        this.res.status(200).contentType(responseMimeType).send(encryptedMessage);
+     }
+ }
+ exports.HttpTransportSession = HttpTransportSession;
+diff --git a/build/transport/WsInboundTransport.js b/build/transport/WsInboundTransport.js
+index 37dfed0825ece973f87ea00485dc9b872f4cf467..c4c2d4a644c72fcae86b583317eb0e74dd89431e 100644
+--- a/build/transport/WsInboundTransport.js
++++ b/build/transport/WsInboundTransport.js
+@@ -51,6 +51,8 @@ class WsInboundTransport {
+                 socket.on('close', () => {
+                     this.logger.debug('Socket closed.');
+                     transportService.removeSession(session);
++                    delete this.socketIds[socketId];
++                    socket.removeAllListeners();
+                 });
+             }
+             else {
