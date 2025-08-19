@@ -17,6 +17,18 @@ RUN pnpm install --node-linker=hoisted --frozen-lockfile && \
   pnpm --filter didcomm-mediator-service build && \
   pnpm prune --prod
 
+# Install jemalloc
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libjemalloc2 \
+ && rm -rf /var/lib/apt/lists/*
+
+# Preload jemalloc instead of glibc malloc
+# jemalloc is more predictable with RSS and crypto-heavy loads
+ENV LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so.2
+
+# Optional: tune jemalloc behavior (releases dirty pages back to OS more aggressively)
+ENV MALLOC_CONF="background_thread:true,dirty_decay_ms:500,muzzy_decay_ms:500"
+
 FROM base AS final
 
 WORKDIR /app
