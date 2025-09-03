@@ -8,13 +8,13 @@ describe('loadMessagePickupStorage', () => {
       LOG_LEVEL: 'off',
       ASKAR__STORE_ID: 'test',
       ASKAR__STORE_KEY: 'test',
-      messagePickup__storage__type: 'postgres',
-      messagePickup__storage__host: 'postgres',
-      messagePickup__storage__user: 'postgres',
-      messagePickup__storage__password: 'postgres',
-      messagePickup__storage__database: 'postgres',
+      MESSAGE_PICKUP__STORAGE__TYPE: 'postgres',
+      MESSAGE_PICKUP__STORAGE__HOST: 'postgres',
+      MESSAGE_PICKUP__STORAGE__USER: 'postgres',
+      MESSAGE_PICKUP__STORAGE__PASSWORD: 'postgres',
+      MESSAGE_PICKUP__STORAGE__DATABASE: 'postgres',
     }
-    const { loadMessagePickupStorage } = await import('../config/messagePickupLoader')
+    const { loadMessagePickupStorage } = await import('../config/messagePickupLoader.js')
     const messagePickupStorage = await loadMessagePickupStorage()
 
     expect(messagePickupStorage).toBeInstanceOf(PostgresMessagePickupRepository)

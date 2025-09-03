@@ -1,6 +1,12 @@
 import { randomUUID } from 'node:crypto'
+import { AgentContext, DependencyManager } from '@credo-ts/core'
 import { beforeAll, expect, suite, test } from 'vitest'
 import { DynamoDbMessagePickupRepository } from '../src'
+
+const agentContext = new AgentContext({
+  contextCorrelationId: 'test',
+  dependencyManager: new DependencyManager(),
+})
 
 suite('dynamoDbMessagePickupRepository', () => {
   let repository: DynamoDbMessagePickupRepository
@@ -19,7 +25,7 @@ suite('dynamoDbMessagePickupRepository', () => {
   })
 
   test('add message', async () => {
-    messageId = await repository.addMessage({
+    messageId = await repository.addMessage(agentContext, {
       connectionId,
       payload: { ciphertext: 'a', iv: 'a', protected: 'a', tag: 'a' },
       recipientDids: ['did:web:example.org'],
@@ -27,23 +33,23 @@ suite('dynamoDbMessagePickupRepository', () => {
   })
 
   test('count available messages', async () => {
-    const count = await repository.getAvailableMessageCount({ connectionId })
+    const count = await repository.getAvailableMessageCount(agentContext, { connectionId })
 
     expect(count).toStrictEqual(1)
   })
 
   test('get all messages', async () => {
-    const messages = await repository.takeFromQueue({ connectionId })
-    const count = await repository.getAvailableMessageCount({ connectionId })
+    const messages = await repository.takeFromQueue(agentContext, { connectionId })
+    const count = await repository.getAvailableMessageCount(agentContext, { connectionId })
 
     expect(messages.length).toStrictEqual(1)
     expect(messages.length).toStrictEqual(count)
   })
 
   test('delete message', async () => {
-    await repository.removeMessages({ connectionId, messageIds: [messageId] })
+    await repository.removeMessages(agentContext, { connectionId, messageIds: [messageId] })
 
-    const count = await repository.getAvailableMessageCount({ connectionId })
+    const count = await repository.getAvailableMessageCount(agentContext, { connectionId })
 
     expect(count).toStrictEqual(0)
   })
