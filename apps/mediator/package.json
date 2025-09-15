@@ -18,9 +18,9 @@
     "start": "NODE_ENV=production node build/index.js"
   },
   "dependencies": {
-    "@credo-ts/askar": "^0.5.13",
-    "@credo-ts/core": "^0.5.13",
-    "@credo-ts/node": "^0.5.13",
+    "@credo-ts/askar": "^0.5.17",
+    "@credo-ts/core": "^0.5.17",
+    "@credo-ts/node": "^0.5.17",
     "@hyperledger/aries-askar-nodejs": "^0.2.3",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",

@@ -18,14 +18,14 @@ importers:
   apps/mediator:
     dependencies:
       '@credo-ts/askar':
-        specifier: ^0.5.13
-        version: 0.5.15(@hyperledger/aries-askar-shared@0.2.3)(expo@53.0.9(@babel/core@7.27.1)(react-native@0.79.2(@babel/core@7.27.1)(react@19.1.0))(react@19.1.0))(react-native@0.79.2(@babel/core@7.27.1)(react@19.1.0))(web-streams-polyfill@3.3.3)
+        specifier: ^0.5.17
+        version: 0.5.17(@hyperledger/aries-askar-shared@0.2.3)(expo@53.0.9(@babel/core@7.27.1)(react-native@0.79.2(@babel/core@7.27.1)(react@19.1.0))(react@19.1.0))(react-native@0.79.2(@babel/core@7.27.1)(react@19.1.0))(web-streams-polyfill@3.3.3)
       '@credo-ts/core':
-        specifier: ^0.5.13
-        version: 0.5.15(expo@53.0.9(@babel/core@7.27.1)(react-native@0.79.2(@babel/core@7.27.1)(react@19.1.0))(react@19.1.0))(react-native@0.79.2(@babel/core@7.27.1)(react@19.1.0))(web-streams-polyfill@3.3.3)
+        specifier: ^0.5.17
+        version: 0.5.17(expo@53.0.9(@babel/core@7.27.1)(react-native@0.79.2(@babel/core@7.27.1)(react@19.1.0))(react@19.1.0))(react-native@0.79.2(@babel/core@7.27.1)(react@19.1.0))(web-streams-polyfill@3.3.3)
       '@credo-ts/node':
-        specifier: ^0.5.13
-        version: 0.5.15(expo@53.0.9(@babel/core@7.27.1)(react-native@0.79.2(@babel/core@7.27.1)(react@19.1.0))(react@19.1.0))(react-native@0.79.2(@babel/core@7.27.1)(react@19.1.0))(web-streams-polyfill@3.3.3)
+        specifier: ^0.5.17
+        version: 0.5.17(expo@53.0.9(@babel/core@7.27.1)(react-native@0.79.2(@babel/core@7.27.1)(react@19.1.0))(react@19.1.0))(react-native@0.79.2(@babel/core@7.27.1)(react@19.1.0))(web-streams-polyfill@3.3.3)
       '@hyperledger/aries-askar-nodejs':
         specifier: ^0.2.3
         version: 0.2.3
@@ -92,8 +92,8 @@ importers:
         version: 3.806.0(@aws-sdk/client-dynamodb@3.806.0)
     devDependencies:
       '@credo-ts/core':
-        specifier: ^0.5.11
-        version: 0.5.15(expo@53.0.9(@babel/core@7.28.0)(react-native@0.79.2(@babel/core@7.28.0)(react@19.1.0))(react@19.1.0))(react-native@0.79.2(@babel/core@7.28.0)(react@19.1.0))(web-streams-polyfill@3.3.3)
+        specifier: ^0.5.17
+        version: 0.5.17(expo@53.0.9(@babel/core@7.28.0)(react-native@0.79.2(@babel/core@7.28.0)(react@19.1.0))(react@19.1.0))(react-native@0.79.2(@babel/core@7.28.0)(react@19.1.0))(web-streams-polyfill@3.3.3)
       '@types/node':
         specifier: ^22.15.17
         version: 22.15.17
@@ -114,8 +114,8 @@ importers:
         specifier: ^1.9.4
         version: 1.9.4
       '@credo-ts/core':
-        specifier: ^0.5.11
-        version: 0.5.15(expo@53.0.9(@babel/core@7.28.0)(react-native@0.79.2(@babel/core@7.28.0)(react@19.1.0))(react@19.1.0))(react-native@0.79.2(@babel/core@7.28.0)(react@19.1.0))(web-streams-polyfill@3.3.3)
+        specifier: ^0.5.17
+        version: 0.5.17(expo@53.0.9(@babel/core@7.28.0)(react-native@0.79.2(@babel/core@7.28.0)(react@19.1.0))(react@19.1.0))(react-native@0.79.2(@babel/core@7.28.0)(react@19.1.0))(web-streams-polyfill@3.3.3)
       '@types/node':
         specifier: ^16.0.0
         version: 16.18.126
@@ -871,8 +871,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@credo-ts/askar@0.5.15':
-    resolution: {integrity: sha512-eSoiQQEEntTZHsw87BIlafGKash5HAP+34VnVl4T9xKs59KNN7BvpdG6/6lqhS0G8DxeN998KuW4D1CEWh7AhA==}
+  '@credo-ts/askar@0.5.17':
+    resolution: {integrity: sha512-F+pL41ol+JPsj8D8vTkcIqDgZYe90gvTCFSTnyv8maDCsfaSGQTkBZF0aYGWGBvTq/V1Tu07i1KueEmO3C5vhw==}
     peerDependencies:
       '@animo-id/expo-secure-environment': ^0.0.1-alpha.0
       '@hyperledger/aries-askar-shared': ^0.2.3
@@ -880,11 +880,11 @@ packages:
       '@animo-id/expo-secure-environment':
         optional: true
 
-  '@credo-ts/core@0.5.15':
-    resolution: {integrity: sha512-3BYjncNY1Y6JDtxnbza1WVID8OoPgIZEno3z2F8a11xvsemsZCyy9vpyVgQi/Dz3P6/6JLZ/mnJAUwGKFZPnqA==}
+  '@credo-ts/core@0.5.17':
+    resolution: {integrity: sha512-oZRj6b34PQDlKOzaw0u0WI7ayjbZAVFW07wJNcRIO2vfs1RRl4Obcr7mg365F1l+W5E1UbLizJf5uCeQr/dW4Q==}
 
-  '@credo-ts/node@0.5.15':
-    resolution: {integrity: sha512-oLGwWGX3TKzZakfps9Dgb7UGJWsFaW7WpQ1n4gIYg54L3Ew0K6e/A1McJ/atOS8RhU3YS2/DVhs8uBY5xqbfuQ==}
+  '@credo-ts/node@0.5.17':
+    resolution: {integrity: sha512-CaNnXbgyY9WwJg3xveIwDvLloTgW4VgREmu4NEXi/DIjWHHxrEruPHsUqNp90QAuVWWFazyxSsSyZmNQbAg/yg==}
 
   '@cspotcode/source-map-support@0.8.1':
     resolution: {integrity: sha512-IchNf6dN4tHoMFIn/7OE8LWZ19Y6q/67Bmf6vnGREv8RSbBVb9LPJxEcnwrcwX6ixSvaiGoomAUvu4YSxXrVgw==}
@@ -1919,6 +1919,7 @@ packages:
 
   '@sphereon/kmp-mdl-mdoc@0.2.0-SNAPSHOT.22':
     resolution: {integrity: sha512-uAZZExVy+ug9JLircejWa5eLtAZ7bnBP6xb7DO2+86LRsHNLh2k2jMWJYxp+iWtGHTsh6RYsZl14ScQLvjiQ/A==}
+    bundledDependencies: []
 
   '@sphereon/pex-models@2.3.2':
     resolution: {integrity: sha512-foFxfLkRwcn/MOp/eht46Q7wsvpQGlO7aowowIIb5Tz9u97kYZ2kz6K2h2ODxWuv5CRA7Q0MY8XUBGE2lfOhOQ==}
@@ -2044,9 +2045,6 @@ packages:
 
   '@types/node@20.17.46':
     resolution: {integrity: sha512-0PQHLhZPWOxGW4auogW0eOQAuNIlCYvibIpG67ja0TOJ6/sehu+1en7sfceUn+QQtx4Rk3GxbLNwPh0Cav7TWw==}
-
-  '@types/node@20.19.8':
-    resolution: {integrity: sha512-HzbgCY53T6bfu4tT7Aq3TvViJyHjLjPNaAS3HOuMc9pw97KHsUtXNX4L+wu59g1WnjsZSko35MbEqnO58rihhw==}
 
   '@types/node@22.15.17':
     resolution: {integrity: sha512-wIX2aSZL5FE+MR0JlvF87BNVrtFWf6AE6rxSE9X7OwnVvoyCQjpzSRJ+M87se/4QCkCiebQAqrJ0y6fwIyi7nw==}
@@ -7246,9 +7244,9 @@ snapshots:
   '@biomejs/cli-win32-x64@1.9.4':
     optional: true
 
-  '@credo-ts/askar@0.5.15(@hyperledger/aries-askar-shared@0.2.3)(expo@53.0.9(@babel/core@7.27.1)(react-native@0.79.2(@babel/core@7.27.1)(react@19.1.0))(react@19.1.0))(react-native@0.79.2(@babel/core@7.27.1)(react@19.1.0))(web-streams-polyfill@3.3.3)':
+  '@credo-ts/askar@0.5.17(@hyperledger/aries-askar-shared@0.2.3)(expo@53.0.9(@babel/core@7.27.1)(react-native@0.79.2(@babel/core@7.27.1)(react@19.1.0))(react@19.1.0))(react-native@0.79.2(@babel/core@7.27.1)(react@19.1.0))(web-streams-polyfill@3.3.3)':
     dependencies:
-      '@credo-ts/core': 0.5.15(expo@53.0.9(@babel/core@7.27.1)(react-native@0.79.2(@babel/core@7.27.1)(react@19.1.0))(react@19.1.0))(react-native@0.79.2(@babel/core@7.27.1)(react@19.1.0))(web-streams-polyfill@3.3.3)
+      '@credo-ts/core': 0.5.17(expo@53.0.9(@babel/core@7.27.1)(react-native@0.79.2(@babel/core@7.27.1)(react@19.1.0))(react@19.1.0))(react-native@0.79.2(@babel/core@7.27.1)(react@19.1.0))(web-streams-polyfill@3.3.3)
       '@hyperledger/aries-askar-shared': 0.2.3
       bn.js: 5.2.2
       class-transformer: 0.5.1
@@ -7263,7 +7261,7 @@ snapshots:
       - supports-color
       - web-streams-polyfill
 
-  '@credo-ts/core@0.5.15(expo@53.0.9(@babel/core@7.27.1)(react-native@0.79.2(@babel/core@7.27.1)(react@19.1.0))(react@19.1.0))(react-native@0.79.2(@babel/core@7.27.1)(react@19.1.0))(web-streams-polyfill@3.3.3)':
+  '@credo-ts/core@0.5.17(expo@53.0.9(@babel/core@7.27.1)(react-native@0.79.2(@babel/core@7.27.1)(react@19.1.0))(react@19.1.0))(react-native@0.79.2(@babel/core@7.27.1)(react@19.1.0))(web-streams-polyfill@3.3.3)':
     dependencies:
       '@animo-id/mdoc': 0.2.38
       '@animo-id/pex': 4.1.1-alpha.0
@@ -7315,7 +7313,7 @@ snapshots:
       - supports-color
       - web-streams-polyfill
 
-  '@credo-ts/core@0.5.15(expo@53.0.9(@babel/core@7.28.0)(react-native@0.79.2(@babel/core@7.28.0)(react@19.1.0))(react@19.1.0))(react-native@0.79.2(@babel/core@7.28.0)(react@19.1.0))(web-streams-polyfill@3.3.3)':
+  '@credo-ts/core@0.5.17(expo@53.0.9(@babel/core@7.28.0)(react-native@0.79.2(@babel/core@7.28.0)(react@19.1.0))(react@19.1.0))(react-native@0.79.2(@babel/core@7.28.0)(react@19.1.0))(web-streams-polyfill@3.3.3)':
     dependencies:
       '@animo-id/mdoc': 0.2.38
       '@animo-id/pex': 4.1.1-alpha.0
@@ -7367,15 +7365,15 @@ snapshots:
       - supports-color
       - web-streams-polyfill
 
-  '@credo-ts/node@0.5.15(expo@53.0.9(@babel/core@7.27.1)(react-native@0.79.2(@babel/core@7.27.1)(react@19.1.0))(react@19.1.0))(react-native@0.79.2(@babel/core@7.27.1)(react@19.1.0))(web-streams-polyfill@3.3.3)':
+  '@credo-ts/node@0.5.17(expo@53.0.9(@babel/core@7.27.1)(react-native@0.79.2(@babel/core@7.27.1)(react@19.1.0))(react@19.1.0))(react-native@0.79.2(@babel/core@7.27.1)(react@19.1.0))(web-streams-polyfill@3.3.3)':
     dependencies:
       '@2060.io/ffi-napi': 4.0.9
       '@2060.io/ref-napi': 3.0.6
-      '@credo-ts/core': 0.5.15(expo@53.0.9(@babel/core@7.27.1)(react-native@0.79.2(@babel/core@7.27.1)(react@19.1.0))(react@19.1.0))(react-native@0.79.2(@babel/core@7.27.1)(react@19.1.0))(web-streams-polyfill@3.3.3)
+      '@credo-ts/core': 0.5.17(expo@53.0.9(@babel/core@7.27.1)(react-native@0.79.2(@babel/core@7.27.1)(react@19.1.0))(react@19.1.0))(react-native@0.79.2(@babel/core@7.27.1)(react@19.1.0))(web-streams-polyfill@3.3.3)
       '@types/express': 4.17.21
       express: 4.21.2
       rxjs: 7.8.2
-      ws: 8.18.2
+      ws: 8.18.3
     transitivePeerDependencies:
       - bufferutil
       - domexception
@@ -8178,7 +8176,7 @@ snapshots:
     dependencies:
       '@jest/fake-timers': 29.7.0
       '@jest/types': 29.6.3
-      '@types/node': 20.19.8
+      '@types/node': 22.15.17
       jest-mock: 29.7.0
     optional: true
 
@@ -8186,7 +8184,7 @@ snapshots:
     dependencies:
       '@jest/types': 29.6.3
       '@sinonjs/fake-timers': 10.3.0
-      '@types/node': 20.19.8
+      '@types/node': 22.15.17
       jest-message-util: 29.7.0
       jest-mock: 29.7.0
       jest-util: 29.7.0
@@ -8223,7 +8221,7 @@ snapshots:
       '@jest/schemas': 29.6.3
       '@types/istanbul-lib-coverage': 2.0.6
       '@types/istanbul-reports': 3.0.4
-      '@types/node': 20.19.8
+      '@types/node': 22.15.17
       '@types/yargs': 17.0.33
       chalk: 4.1.2
     optional: true
@@ -9230,7 +9228,7 @@ snapshots:
 
   '@types/graceful-fs@4.1.9':
     dependencies:
-      '@types/node': 20.19.8
+      '@types/node': 22.15.17
     optional: true
 
   '@types/http-errors@2.0.4': {}
@@ -9269,11 +9267,6 @@ snapshots:
   '@types/node@20.17.46':
     dependencies:
       undici-types: 6.19.8
-
-  '@types/node@20.19.8':
-    dependencies:
-      undici-types: 6.21.0
-    optional: true
 
   '@types/node@22.15.17':
     dependencies:
@@ -10068,7 +10061,7 @@ snapshots:
 
   chrome-launcher@0.15.2:
     dependencies:
-      '@types/node': 20.19.8
+      '@types/node': 22.15.17
       escape-string-regexp: 4.0.0
       is-wsl: 2.2.0
       lighthouse-logger: 1.4.2
@@ -10080,7 +10073,7 @@ snapshots:
 
   chromium-edge-launcher@0.2.0:
     dependencies:
-      '@types/node': 20.19.8
+      '@types/node': 22.15.17
       escape-string-regexp: 4.0.0
       is-wsl: 2.2.0
       lighthouse-logger: 1.4.2
@@ -10342,7 +10335,7 @@ snapshots:
 
   dotenv-expand@11.0.7:
     dependencies:
-      dotenv: 16.4.7
+      dotenv: 16.5.0
     optional: true
 
   dotenv@16.4.7:
@@ -11343,7 +11336,7 @@ snapshots:
       '@jest/environment': 29.7.0
       '@jest/fake-timers': 29.7.0
       '@jest/types': 29.6.3
-      '@types/node': 20.19.8
+      '@types/node': 22.15.17
       jest-mock: 29.7.0
       jest-util: 29.7.0
     optional: true
@@ -11355,7 +11348,7 @@ snapshots:
     dependencies:
       '@jest/types': 29.6.3
       '@types/graceful-fs': 4.1.9
-      '@types/node': 20.19.8
+      '@types/node': 22.15.17
       anymatch: 3.1.3
       fb-watchman: 2.0.2
       graceful-fs: 4.2.11
@@ -11384,7 +11377,7 @@ snapshots:
   jest-mock@29.7.0:
     dependencies:
       '@jest/types': 29.6.3
-      '@types/node': 20.19.8
+      '@types/node': 22.15.17
       jest-util: 29.7.0
     optional: true
 
@@ -11394,7 +11387,7 @@ snapshots:
   jest-util@29.7.0:
     dependencies:
       '@jest/types': 29.6.3
-      '@types/node': 20.19.8
+      '@types/node': 22.15.17
       chalk: 4.1.2
       ci-info: 3.9.0
       graceful-fs: 4.2.11
@@ -11413,13 +11406,13 @@ snapshots:
 
   jest-worker@27.5.1:
     dependencies:
-      '@types/node': 16.18.126
+      '@types/node': 22.15.17
       merge-stream: 2.0.0
       supports-color: 8.1.1
 
   jest-worker@29.7.0:
     dependencies:
-      '@types/node': 20.19.8
+      '@types/node': 22.15.17
       jest-util: 29.7.0
       merge-stream: 2.0.0
       supports-color: 8.1.1
@@ -13619,8 +13612,7 @@ snapshots:
 
   ws@8.18.2: {}
 
-  ws@8.18.3:
-    optional: true
+  ws@8.18.3: {}
 
   xcode@3.0.1:
     dependencies:
