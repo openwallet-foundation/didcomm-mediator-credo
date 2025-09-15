@@ -35,7 +35,7 @@ export class PushNotificationsFcmSetDeviceInfoMessage extends AgentMessage {
   public devicePlatform!: string | null
 
   public static readonly type = parseMessageType('https://didcomm.org/push-notifications-fcm/1.0/set-device-info')
-  
+
   @IsValidMessageType(PushNotificationsFcmSetDeviceInfoMessage.type)
   public readonly type = PushNotificationsFcmSetDeviceInfoMessage.type.messageTypeUri
 }
