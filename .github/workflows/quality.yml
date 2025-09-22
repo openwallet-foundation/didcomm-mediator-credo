@@ -34,7 +34,7 @@ jobs:
         run: pnpm types:check
 
       - name: Compile
-        run: pnpm build:all
+        run: pnpm build
 
   tests:
     runs-on: ubuntu-latest
