@@ -7,11 +7,11 @@ export default {
   records: [pushNotificationsFcmDrizzleRecord],
   migrations: {
     postgres: {
-      schemaSourcePath: `${__dirname}/../../src/drizzle/postgres.ts`,
+      schemaPath: `${__dirname}/../../build/drizzle/postgres.js`,
       migrationsPath: `${__dirname}/../../migrations/postgres`,
     },
     sqlite: {
-      schemaSourcePath: `${__dirname}/../../src/drizzle/sqlite.ts`,
+      schemaPath: `${__dirname}/../../build/drizzle/sqlite.js`,
       migrationsPath: `${__dirname}/../../migrations/sqlite`,
     },
   },

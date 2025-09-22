@@ -72,7 +72,6 @@ export async function createAgent() {
 
   const agent = new Agent<typeof modules & { askar: AskarModule }>({
     config: {
-      label: config.agentName,
       logger,
       autoUpdateStorageOnStartup: true,
     },
@@ -120,7 +119,7 @@ export async function createAgent() {
     agent.config.logger.info('Provisioned store')
   } catch (error) {
     if (error instanceof AskarStoreDuplicateError) {
-      // no-op
+      agent.config.logger.info('Store already exists')
     } else {
       agent.config.logger.error('Error provisioning store', {
         error,

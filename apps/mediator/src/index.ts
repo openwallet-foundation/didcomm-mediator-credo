@@ -19,6 +19,7 @@ void createAgent().then(async (agent) => {
   if (!outOfBandRecord) {
     outOfBandRecord = await agent.modules.oob.createInvitation({
       multiUseInvitation: true,
+      label: config.agentName,
     })
   }
 

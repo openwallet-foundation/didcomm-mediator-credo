@@ -4,10 +4,10 @@ packages:
 
 catalog:
   typescript: "^5.6.3"
-  "@credo-ts/askar": "0.6.0-pr-2324-20250722115823"
-  "@credo-ts/core": "0.6.0-pr-2324-20250722115823"
-  "@credo-ts/didcomm": "0.6.0-pr-2324-20250722115823"
-  "@credo-ts/node": "0.6.0-pr-2324-20250722115823"
-  "@credo-ts/redis-cache": "0.6.0-pr-2324-20250722115823"
-  "@credo-ts/drizzle-storage": "0.6.0-pr-2324-20250722115823"
+  "@credo-ts/askar": "0.6.0-alpha-20250919145226"
+  "@credo-ts/core": "0.6.0-alpha-20250919145226"
+  "@credo-ts/didcomm": "0.6.0-alpha-20250919145226"
+  "@credo-ts/node": "0.6.0-alpha-20250919145226"
+  "@credo-ts/redis-cache": "0.6.0-alpha-20250919145226"
+  "@credo-ts/drizzle-storage": "0.6.0-alpha-20250919145226"
   "@types/node": "^22.15.17"
