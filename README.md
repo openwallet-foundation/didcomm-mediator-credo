@@ -124,6 +124,7 @@ The mediator can be configured using **environment variables** or a **JSON confi
 ### 1. Environment Variables
 
 - All configuration options can be set via environment variables.
+- Environment variables must be written in upper case. (ASKAR instead of askar)
 - Nested config options use double underscores (`__`) for nesting. For example:
   - `ASKAR__STORE_ID=test`
   - `MESSAGE_PICKUP__STORAGE__TYPE=postgres`
