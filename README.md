@@ -104,6 +104,9 @@ The `POSTGRES_` variables won't be used in development mode (`NODE_ENV=developme
 | `FIREBASE_CLIENT_EMAIL`    | (OPTIONAL) Firebase client email generated when setting up Firebase Cloud Messaging project, required if sending push notifications via Firebase Cloud Messaging.                                                                                                                 |
 | `FIREBASE_PRIVATE_KEY`     | (OPTIONAL) Private key generated when setting up Firebase Cloud Messaging project, required if sending push notifications via Firebase Cloud Messaging.                                                                                                                           |
 | `NOTIFICATION_WEBHOOK_URL` | (OPTIONAL) A url used for sending notifications to                                                                                                                                                                                                                                |
+| `NODE_OPTIONS`          | Options to pass to Node.js runtime. We recommend setting this to `--max-old-space-size=512` to limit the memory usage of the agent.                                                                                                                                                |
+| `MALLOC_CONF`          | Options to pass to the memory allocator. We recommend setting this to `background_thread:true,metadata_thp:auto` to improve performance.                                                                                                                                                |
+| `LD_PRELOAD`          | Preload the jemalloc memory allocator. We recommend setting this to `/usr/lib/x86_64-linux-gnu/libjemalloc.so.2` to improve performance.                                                                                                                                                |
 
 ## Postgres Database
 
