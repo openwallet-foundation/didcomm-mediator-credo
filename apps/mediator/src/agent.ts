@@ -25,6 +25,7 @@ import { Logger } from './logger'
 import { loadPickup } from './pickup/loader'
 import { PushNotificationsFcmModule } from './push-notifications/fcm'
 import { StorageMessageQueueModule } from './storage/StorageMessageQueueModule'
+import { initializePushNotificationSender } from './push-notifications/fcm/firebase'
 
 function createModules(messagePickupRepository?: MessagePickupRepository) {
   type Modules = {
@@ -173,6 +174,8 @@ export async function createAgent() {
       socketServer.emit('connection', socket, request)
     })
   })
+
+  await initializePushNotificationSender(agent)
 
   return agent
 }
