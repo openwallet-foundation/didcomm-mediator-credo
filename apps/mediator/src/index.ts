@@ -27,7 +27,7 @@ void createAgent().then(async (agent) => {
     outOfBandRecord = outOfBandRecords
       .filter((oobRecord) => oobRecord.reusable)
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0]
-      
+
     if (!outOfBandRecord) {
       agent.config.logger.warn('No reusable out of band invitation found, creating a new one')
       outOfBandRecord = await agent.oob.createInvitation({
