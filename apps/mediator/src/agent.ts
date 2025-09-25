@@ -24,8 +24,8 @@ import { askarPostgresConfig } from './database'
 import { Logger } from './logger'
 import { loadPickup } from './pickup/loader'
 import { PushNotificationsFcmModule } from './push-notifications/fcm'
-import { StorageMessageQueueModule } from './storage/StorageMessageQueueModule'
 import { initializePushNotificationSender } from './push-notifications/fcm/firebase'
+import { StorageMessageQueueModule } from './storage/StorageMessageQueueModule'
 
 function createModules(messagePickupRepository?: MessagePickupRepository) {
   type Modules = {
