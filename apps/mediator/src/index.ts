@@ -13,13 +13,29 @@ void createAgent().then(async (agent) => {
     role: OutOfBandRole.Sender,
   })
 
-  let outOfBandRecord = outOfBandRecords.find((oobRecord) => oobRecord.reusable)
+  let outOfBandRecord = undefined
 
-  // If it does't exist, we create a new one
-  if (!outOfBandRecord) {
+  if (config.get('agent:recreateInvitation') && outOfBandRecords.length > 0) {
+    agent.config.logger.info('Recreating out of band invitation')
     outOfBandRecord = await agent.oob.createInvitation({
       multiUseInvitation: true,
+      goalCode: config.get('agent:goalCode'),
+      goal: 'Mediator Invitation',
     })
+  } else {
+    // Latest Reusable Invitation
+    outOfBandRecord = outOfBandRecords
+      .filter((oobRecord) => oobRecord.reusable)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0]
+      
+    if (!outOfBandRecord) {
+      agent.config.logger.warn('No reusable out of band invitation found, creating a new one')
+      outOfBandRecord = await agent.oob.createInvitation({
+        multiUseInvitation: true,
+        goalCode: config.get('agent:goalCode'),
+        goal: 'Mediator Invitation',
+      })
+    }
   }
 
   const httpEndpoint = agent.config.endpoints.find((e) => e.startsWith('http')) as string
