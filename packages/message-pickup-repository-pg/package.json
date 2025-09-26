@@ -28,13 +28,13 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
-    "@credo-ts/core": "^0.5.17",
+    "@credo-ts/core": "v0.5.18-alpha-20250926091534",
     "@types/node": "^16.0.0",
     "@types/pg": "^8.11.10",
     "ts-loader": "^9.0.0",
     "typescript": "^4.0.0"
   },
   "peerDependencies": {
-    "@credo-ts/core": "^0.5.17"
+    "@credo-ts/core": "v0.5.18-alpha-20250926091534"
   }
 }
