@@ -21,7 +21,7 @@ export const firebase: admin.app.App | undefined = !config.get('agent:usePushNot
 // DirectDelivery sender is built into the storage module and does not need initialization here
 export async function initializePushNotificationSender(agent: Agent) {
   if (!config.get('agent:usePushNotifications')) return
-  
+
   // For live mode and postgres pickup type, listen for queued messages and send push notifications
   if (
     config.get('agent:pickup:strategy') === MessageForwardingStrategy.QueueAndLiveModeDelivery &&
