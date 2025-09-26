@@ -84,7 +84,7 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
     try {
       // Initialize the database
       await this.buildPgDatabase()
-      this.logger?.info('[initialize] The database has been build successfully')
+      this.logger?.info('[initialize] The database has been built successfully')
 
       // Configure PostgreSQL pool for the messages collections
       this.messagesCollection = new Pool({
@@ -479,10 +479,6 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
           await dbClient.query(createTableLive)
           await dbClient.query(liveSessionTableIndex)
           this.logger?.info(`[buildPgDatabase] PostgresDbService Table "${liveSessionTableName}" created.`)
-        } else {
-          // If the table exists, clean it (truncate or delete, depending on your requirements).
-          await dbClient.query(`TRUNCATE TABLE ${liveSessionTableName}`)
-          this.logger?.info(`[buildPgDatabase] PostgresDbService Table "${liveSessionTableName}" cleared.`)
         }
 
         // Unlock after table creation
@@ -585,7 +581,7 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
         `INSERT INTO ${liveSessionTableName} (session_id, connection_id, protocol_version, instance) VALUES($1, $2, $3, $4) RETURNING session_id`,
         [id, connectionId, protocolVersion, instance]
       )
-      const liveSessionId = insertMessageDB?.rows[0].sessionid
+      const liveSessionId = insertMessageDB?.rows[0].session_id
       this.logger?.debug(`[addLiveSessionOnDb] add liveSession to ${connectionId} and result ${liveSessionId}`)
     } catch (error) {
       this.logger?.debug(`[addLiveSessionOnDb] error add liveSession DB ${connectionId}`)
