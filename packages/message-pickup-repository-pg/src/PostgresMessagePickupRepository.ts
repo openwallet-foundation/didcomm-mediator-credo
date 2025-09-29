@@ -3,21 +3,27 @@ import * as os from 'node:os'
 import {
   AddMessageOptions,
   Agent,
+  ConnectionRecord,
+  ConnectionService,
   GetAvailableMessageCountOptions,
   Logger,
   MessagePickupEventTypes,
   MessagePickupLiveSessionRemovedEvent,
   MessagePickupLiveSessionSavedEvent,
   MessagePickupRepository,
+  MessagePickupSessionService,
+  MessageSender,
   QueuedMessage,
   RemoveMessagesOptions,
   TakeFromQueueOptions,
+  TrustPingEventTypes,
   injectable,
 } from '@credo-ts/core'
 import {
   MessagePickupSession,
   MessagePickupSessionRole,
 } from '@credo-ts/core/build/modules/message-pickup/MessagePickupSession'
+import { MessageForwardingStrategy } from '@credo-ts/core/build/modules/routing/MessageForwardingStrategy'
 import { Pool } from 'pg'
 import PGPubsub from 'pg-pubsub'
 import {
@@ -130,6 +136,47 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
           }
         }
       )
+
+      const connectionsService = this.agent.dependencyManager.resolve(ConnectionService)
+      const pickupSessionService = this.agent.dependencyManager.resolve(MessagePickupSessionService)
+      const messageSender = this.agent.dependencyManager.resolve(MessageSender)
+
+      // This is for backwards compatibility with mobile agents which use implicit pickup
+      if (this.agent.mediator.config.messageForwardingStrategy === MessageForwardingStrategy.QueueAndLiveModeDelivery) {
+        options.agent.events.on(TrustPingEventTypes.TrustPingReceivedEvent, async (data) => {
+          const connectionRecord = data.payload.connectionRecord as ConnectionRecord
+
+          if (
+            !pickupSessionService.getLiveSessionByConnectionId(options.agent.context, {
+              connectionId: connectionRecord.id,
+            })
+          ) {
+            pickupSessionService.saveLiveSession(options.agent.context, {
+              connectionId: connectionRecord.id,
+              protocolVersion: 'v2',
+              role: MessagePickupSessionRole.MessageHolder,
+            })
+          }
+
+          const messagesToDeliver = await this.takeFromQueue({
+            connectionId: connectionRecord.id,
+            limit: 10,
+            deleteMessages: true,
+          })
+
+          if (messagesToDeliver.length === 0) return
+
+          const connection = await connectionsService.getById(options.agent.context, connectionRecord.id)
+          for (const message of messagesToDeliver) {
+            await messageSender.sendPackage(options.agent.context, {
+              connection,
+              recipientKey: connection.did ?? connection.id,
+              encryptedMessage: message.encryptedMessage,
+              options: { transportPriority: { schemes: ['ws', 'wss'], restrictive: true } },
+            })
+          }
+        })
+      }
     } catch (error) {
       this.logger?.error(`[initialize] Initialization failed: ${error}`)
       throw new Error(`Failed to initialize the service: ${error}`)
