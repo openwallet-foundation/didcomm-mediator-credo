@@ -4,6 +4,11 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  '@hyperledger/aries-askar-nodejs':
+    hash: l4doihihbzvbnflqykxpouk5vm
+    path: patches/@hyperledger__aries-askar-nodejs.patch
+
 importers:
 
   .:
@@ -28,7 +33,7 @@ importers:
         version: 0.5.17(expo@53.0.9(@babel/core@7.27.1)(react-native@0.79.2(@babel/core@7.27.1)(react@19.1.0))(react@19.1.0))(react-native@0.79.2(@babel/core@7.27.1)(react@19.1.0))(web-streams-polyfill@3.3.3)
       '@hyperledger/aries-askar-nodejs':
         specifier: ^0.2.3
-        version: 0.2.3
+        version: 0.2.3(patch_hash=l4doihihbzvbnflqykxpouk5vm)
       class-transformer:
         specifier: ^0.5.1
         version: 0.5.1
@@ -1919,7 +1924,6 @@ packages:
 
   '@sphereon/kmp-mdl-mdoc@0.2.0-SNAPSHOT.22':
     resolution: {integrity: sha512-uAZZExVy+ug9JLircejWa5eLtAZ7bnBP6xb7DO2+86LRsHNLh2k2jMWJYxp+iWtGHTsh6RYsZl14ScQLvjiQ/A==}
-    bundledDependencies: []
 
   '@sphereon/pex-models@2.3.2':
     resolution: {integrity: sha512-foFxfLkRwcn/MOp/eht46Q7wsvpQGlO7aowowIIb5Tz9u97kYZ2kz6K2h2ODxWuv5CRA7Q0MY8XUBGE2lfOhOQ==}
@@ -8121,7 +8125,7 @@ snapshots:
       yargs: 17.7.2
     optional: true
 
-  '@hyperledger/aries-askar-nodejs@0.2.3':
+  '@hyperledger/aries-askar-nodejs@0.2.3(patch_hash=l4doihihbzvbnflqykxpouk5vm)':
     dependencies:
       '@2060.io/ffi-napi': 4.0.9
       '@2060.io/ref-napi': 3.0.6
