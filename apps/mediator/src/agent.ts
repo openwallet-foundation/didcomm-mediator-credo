@@ -26,6 +26,7 @@ import { loadCacheStorage } from './config/cacheLoader'
 import { ExtendedQueueTransportRepository, loadMessagePickupStorage } from './config/messagePickupLoader'
 import { loadStorage } from './config/storageLoader'
 import { PushNotificationsFcmModule } from './push-notifications/fcm'
+import { initializePushNotificationSender } from './push-notifications/fcm/firebase'
 
 async function createModules({
   queueTransportRepository,
@@ -152,6 +153,8 @@ export async function createAgent() {
       socketServer.emit('connection', socket, request)
     })
   })
+
+  await initializePushNotificationSender(agent)
 
   return agent
 }

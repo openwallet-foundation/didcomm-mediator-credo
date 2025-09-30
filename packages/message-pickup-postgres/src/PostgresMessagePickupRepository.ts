@@ -1,13 +1,13 @@
 import { randomUUID } from 'node:crypto'
 import * as os from 'node:os'
-import { Agent, AgentContext, Logger } from '@credo-ts/core'
+import { Agent, AgentContext, EventEmitter, Logger } from '@credo-ts/core'
 import {
   AddMessageOptions,
   GetAvailableMessageCountOptions,
+  MessagePickupApi,
   MessagePickupEventTypes,
   MessagePickupLiveSessionRemovedEvent,
   MessagePickupLiveSessionSavedEvent,
-  MessagePickupModule,
   QueueTransportRepository,
   QueuedMessage,
   RemoveMessagesOptions,
@@ -30,15 +30,14 @@ import {
 } from './config/dbCollections'
 import {
   ExtendedMessagePickupSession,
-  MessageQueuedEvent,
-  MessageQueuedEventType,
+  PostgresMessagePickupMessageQueuedEvent,
+  PostgresMessagePickupMessageQueuedEventType,
   PostgresMessagePickupRepositoryConfig,
 } from './interfaces'
 
 export class PostgresMessagePickupRepository implements QueueTransportRepository {
   private logger?: Logger
   private messagesCollection?: Pool
-  private agent?: Agent<{ messagePickup: MessagePickupModule }>
   private pubSubInstance: PGPubsub
   private instanceName: string
   private postgresUser: string
@@ -70,15 +69,15 @@ export class PostgresMessagePickupRepository implements QueueTransportRepository
    * Initializes the service by setting up the database, message listeners, and the agent.
    * This method also configures the Pub/Sub system and registers event handlers.
    *
-   * @param {Agent} agent - The agent instance to be initialized.
    * @returns {Promise<void>} A promise that resolves when the initialization is complete.
    * @throws {Error} Throws an error if initialization fails due to database, Pub/Sub, or agent setup issues.
    */
   public async initialize(agent: Agent): Promise<void> {
     try {
       // Initialize the database
+
       await this.buildPgDatabase(agent.context)
-      agent.context.config.logger.info('[initialize] The database has been build successfully')
+      agent.context.config.logger.info('[initialize] The database has been built successfully')
 
       // Configure PostgreSQL pool for the messages collections
       this.messagesCollection = new Pool({
@@ -91,9 +90,6 @@ export class PostgresMessagePickupRepository implements QueueTransportRepository
 
       // Initialize Listener PUB/SUB
       await this.initializeMessageListener(agent.context, 'newMessage')
-
-      // Set instance variables
-      this.agent = agent
 
       // Register event handlers
       agent.events.on(
@@ -264,10 +260,6 @@ export class PostgresMessagePickupRepository implements QueueTransportRepository
     const { connectionId, recipientDids, payload } = options
     agentContext.config.logger.debug(`[addMessage] Initializing new message for connectionId: ${connectionId}`)
 
-    if (!this.agent) {
-      throw new Error('Agent is not defined')
-    }
-
     try {
       // Retrieve local live session details
       const localLiveSession = await this.findLocalLiveSession(agentContext, connectionId)
@@ -308,7 +300,8 @@ export class PostgresMessagePickupRepository implements QueueTransportRepository
       if (localLiveSession) {
         agentContext.config.logger.debug(`[addMessage] Local live session exists for connectionId: ${connectionId}`)
 
-        await this.agent.modules.messagePickup.deliverMessages({
+        const messagePickupApi = agentContext.resolve(MessagePickupApi)
+        await messagePickupApi.deliverMessages({
           pickupSessionId: localLiveSession.id,
           messages: [{ id: messageRecord.id, encryptedMessage: payload, receivedAt: messageRecord.created_at }],
         })
@@ -398,8 +391,9 @@ export class PostgresMessagePickupRepository implements QueueTransportRepository
             `[initializeMessageListener] ${this.instanceName} found a LiveSession on channel: ${channel} for connectionId: ${connectionId}. Delivering messages.`
           )
 
+          const messagePickupApi = agentContext.resolve(MessagePickupApi)
           // Deliver messages from the queue for the live session
-          await this.agent?.modules.messagePickup.deliverMessagesFromQueue({
+          await messagePickupApi.deliverMessagesFromQueue({
             pickupSessionId: pickupLiveSession.id,
           })
         } else {
@@ -487,12 +481,6 @@ export class PostgresMessagePickupRepository implements QueueTransportRepository
           agentContext.config.logger.info(
             `[buildPgDatabase] PostgresDbService Table "${liveSessionTableName}" created.`
           )
-        } else {
-          // If the table exists, clean it (truncate or delete, depending on your requirements).
-          await dbClient.query(`TRUNCATE TABLE ${liveSessionTableName}`)
-          agentContext.config.logger.info(
-            `[buildPgDatabase] PostgresDbService Table "${liveSessionTableName}" cleared.`
-          )
         }
 
         // Unlock after table creation
@@ -554,8 +542,8 @@ export class PostgresMessagePickupRepository implements QueueTransportRepository
     )
 
     try {
-      if (!this.agent) throw new Error('Agent is not defined')
-      const localSession = await this.agent.modules.messagePickup.getLiveModeSession({ connectionId })
+      const messagePickupApi = agentContext.resolve(MessagePickupApi)
+      const localSession = await messagePickupApi.getLiveModeSession({ connectionId })
 
       return localSession ? { ...localSession, isLocalSession: true } : undefined
     } catch (error) {
@@ -615,7 +603,7 @@ export class PostgresMessagePickupRepository implements QueueTransportRepository
         `INSERT INTO ${liveSessionTableName} (session_id, connection_id, protocol_version, instance) VALUES($1, $2, $3, $4) RETURNING session_id`,
         [id, connectionId, protocolVersion, instance]
       )
-      const liveSessionId = insertMessageDB?.rows[0].sessionid
+      const liveSessionId = insertMessageDB?.rows[0].session_id
       agentContext.config.logger.debug(
         `[addLiveSessionOnDb] add liveSession to ${connectionId} and result ${liveSessionId}`
       )
@@ -657,19 +645,19 @@ export class PostgresMessagePickupRepository implements QueueTransportRepository
    * @param {any} [options.*] - Additional optional properties for the event payload.
    * @throws {Error} Throws if the agent is not initialized.
    */
-  private async emitMessageQueuedEvent(agentContext: AgentContext, options: MessageQueuedEvent) {
-    if (!this.agent) {
-      agentContext.config.logger.error('[emitMessageQueuedEvent] Agent is not initialized.')
-      throw new Error('Agent is not initialized.')
-    }
+  private async emitMessageQueuedEvent(
+    agentContext: AgentContext,
+    options: PostgresMessagePickupMessageQueuedEvent['payload']
+  ) {
     const { message, session } = options
 
     agentContext.config.logger.debug(
       `[emitMessageQueuedEvent] Emitting MessageQueuedEvent for connectionId: ${options.message.connectionId}, messageId: ${options.message.id}`
     )
 
-    this.agent.events.emit(this.agent.context, {
-      type: MessageQueuedEventType,
+    const eventEmitter = agentContext.resolve(EventEmitter)
+    eventEmitter.emit<PostgresMessagePickupMessageQueuedEvent>(agentContext, {
+      type: PostgresMessagePickupMessageQueuedEventType,
       payload: {
         message,
         session,

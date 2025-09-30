@@ -1,4 +1,5 @@
 import { Logger } from '@credo-ts/core'
+import { BaseEvent } from '@credo-ts/core'
 import { EncryptedMessage } from '@credo-ts/didcomm'
 import { MessagePickupSession } from '@credo-ts/didcomm/build/modules/message-pickup/MessagePickupSession'
 
@@ -10,18 +11,21 @@ export interface PostgresMessagePickupRepositoryConfig {
   postgresDatabaseName?: string
 }
 
-export const MessageQueuedEventType: string = 'MessagePickupRepositoryMessageQueued'
+export const PostgresMessagePickupMessageQueuedEventType = 'PostgresMessagePickupRepositoryMessageQueued' as const
 
-export interface MessageQueuedEvent {
-  message: {
-    id: string
-    connectionId: string
-    recipientDids: string[]
-    encryptedMessage: EncryptedMessage
-    receivedAt: Date
-    state: string
+export interface PostgresMessagePickupMessageQueuedEvent extends BaseEvent {
+  type: typeof PostgresMessagePickupMessageQueuedEventType
+  payload: {
+    message: {
+      id: string
+      connectionId: string
+      recipientDids: string[]
+      encryptedMessage: EncryptedMessage
+      receivedAt: Date
+      state: 'pending' | 'sending'
+    }
+    session?: MessagePickupSession
   }
-  session?: MessagePickupSession
 }
 
 export interface ExtendedMessagePickupSession extends MessagePickupSession {

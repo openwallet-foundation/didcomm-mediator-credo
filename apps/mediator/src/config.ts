@@ -279,9 +279,16 @@ const zConfig = z
     invitationUrl: z
       .url({
         error:
-          "Invitation url must be a valid url. Defaults to '/invitatin' on the first configured http(s) agent endpoint. Can also be set using 'INVITATION_URL' environment variable",
+          "Invitation url must be a valid url. Defaults to '/invitation' on the first configured http(s) agent endpoint. Can also be set using 'INVITATION_URL' environment variable",
       })
       .optional(),
+    invitationGoalCode: z.string().optional(),
+    createNewInvitation: z
+      .enum(['true', 'false'])
+      .transform((v) => v === 'true')
+      .or(z.boolean())
+      .optional()
+      .default(false),
   })
   .transform((config) => {
     const agentEndpoints =

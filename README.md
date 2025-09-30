@@ -132,6 +132,14 @@ The mediator can be configured using **environment variables** or a **JSON confi
   - `CACHE__REDIS_URL=redis://127.0.0.1:6379`
 - See the [Configuration Reference](#configuration-reference) below for all available options and their ENV names.
 
+You can also provide the following environment variables, these CANNOT be provided in the JSON configuration, as they are Node environment variables.
+
+| Environment Variable | Description                                                                                                                              |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `NODE_OPTIONS`       | Options to pass to Node.js runtime. We recommend setting this to `--max-old-space-size=512` to limit the memory usage of the agent.      |
+| `MALLOC_CONF`        | Options to pass to the memory allocator. We recommend setting this to `background_thread:true,metadata_thp:auto` to improve performance. |
+| `LD_PRELOAD`         | Preload the jemalloc memory allocator. We recommend setting this to `/usr/lib/x86_64-linux-gnu/libjemalloc.so.2` to improve performance. |
+
 ### 2. JSON Configuration File
 
 - You can provide a JSON config file and point to it with the `CONFIG` environment variable:
@@ -181,7 +189,7 @@ Below are the top-level configuration options. All can be set via ENV (with doub
 
 ### Message Pickup
 
-- `forwardingStrategy`: `DirectDelivery`, `QueueOnly`, `QueueAndLiveModeDelivery`
+- `forwardingStrategy`: `DirectDelivery`, `QueueOnly`, `QueueAndLiveModeDelivery`. The `DirectDelivery` strategy will deliver messages directly to the recipient, while the `QueueOnly` strategy will only queue the messages for the recipient. The `QueueAndLiveModeDelivery` strategy will queue the messages for the recipient and deliver them directly if possible. The default is `DirectDelivery`.
 - `storage.type`: `credo`, `postgres`, or `dynamodb`
   - For `postgres`: `host`, `user`, `password`, `database`
   - For `dynamodb`: `region`, `accessKeyId`, `secretAccessKey`, `tableName`

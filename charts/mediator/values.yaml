@@ -219,6 +219,16 @@ environment:
         key: password
   - name: MESSAGE_PICKUP__FORWARDING_STRATEGY
     value: DirectDelivery # The default is 'DirectDelivery', it can be also be 'QueueOnly' or 'QueueAndLiveModeDelivery'
+  - name: CREATE_NEW_INVITATION
+    value: "false" # This will create a new invitation to update the service endpoints or goal code.
+  - name: INVITATION_GOAL_CODE
+    value: "mediator" # This is the goal code that will be used for the mediator. It can be set to 'mediator' or 'mediator-queue'.
+  - name: NODE_OPTIONS
+    value: "" # This can be used to set node options like --max-old-space-size=240
+  - name: MALLOC_CONF
+    value: "" # This can be used to set memory allocation options for the container
+  - name: LD_PRELOAD
+    value: "" # This can be used to set a different memory allocator like jemalloc
 
 # This is to setup the liveness and readiness probes more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
 ## @param livenessProbe [object] Liveness probe configuration
