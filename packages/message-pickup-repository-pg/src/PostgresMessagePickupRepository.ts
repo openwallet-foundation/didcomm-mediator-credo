@@ -513,8 +513,8 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
         'INSERT INTO live_session (session_id, connection_id, protocol_version, instance) VALUES($1, $2, $3, $4) RETURNING session_id',
         [id, connectionId, protocolVersion, instance]
       )
-      const liveSessionId = insertMessageDB?.rows[0].sessionid
-      this.logger?.debug(`[addLiveSessionOnDb] add liveSession to ${connectionId} and result ${liveSessionId}`)
+      const liveSessionId: MessagePickupSession['id'] = insertMessageDB?.rows[0].session_id
+      this.logger?.debug(`[addLiveSessionOnDb] add liveSession to liveSessionId ${liveSessionId} to connectionId ${connectionId}`)
     } catch (error) {
       this.logger?.debug(`[addLiveSessionOnDb] error add liveSession DB ${connectionId}`)
     }
