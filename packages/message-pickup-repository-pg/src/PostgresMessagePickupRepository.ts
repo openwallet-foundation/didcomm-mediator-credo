@@ -514,7 +514,9 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
         [id, connectionId, protocolVersion, instance]
       )
       const liveSessionId: MessagePickupSession['id'] = insertMessageDB?.rows[0].session_id
-      this.logger?.debug(`[addLiveSessionOnDb] add liveSession to liveSessionId ${liveSessionId} to connectionId ${connectionId}`)
+      this.logger?.debug(
+        `[addLiveSessionOnDb] add liveSession to liveSessionId ${liveSessionId} to connectionId ${connectionId}`
+      )
     } catch (error) {
       this.logger?.debug(`[addLiveSessionOnDb] error add liveSession DB ${connectionId}`)
     }
