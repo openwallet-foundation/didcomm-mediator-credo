@@ -1,6 +1,12 @@
 import type { FcmDeviceInfo } from './models'
 
-import { AgentContext, ConnectionService, MessageSender, OutboundMessageContext, injectable } from '@credo-ts/core'
+import { AgentContext, injectable } from '@credo-ts/core'
+import {
+  DidCommConnectionService,
+  DidCommMessageHandlerRegistry,
+  DidCommMessageSender,
+  DidCommOutboundMessageContext,
+} from '@credo-ts/didcomm'
 
 import {
   PushNotificationsFcmDeviceInfoHandler,
@@ -11,15 +17,15 @@ import { PushNotificationsFcmService } from './services/PushNotificationsFcmServ
 
 @injectable()
 export class PushNotificationsFcmApi {
-  private messageSender: MessageSender
+  private messageSender: DidCommMessageSender
   private pushNotificationsService: PushNotificationsFcmService
-  private connectionService: ConnectionService
+  private connectionService: DidCommConnectionService
   private agentContext: AgentContext
 
   public constructor(
-    messageSender: MessageSender,
+    messageSender: DidCommMessageSender,
     pushNotificationsService: PushNotificationsFcmService,
-    connectionService: ConnectionService,
+    connectionService: DidCommConnectionService,
     agentContext: AgentContext
   ) {
     this.messageSender = messageSender
@@ -27,11 +33,13 @@ export class PushNotificationsFcmApi {
     this.connectionService = connectionService
     this.agentContext = agentContext
 
-    this.agentContext.dependencyManager.registerMessageHandlers([
-      new PushNotificationsFcmSetDeviceInfoHandler(this.pushNotificationsService),
-      new PushNotificationsFcmDeviceInfoHandler(),
-      new PushNotificationsFcmProblemReportHandler(this.pushNotificationsService),
-    ])
+    this.agentContext
+      .resolve(DidCommMessageHandlerRegistry)
+      .registerMessageHandlers([
+        new PushNotificationsFcmSetDeviceInfoHandler(this.pushNotificationsService),
+        new PushNotificationsFcmDeviceInfoHandler(),
+        new PushNotificationsFcmProblemReportHandler(),
+      ])
   }
 
   /**
@@ -50,7 +58,7 @@ export class PushNotificationsFcmApi {
 
     const message = this.pushNotificationsService.createDeviceInfo({ threadId, deviceInfo })
 
-    const outbound = new OutboundMessageContext(message, {
+    const outbound = new DidCommOutboundMessageContext(message, {
       agentContext: this.agentContext,
       connection: connection,
     })

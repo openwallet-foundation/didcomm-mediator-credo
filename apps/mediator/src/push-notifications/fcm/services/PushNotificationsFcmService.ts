@@ -1,5 +1,6 @@
-import type { AgentContext, InboundMessageContext, Logger } from '@credo-ts/core'
-import { CredoError, InjectionSymbols, TransportService, inject, injectable } from '@credo-ts/core'
+import type { AgentContext, Logger } from '@credo-ts/core'
+import { CredoError, InjectionSymbols, inject, injectable } from '@credo-ts/core'
+import { DidCommInboundMessageContext } from '@credo-ts/didcomm'
 import { PushNotificationsFcmProblemReportError, PushNotificationsFcmProblemReportReason } from '../errors'
 import { PushNotificationsFcmDeviceInfoMessage, PushNotificationsFcmSetDeviceInfoMessage } from '../messages'
 import type { FcmDeviceInfo } from '../models/FcmDeviceInfo'
@@ -9,16 +10,13 @@ import { PushNotificationsFcmRecord, PushNotificationsFcmRepository } from '../r
 export class PushNotificationsFcmService {
   private pushNotificationsFcmRepository: PushNotificationsFcmRepository
   private logger: Logger
-  private transportService: TransportService
 
   public constructor(
     pushNotificationsFcmRepository: PushNotificationsFcmRepository,
-    transportService: TransportService,
     @inject(InjectionSymbols.Logger) logger: Logger
   ) {
     this.pushNotificationsFcmRepository = pushNotificationsFcmRepository
     this.logger = logger
-    this.transportService = transportService
   }
 
   public createDeviceInfo(options: { threadId: string; deviceInfo: FcmDeviceInfo }) {
@@ -36,7 +34,9 @@ export class PushNotificationsFcmService {
     })
   }
 
-  public async processSetDeviceInfo(messageContext: InboundMessageContext<PushNotificationsFcmSetDeviceInfoMessage>) {
+  public async processSetDeviceInfo(
+    messageContext: DidCommInboundMessageContext<PushNotificationsFcmSetDeviceInfoMessage>
+  ) {
     const { message, agentContext } = messageContext
     if (
       (message.deviceToken === null && message.devicePlatform !== null) ||

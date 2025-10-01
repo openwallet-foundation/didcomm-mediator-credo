@@ -4,6 +4,8 @@ on:
   push:
     tags:
       - v*
+    branches:
+      - 0.6.x-alpha
   workflow_dispatch:
   workflow_run:
     workflows: [Quality]
