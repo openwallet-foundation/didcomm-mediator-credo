@@ -1,4 +1,4 @@
-import type { EncryptedMessage } from '@credo-ts/didcomm'
+import type { DidCommEncryptedMessage } from '@credo-ts/didcomm'
 
 import { BaseRecord, utils } from '@credo-ts/core'
 
@@ -10,13 +10,13 @@ export interface MessageRecordStorageProps {
   id?: string
   createdAt?: Date
   connectionId: string
-  message: EncryptedMessage
+  message: DidCommEncryptedMessage
 }
 
 export class MessageRecord extends BaseRecord<DefaultMessageRecordTags> implements MessageRecordStorageProps {
   public sentTime!: string
   public connectionId!: string
-  public message!: EncryptedMessage
+  public message!: DidCommEncryptedMessage
 
   public static override readonly type = 'MessageRecord'
   public override readonly type = MessageRecord.type

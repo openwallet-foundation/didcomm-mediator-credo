@@ -1,5 +1,5 @@
 import { LogLevel } from '@credo-ts/core'
-import { MessageForwardingStrategy } from '@credo-ts/didcomm'
+import { DidCommMessageForwardingStrategy } from '@credo-ts/didcomm'
 import { loadConfigSync } from 'zod-config'
 import { envAdapter } from 'zod-config/env-adapter'
 import { jsonAdapter } from 'zod-config/json-adapter'
@@ -137,11 +137,11 @@ const zConfig = z
     messagePickup: z
       .object({
         forwardingStrategy: z
-          .enum(MessageForwardingStrategy, {
+          .enum(DidCommMessageForwardingStrategy, {
             error:
               "Message pickup forwarding strategy must be one of 'DirectDelivery' (default) | 'QueueOnly' | 'QueueAndLiveModeDelivery'. Can also be set using MESSAGE_PICKUP__FORWARDING_STRATEGRY environment variable",
           })
-          .default(MessageForwardingStrategy.DirectDelivery),
+          .default(DidCommMessageForwardingStrategy.DirectDelivery),
         storage: z
           .discriminatedUnion(
             'type',
@@ -199,7 +199,7 @@ const zConfig = z
           }),
       })
       .default({
-        forwardingStrategy: MessageForwardingStrategy.DirectDelivery,
+        forwardingStrategy: DidCommMessageForwardingStrategy.DirectDelivery,
         storage: {
           type: 'credo',
         },
@@ -317,13 +317,7 @@ function loadMediatorConfig(): Config {
       transform: ({ key, value }) => ({
         key: key
           .split('__')
-          .map((word) =>
-            word
-              .toLowerCase()
-              .split('_')
-              .map((wordItem, index) => (index === 0 ? wordItem : wordItem.charAt(0).toUpperCase() + wordItem.slice(1)))
-              .join('')
-          )
+          .map((word) => transformWord(word))
           .join('__'),
         value,
       }),
@@ -349,4 +343,28 @@ function loadMediatorConfig(): Config {
 
     throw error
   }
+}
+
+/**
+ * Transforms a word from an environment variable into the casing as used by the JSON config.
+ *
+ * This means `_` are replaced and updated to camelCase. Leading and trailing `_` are preserved.
+ */
+function transformWord(word: string) {
+  const match = word.match(/^(_*)(.*?)(_*)$/)
+
+  if (!match) {
+    return word // Handle edge case of all underscores or empty string
+  }
+
+  const [, leadingUnderscores, content, trailingUnderscores] = match
+
+  const camelCased = content
+    .toLowerCase()
+    .split('_')
+    .filter((wordItem) => wordItem.length > 0)
+    .map((wordItem, index) => (index === 0 ? wordItem : wordItem.charAt(0).toUpperCase() + wordItem.slice(1)))
+    .join('')
+
+  return leadingUnderscores + camelCased + trailingUnderscores
 }

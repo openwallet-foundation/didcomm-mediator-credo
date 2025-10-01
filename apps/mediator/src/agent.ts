@@ -1,20 +1,20 @@
 import type { Socket } from 'node:net'
 import { Agent } from '@credo-ts/core'
 import {
-  ConnectionsModule,
+  DidCommConnectionsModule,
+  DidCommHttpOutboundTransport,
+  DidCommMediatorModule,
   DidCommMimeType,
-  HttpOutboundTransport,
-  MediatorModule,
-  OutOfBandRole,
-  OutOfBandState,
-  WsOutboundTransport,
+  DidCommOutOfBandRole,
+  DidCommOutOfBandState,
+  DidCommWsOutboundTransport,
   getDefaultDidcommModules,
 } from '@credo-ts/didcomm'
 
 // FIXME: export from askar root
 import { AskarStoreDuplicateError } from '@credo-ts/askar/build/error/AskarStoreDuplicateError'
 
-import { HttpInboundTransport, WsInboundTransport, agentDependencies } from '@credo-ts/node'
+import { DidCommHttpInboundTransport, DidCommWsInboundTransport, agentDependencies } from '@credo-ts/node'
 
 import express from 'express'
 import { Server } from 'ws'
@@ -40,10 +40,10 @@ async function createModules({
       didCommMimeType: DidCommMimeType.V0,
       queueTransportRepository,
     }),
-    connections: new ConnectionsModule({
+    connections: new DidCommConnectionsModule({
       autoAcceptConnections: true,
     }),
-    mediator: new MediatorModule({
+    mediator: new DidCommMediatorModule({
       autoAcceptMediationRequests: true,
       messageForwardingStrategy: config.messagePickup.forwardingStrategy,
     }),
@@ -81,10 +81,10 @@ export async function createAgent() {
   })
 
   // Create all transports
-  const httpInboundTransport = new HttpInboundTransport({ app, port: config.agentPort })
-  const httpOutboundTransport = new HttpOutboundTransport()
-  const wsInboundTransport = new WsInboundTransport({ server: socketServer })
-  const wsOutboundTransport = new WsOutboundTransport()
+  const httpInboundTransport = new DidCommHttpInboundTransport({ app, port: config.agentPort })
+  const httpOutboundTransport = new DidCommHttpOutboundTransport()
+  const wsInboundTransport = new DidCommWsInboundTransport({ server: socketServer })
+  const wsOutboundTransport = new DidCommWsOutboundTransport()
 
   // Register all Transports
   agent.modules.didcomm.registerInboundTransport(httpInboundTransport)
@@ -106,8 +106,8 @@ export async function createAgent() {
 
     if (
       !outOfBandRecord ||
-      outOfBandRecord.role !== OutOfBandRole.Sender ||
-      outOfBandRecord.state !== OutOfBandState.AwaitResponse
+      outOfBandRecord.role !== DidCommOutOfBandRole.Sender ||
+      outOfBandRecord.state !== DidCommOutOfBandState.AwaitResponse
     ) {
       return res.status(400).send(`No invitation found for _oobid ${req.query._oobid}`)
     }

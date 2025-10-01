@@ -1,8 +1,8 @@
 {
   "agentPort": 3110,
   "agentName": "Credo DIDComm Mediator",
-  "agentEndpoints": ["http://localhost:3110", "ws://localhost:3310"],
-  "invitationUrl": "http://localhost:3110/invitation",
+  "agentEndpoints": ["https://3f4971c426f3.ngrok-free.app", "wss://3f4971c426f3.ngrok-free.app"],
+  "invitationUrl": "https://3f4971c426f3.ngrok-free.app/invitation",
   "cache": {
     "type": "redis",
     "redisUrl": "redis://127.0.0.1:6379"
@@ -33,16 +33,6 @@
       "region": "local",
       "accessKeyId": "local",
       "secretAccessKey": "local"
-    }
-  },
-  "pushNotifications": {
-    "webhookUrl": "https://webhook.com",
-    "firebase": {
-      "projectId": "fb315c26-b923-4f8f-b78b-2e4d7c8a66be",
-      "clientEmail": "email@email.com",
-      "priateKey": "ey...",
-      "notificationTitle": "New message",
-      "notificationBody": "New message"
     }
   }
 }

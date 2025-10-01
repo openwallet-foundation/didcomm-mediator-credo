@@ -1,5 +1,5 @@
 import { Agent } from '@credo-ts/core'
-import { MessageForwardingStrategy } from '@credo-ts/didcomm'
+import { DidCommMessageForwardingStrategy } from '@credo-ts/didcomm'
 import {
   PostgresMessagePickupMessageQueuedEvent,
   PostgresMessagePickupMessageQueuedEventType,
@@ -26,7 +26,7 @@ export async function initializePushNotificationSender(agent: Agent) {
 
   // For live mode and postgres pickup type, listen for queued messages and send push notifications
   if (
-    config.messagePickup.forwardingStrategy === MessageForwardingStrategy.QueueAndLiveModeDelivery &&
+    config.messagePickup.forwardingStrategy === DidCommMessageForwardingStrategy.QueueAndLiveModeDelivery &&
     config.messagePickup.storage.type === 'postgres'
   ) {
     agent.config.logger.info(

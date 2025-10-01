@@ -1,10 +1,10 @@
-import { EncryptedMessage } from '@credo-ts/didcomm'
+import { DidCommEncryptedMessage } from '@credo-ts/didcomm'
 import { beforeAll, expect, suite, test } from 'vitest'
 import { DynamoDbClientRepository } from '../src/client'
 
 const connectionId = '4ffdd113-117b-4827-9af5-28aa73ec4bad'
 const recipientDids = ['did:key:123', 'did:jwk:123', 'did:peer:3abba']
-const encryptedMessage: EncryptedMessage = {
+const encryptedMessage: DidCommEncryptedMessage = {
   ciphertext: 'ciphertext',
   iv: 'iv',
   protected: 'protected',

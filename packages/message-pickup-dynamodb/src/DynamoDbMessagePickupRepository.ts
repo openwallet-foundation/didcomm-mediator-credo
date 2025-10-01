@@ -1,15 +1,15 @@
 import { AgentContext } from '@credo-ts/core'
 import {
   AddMessageOptions,
+  DidCommQueueTransportRepository,
   GetAvailableMessageCountOptions,
-  QueueTransportRepository,
-  QueuedMessage,
+  QueuedDidCommMessage,
   RemoveMessagesOptions,
   TakeFromQueueOptions,
 } from '@credo-ts/didcomm'
 import { DynamoDbClientRepository, DynamoDbClientRepositoryOptions } from './client'
 
-export class DynamoDbMessagePickupRepository implements QueueTransportRepository {
+export class DynamoDbMessagePickupRepository implements DidCommQueueTransportRepository {
   private client: DynamoDbClientRepository
 
   private constructor(client: DynamoDbClientRepository) {
@@ -27,7 +27,10 @@ export class DynamoDbMessagePickupRepository implements QueueTransportRepository
     return await this.client.getMessageCount(connectionId)
   }
 
-  public async takeFromQueue(agentContext: AgentContext, options: TakeFromQueueOptions): Promise<Array<QueuedMessage>> {
+  public async takeFromQueue(
+    agentContext: AgentContext,
+    options: TakeFromQueueOptions
+  ): Promise<Array<QueuedDidCommMessage>> {
     return await this.client.getMessages(options)
   }
 

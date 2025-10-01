@@ -1,7 +1,12 @@
 import type { FcmDeviceInfo } from './models'
 
 import { AgentContext, injectable } from '@credo-ts/core'
-import { ConnectionService, MessageHandlerRegistry, MessageSender, OutboundMessageContext } from '@credo-ts/didcomm'
+import {
+  DidCommConnectionService,
+  DidCommMessageHandlerRegistry,
+  DidCommMessageSender,
+  DidCommOutboundMessageContext,
+} from '@credo-ts/didcomm'
 
 import {
   PushNotificationsFcmDeviceInfoHandler,
@@ -12,15 +17,15 @@ import { PushNotificationsFcmService } from './services/PushNotificationsFcmServ
 
 @injectable()
 export class PushNotificationsFcmApi {
-  private messageSender: MessageSender
+  private messageSender: DidCommMessageSender
   private pushNotificationsService: PushNotificationsFcmService
-  private connectionService: ConnectionService
+  private connectionService: DidCommConnectionService
   private agentContext: AgentContext
 
   public constructor(
-    messageSender: MessageSender,
+    messageSender: DidCommMessageSender,
     pushNotificationsService: PushNotificationsFcmService,
-    connectionService: ConnectionService,
+    connectionService: DidCommConnectionService,
     agentContext: AgentContext
   ) {
     this.messageSender = messageSender
@@ -29,7 +34,7 @@ export class PushNotificationsFcmApi {
     this.agentContext = agentContext
 
     this.agentContext
-      .resolve(MessageHandlerRegistry)
+      .resolve(DidCommMessageHandlerRegistry)
       .registerMessageHandlers([
         new PushNotificationsFcmSetDeviceInfoHandler(this.pushNotificationsService),
         new PushNotificationsFcmDeviceInfoHandler(),
@@ -53,7 +58,7 @@ export class PushNotificationsFcmApi {
 
     const message = this.pushNotificationsService.createDeviceInfo({ threadId, deviceInfo })
 
-    const outbound = new OutboundMessageContext(message, {
+    const outbound = new DidCommOutboundMessageContext(message, {
       agentContext: this.agentContext,
       connection: connection,
     })

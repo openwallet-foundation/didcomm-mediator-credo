@@ -1,10 +1,15 @@
 import { Agent } from '@credo-ts/core'
 
-import { OutOfBandRecord, OutOfBandRepository, OutOfBandRole, OutOfBandState } from '@credo-ts/didcomm'
+import {
+  DidCommOutOfBandRecord,
+  DidCommOutOfBandRepository,
+  DidCommOutOfBandRole,
+  DidCommOutOfBandState,
+} from '@credo-ts/didcomm'
 import { MediatorAgent, createAgent } from './agent'
 import { config } from './config'
 
-function logInvitationUrl(agent: MediatorAgent, outOfBandRecord: OutOfBandRecord) {
+function logInvitationUrl(agent: MediatorAgent, outOfBandRecord: DidCommOutOfBandRecord) {
   const httpEndpoint = config.agentEndpoints.find((e) => e.startsWith('http'))
   if (!httpEndpoint) {
     throw new Error('No HTTP endpoint configured for invitation generation')
@@ -34,10 +39,10 @@ void createAgent().then(async (agent) => {
     return logInvitationUrl(agent, outOfBandRecord)
   }
 
-  const oobRepo = agent.dependencyManager.resolve(OutOfBandRepository)
+  const oobRepo = agent.dependencyManager.resolve(DidCommOutOfBandRepository)
   const outOfBandRecords = await oobRepo.findByQuery(agent.context, {
-    state: OutOfBandState.AwaitResponse,
-    role: OutOfBandRole.Sender,
+    state: DidCommOutOfBandState.AwaitResponse,
+    role: DidCommOutOfBandRole.Sender,
   })
 
   let outOfBandRecord = outOfBandRecords

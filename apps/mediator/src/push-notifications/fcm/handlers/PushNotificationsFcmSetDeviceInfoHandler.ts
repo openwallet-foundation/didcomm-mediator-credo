@@ -1,4 +1,4 @@
-import type { MessageHandler, MessageHandlerInboundMessage } from '@credo-ts/didcomm'
+import type { DidCommMessageHandler, DidCommMessageHandlerInboundMessage } from '@credo-ts/didcomm'
 
 import { PushNotificationsFcmSetDeviceInfoMessage } from '../messages'
 import type { PushNotificationsFcmService } from '../services/PushNotificationsFcmService'
@@ -6,7 +6,7 @@ import type { PushNotificationsFcmService } from '../services/PushNotificationsF
 /**
  * Handler for incoming push notification device info messages
  */
-export class PushNotificationsFcmSetDeviceInfoHandler implements MessageHandler {
+export class PushNotificationsFcmSetDeviceInfoHandler implements DidCommMessageHandler {
   private pushNotificationsFcmService: PushNotificationsFcmService
   public supportedMessages = [PushNotificationsFcmSetDeviceInfoMessage]
 
@@ -19,7 +19,7 @@ export class PushNotificationsFcmSetDeviceInfoHandler implements MessageHandler 
   /*
   /* The result can be hooked into through the generic message processed event
    */
-  public async handle(inboundMessage: MessageHandlerInboundMessage<PushNotificationsFcmSetDeviceInfoHandler>) {
+  public async handle(inboundMessage: DidCommMessageHandlerInboundMessage<PushNotificationsFcmSetDeviceInfoHandler>) {
     await this.pushNotificationsFcmService.processSetDeviceInfo(inboundMessage)
     return undefined
   }

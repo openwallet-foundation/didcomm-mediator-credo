@@ -1,8 +1,8 @@
 import type {
   AddMessageOptions,
+  DidCommQueueTransportRepository,
   GetAvailableMessageCountOptions,
-  QueueTransportRepository,
-  QueuedMessage,
+  QueuedDidCommMessage,
   RemoveMessagesOptions,
   TakeFromQueueOptions,
 } from '@credo-ts/didcomm'
@@ -21,7 +21,7 @@ export interface NotificationMessage {
   token?: string
 }
 
-export class StorageServiceMessageQueue implements QueueTransportRepository {
+export class StorageServiceMessageQueue implements DidCommQueueTransportRepository {
   public async getAvailableMessageCount(agentContext: AgentContext, options: GetAvailableMessageCountOptions) {
     const { connectionId } = options
 
@@ -33,7 +33,10 @@ export class StorageServiceMessageQueue implements QueueTransportRepository {
     return messageRecords.length
   }
 
-  public async takeFromQueue(agentContext: AgentContext, options: TakeFromQueueOptions): Promise<QueuedMessage[]> {
+  public async takeFromQueue(
+    agentContext: AgentContext,
+    options: TakeFromQueueOptions
+  ): Promise<QueuedDidCommMessage[]> {
     const { connectionId, limit, deleteMessages } = options
 
     const messageRepository = agentContext.resolve(MessageRepository)

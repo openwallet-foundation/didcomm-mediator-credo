@@ -2,7 +2,15 @@ import { AskarModule } from '@credo-ts/askar'
 import { askar } from '@openwallet-foundation/askar-nodejs'
 import { config, logger } from '../config'
 
-export async function loadAskar(): Promise<{ askar?: AskarModule }> {
+export async function loadAskar({
+  enableStorage,
+}: {
+  /**
+   * Override whether storage is enabled. Generally this should not be used, except for the migration of
+   * askar to drizzle.
+   */
+  enableStorage?: boolean
+} = {}): Promise<{ askar?: AskarModule }> {
   const { storage, kms } = config
 
   if (storage.type !== 'askar' && kms.type !== 'askar') {
@@ -37,7 +45,7 @@ export async function loadAskar(): Promise<{ askar?: AskarModule }> {
             : { type: 'sqlite' },
       },
       enableKms: kms.type === 'askar',
-      enableStorage: storage.type === 'askar',
+      enableStorage: enableStorage ?? storage.type === 'askar',
     }),
   }
 }

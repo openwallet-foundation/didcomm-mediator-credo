@@ -1,11 +1,11 @@
 import { Agent } from '@credo-ts/core'
-import { QueueTransportRepository } from '@credo-ts/didcomm'
+import { DidCommQueueTransportRepository } from '@credo-ts/didcomm'
 import { DynamoDbMessagePickupRepository } from '@credo-ts/didcomm-message-pickup-dynamodb'
 import { PostgresMessagePickupRepository } from '@credo-ts/didcomm-message-pickup-postgres'
 import { config, logger } from '../config'
 import { StorageServiceMessageQueue } from '../storage/StorageMessageQueue'
 
-export interface ExtendedQueueTransportRepository extends QueueTransportRepository {
+export interface ExtendedQueueTransportRepository extends DidCommQueueTransportRepository {
   initialize?: (agent: Agent) => Promise<void>
 }
 

@@ -3,20 +3,20 @@ import * as os from 'node:os'
 import { Agent, AgentContext, EventEmitter, Logger } from '@credo-ts/core'
 import {
   AddMessageOptions,
+  DidCommMessagePickupApi,
+  DidCommMessagePickupEventTypes,
+  DidCommMessagePickupLiveSessionSavedEvent,
+  DidCommQueueTransportRepository,
   GetAvailableMessageCountOptions,
-  MessagePickupApi,
-  MessagePickupEventTypes,
   MessagePickupLiveSessionRemovedEvent,
-  MessagePickupLiveSessionSavedEvent,
-  QueueTransportRepository,
-  QueuedMessage,
+  QueuedDidCommMessage,
   RemoveMessagesOptions,
   TakeFromQueueOptions,
 } from '@credo-ts/didcomm'
 import {
-  MessagePickupSession,
-  MessagePickupSessionRole,
-} from '@credo-ts/didcomm/build/modules/message-pickup/MessagePickupSession'
+  DidCommMessagePickupSession,
+  DidCommMessagePickupSessionRole,
+} from '@credo-ts/didcomm/build/modules/message-pickup/DidCommMessagePickupSession'
 import { Client, Pool } from 'pg'
 import PGPubsub from 'pg-pubsub'
 import {
@@ -35,7 +35,7 @@ import {
   PostgresMessagePickupRepositoryConfig,
 } from './interfaces'
 
-export class PostgresMessagePickupRepository implements QueueTransportRepository {
+export class PostgresMessagePickupRepository implements DidCommQueueTransportRepository {
   private logger?: Logger
   private messagesCollection?: Pool
   private pubSubInstance: PGPubsub
@@ -93,7 +93,7 @@ export class PostgresMessagePickupRepository implements QueueTransportRepository
 
       // Register event handlers
       agent.events.on(
-        MessagePickupEventTypes.LiveSessionRemoved,
+        DidCommMessagePickupEventTypes.LiveSessionRemoved,
         async (data: MessagePickupLiveSessionRemovedEvent) => {
           const connectionId = data.payload.session.connectionId
           agent.context.config.logger.info(`*** Session removed for connectionId: ${connectionId} ***`)
@@ -108,17 +108,20 @@ export class PostgresMessagePickupRepository implements QueueTransportRepository
         }
       )
 
-      agent.events.on(MessagePickupEventTypes.LiveSessionSaved, async (data: MessagePickupLiveSessionSavedEvent) => {
-        const liveSessionData = data.payload.session
-        agent.context.config.logger.info(`*** Session saved for connectionId: ${liveSessionData.connectionId} ***`)
+      agent.events.on(
+        DidCommMessagePickupEventTypes.LiveSessionSaved,
+        async (data: DidCommMessagePickupLiveSessionSavedEvent) => {
+          const liveSessionData = data.payload.session
+          agent.context.config.logger.info(`*** Session saved for connectionId: ${liveSessionData.connectionId} ***`)
 
-        try {
-          // Add the live session record to the database
-          await this.addLiveSessionOnDb(agent.context, liveSessionData, this.instanceName)
-        } catch (handlerError) {
-          agent.context.config.logger.error(`Error handling LiveSessionSaved: ${handlerError}`)
+          try {
+            // Add the live session record to the database
+            await this.addLiveSessionOnDb(agent.context, liveSessionData, this.instanceName)
+          } catch (handlerError) {
+            agent.context.config.logger.error(`Error handling LiveSessionSaved: ${handlerError}`)
+          }
         }
-      })
+      )
     } catch (error) {
       agent.context.config.logger.error(`[initialize] Initialization failed: ${error}`)
       throw new Error(`Failed to initialize the service: ${error}`)
@@ -135,7 +138,10 @@ export class PostgresMessagePickupRepository implements QueueTransportRepository
    * @param {string} options.recipientDid - The DID of the recipient.
    * @returns {Promise<QueuedMessage[]>} A promise resolving to an array of queued messages.
    */
-  public async takeFromQueue(agentContext: AgentContext, options: TakeFromQueueOptions): Promise<QueuedMessage[]> {
+  public async takeFromQueue(
+    agentContext: AgentContext,
+    options: TakeFromQueueOptions
+  ): Promise<QueuedDidCommMessage[]> {
     const { connectionId, limit, deleteMessages, recipientDid } = options
     agentContext.config.logger.info(
       `[takeFromQueue] Initializing method for ConnectionId: ${connectionId}, Limit: ${limit}`
@@ -300,7 +306,7 @@ export class PostgresMessagePickupRepository implements QueueTransportRepository
       if (localLiveSession) {
         agentContext.config.logger.debug(`[addMessage] Local live session exists for connectionId: ${connectionId}`)
 
-        const messagePickupApi = agentContext.resolve(MessagePickupApi)
+        const messagePickupApi = agentContext.resolve(DidCommMessagePickupApi)
         await messagePickupApi.deliverMessages({
           pickupSessionId: localLiveSession.id,
           messages: [{ id: messageRecord.id, encryptedMessage: payload, receivedAt: messageRecord.created_at }],
@@ -391,7 +397,7 @@ export class PostgresMessagePickupRepository implements QueueTransportRepository
             `[initializeMessageListener] ${this.instanceName} found a LiveSession on channel: ${channel} for connectionId: ${connectionId}. Delivering messages.`
           )
 
-          const messagePickupApi = agentContext.resolve(MessagePickupApi)
+          const messagePickupApi = agentContext.resolve(DidCommMessagePickupApi)
           // Deliver messages from the queue for the live session
           await messagePickupApi.deliverMessagesFromQueue({
             pickupSessionId: pickupLiveSession.id,
@@ -542,7 +548,7 @@ export class PostgresMessagePickupRepository implements QueueTransportRepository
     )
 
     try {
-      const messagePickupApi = agentContext.resolve(MessagePickupApi)
+      const messagePickupApi = agentContext.resolve(DidCommMessagePickupApi)
       const localSession = await messagePickupApi.getLiveModeSession({ connectionId })
 
       return localSession ? { ...localSession, isLocalSession: true } : undefined
@@ -575,7 +581,7 @@ export class PostgresMessagePickupRepository implements QueueTransportRepository
         `[findLiveSessionInDb] record found status ${recordFound} to connectionId ${connectionId}`
       )
       return recordFound
-        ? { ...queryLiveSession.rows[0], role: MessagePickupSessionRole.MessageHolder, isLocalSession: false }
+        ? { ...queryLiveSession.rows[0], role: DidCommMessagePickupSessionRole.MessageHolder, isLocalSession: false }
         : undefined
     } catch (error) {
       agentContext.config.logger.debug(`[findLiveSessionInDb] Error find to connectionId ${connectionId}`)
@@ -590,7 +596,7 @@ export class PostgresMessagePickupRepository implements QueueTransportRepository
    */
   private async addLiveSessionOnDb(
     agentContext: AgentContext,
-    session: MessagePickupSession,
+    session: DidCommMessagePickupSession,
     instance: string
   ): Promise<void> {
     const { id, connectionId, protocolVersion } = session

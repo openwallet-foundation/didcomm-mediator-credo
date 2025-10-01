@@ -1,6 +1,6 @@
 import type { AgentContext, DependencyManager, Module } from '@credo-ts/core'
 
-import { FeatureRegistry, Protocol } from '@credo-ts/didcomm'
+import { DidCommFeatureRegistry, DidCommProtocol } from '@credo-ts/didcomm'
 import { PushNotificationsFcmApi } from './PushNotificationsFcmApi'
 import { PushNotificationsFcmRole } from './models'
 import { PushNotificationsFcmRepository } from './repository'
@@ -25,11 +25,11 @@ export class PushNotificationsFcmModule implements Module {
 
   public async initialize(agentContext: AgentContext): Promise<void> {
     // Feature Registry
-    const featureRegistry = agentContext.dependencyManager.resolve(FeatureRegistry)
+    const featureRegistry = agentContext.dependencyManager.resolve(DidCommFeatureRegistry)
 
     // Feature Registry
     featureRegistry.register(
-      new Protocol({
+      new DidCommProtocol({
         id: 'https://didcomm.org/push-notifications-fcm/1.0',
         roles: [PushNotificationsFcmRole.Sender, PushNotificationsFcmRole.Receiver],
       })

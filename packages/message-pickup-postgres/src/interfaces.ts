@@ -1,7 +1,7 @@
 import { Logger } from '@credo-ts/core'
 import { BaseEvent } from '@credo-ts/core'
-import { EncryptedMessage } from '@credo-ts/didcomm'
-import { MessagePickupSession } from '@credo-ts/didcomm/build/modules/message-pickup/MessagePickupSession'
+import { DidCommEncryptedMessage } from '@credo-ts/didcomm'
+import { DidCommMessagePickupSession } from '@credo-ts/didcomm/build/modules/message-pickup/DidCommMessagePickupSession'
 
 export interface PostgresMessagePickupRepositoryConfig {
   logger?: Logger
@@ -20,14 +20,14 @@ export interface PostgresMessagePickupMessageQueuedEvent extends BaseEvent {
       id: string
       connectionId: string
       recipientDids: string[]
-      encryptedMessage: EncryptedMessage
+      encryptedMessage: DidCommEncryptedMessage
       receivedAt: Date
       state: 'pending' | 'sending'
     }
-    session?: MessagePickupSession
+    session?: DidCommMessagePickupSession
   }
 }
 
-export interface ExtendedMessagePickupSession extends MessagePickupSession {
+export interface ExtendedMessagePickupSession extends DidCommMessagePickupSession {
   isLocalSession: boolean
 }

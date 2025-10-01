@@ -26,11 +26,11 @@
 <br />
 
 <p align="center">
-  <a href="#getting-started">Getting started</a> 
+  <a href="#connecting-to-the-mediator">Connecting to the Mediator</a> 
   &nbsp;|&nbsp;
-  <a href="#environment-variables">Environment Variables</a> 
+  <a href="#development">Development</a> 
   &nbsp;|&nbsp;
-  <a href="#postgres-database">Postgres Database</a> 
+  <a href="#configuration">Configuration</a> 
   &nbsp;|&nbsp;
   <a href="#using-docker">Using Docker</a> 
   &nbsp;|&nbsp;
@@ -85,7 +85,7 @@ The mediator can be configured to use different storage backends for various com
    pnpm dev
    ```
 
-### Using Docker for External Dependencies
+### Using Docker Compose for External Dependencies
 
 The project includes a Docker Compose file with services for external dependencies. You can selectively start only the services you need based on your configuration:
 
@@ -118,8 +118,6 @@ You can obtain an auth token from: https://dashboard.ngrok.com/get-started/your-
 ## Configuration
 
 The mediator can be configured using **environment variables** or a **JSON configuration file**. All configuration options are available via both methods, and you can use the provided sample files for quick setup.
-
-## Configuration Methods
 
 ### 1. Environment Variables
 
@@ -154,7 +152,7 @@ You can also provide the following environment variables, these CANNOT be provid
   - `message-pickup-credo.json`, `message-pickup-dynamodb.json`, `message-pickup-postgres.json`: Message pickup storage examples
   - `storage-askar-sqlite.json`, `storage-askar-postgres.json`, `storage-drizzle-sqlite.json`, `storage-drizzle-postgres.json`: Storage backend examples
 
-## Configuration Reference
+### Configuration Reference
 
 Below are the top-level configuration options. All can be set via ENV (with double underscores for nesting) or in a JSON config file.
 
@@ -172,34 +170,71 @@ Below are the top-level configuration options. All can be set via ENV (with doub
 | `agentName`         | String                                                             | `Credo DIDComm Mediator`        | Agent name               |
 | `invitationUrl`     | URL                                                                | `/invitation` on first endpoint | Invitation URL           |
 
-### Askar Database
+#### Askar Database
 
 - `database.type`: `sqlite` or `postgres`
 - For `postgres`, also set: `host`, `user`, `password`, `adminUser`, `adminPassword`
 
-### Drizzle Storage
+#### Drizzle Storage
 
 - `dialect`: `sqlite` or `postgres`
 - `databaseUrl`: Connection string
 
-### Cache
+##### Running Drizzle Migrations
+
+When using Drizzle storage it is important to run database migrations before deploying your mediator. The migrations are SQL files that define the structure of your database and handle changes to Credo's data structure over time. You can do this on every deployment, or only when migrations have changed. We recommend to continuously run migrations when deploying, so you're always up to date with the latest migrations from Credo and the mediator.
+
+You can run migrations using the provided PNPM scripts in the `apps/mediator` directory:
+
+- `pnpm drizzle:migrate:postgres`
+- `pnpm drizzle:migrate:sqlite`
+
+Make sure to provide the `DRIZZLE_DATABASE_URL` environment variable when running this migration.
+
+If you're using the provided Docker image, you can reuse the same image to run migrations. In this scenario for each deployment you will run two docoker containers based on the same image. One for the migration which will exit quickly, and one long-running container for the mediator. The mediator container will be dependant on the migration container.
+
+When running migrations from the docker container make sure to set:
+
+- Entrypoint to `["sh", "-c"]`
+- Command to `pnpm --filter didcomm-mediator-service run drizzle:migrate:postgres` (or `:sqlite`)
+- The `DRIZZLE_DATABASE_URL`
+
+##### Migrating from Askar
+
+If you're migrating from an Askar database to a drizzle database you first need to run the Drizzle migraiton. You can do this by running the provided PNPM script: `pnpm migrate-askar-to-drizzle` from the `apps/mediator` directory. Note you still need to keep Askar for the KMS, and thus you can't fully migrate away from Askar.
+
+Make sure to:
+
+- Provide the same configuration you'd provide to the mediator
+- Provide the aksar configuration
+- Configure Drizzle storage to be used
+
+If you're using the provided Docker image, you can reuse the same image to migrate from Askar to Drizzle Storage. This migration only has to be run once before running your mediator container configured with Drizzle as the storage type.
+
+When running the Askar to Drizzle migration from the docker container make sure to set:
+
+- Entrypoint to `["sh", "-c"]`
+- Command to `pnpm --filter didcomm-mediator-service run migrate-askar-to-drizzle`
+- Environment variables and configuration options as you'd use with the mediator container
+
+#### Cache
 
 - `type`: `in-memory` or `redis`
 - For `redis`, set `redisUrl`
 
-### Message Pickup
+#### Message Pickup
 
 - `forwardingStrategy`: `DirectDelivery`, `QueueOnly`, `QueueAndLiveModeDelivery`. The `DirectDelivery` strategy will deliver messages directly to the recipient, while the `QueueOnly` strategy will only queue the messages for the recipient. The `QueueAndLiveModeDelivery` strategy will queue the messages for the recipient and deliver them directly if possible. The default is `DirectDelivery`.
 - `storage.type`: `credo`, `postgres`, or `dynamodb`
   - For `postgres`: `host`, `user`, `password`, `database`
   - For `dynamodb`: `region`, `accessKeyId`, `secretAccessKey`, `tableName`
 
-### Push Notifications
+#### Push Notifications
 
 - `webhookUrl`: URL for webhook notifications
 - `firebase`: `{ projectId, clientEmail, privateKey, notificationTitle, notificationBody }`
 
-### Example: ENV vs JSON
+#### Example: ENV vs JSON
 
 **ENV:**
 
@@ -272,27 +307,6 @@ docker run \
 ```
 
 You can also adapt the `apps/mediator/docker-compose.yml` file to your needs.
-
-## Using Docker Compose for External Dependencies
-
-The project includes a Docker Compose file with services for external dependencies. You can selectively start only the services you need based on your configuration:
-
-```bash
-docker-compose up # Start all services
-docker-compose up postgres # Start only Postgres
-docker-compose up redis    # Start only Redis
-docker-compose up dynamodb # Start only DynamoDB
-```
-
-## External Access
-
-To reach the mediator from external devices or for testing with mobile apps, set up an ngrok tunnel. Since the `.env.local` file isn't loaded, you'll need to provide the auth token directly with the command:
-
-```bash
-NGROK_AUTH_TOKEN=your_token_here pnpm dev
-```
-
-You can obtain an auth token from: https://dashboard.ngrok.com/get-started/your-authtoken
 
 ## Roadmap
 

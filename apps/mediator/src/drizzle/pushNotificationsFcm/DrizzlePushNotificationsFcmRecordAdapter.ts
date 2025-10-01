@@ -17,7 +17,7 @@ export class DrizzlePushNotificationsFcmRecordAdapter extends BaseDrizzleRecordA
     super(
       database,
       { postgres: postgres.pushNotificationsFcm, sqlite: sqlite.pushNotificationsFcm },
-      'PushNotificationsFcmRecord'
+      PushNotificationsFcmRecord
     )
   }
 

@@ -1,5 +1,5 @@
 import { AttributeDefinition, KeySchemaElement, KeyType, ScalarAttributeType } from '@aws-sdk/client-dynamodb'
-import { QueuedMessage as CredoQueuedMessage } from '@credo-ts/didcomm'
+import { QueuedDidCommMessage as CredoQueuedMessage } from '@credo-ts/didcomm'
 
 // CredoQueuedMessage made Required right now, due to credo having them as optional, but we need it for efficient sorting
 export type QueuedMessage = Required<CredoQueuedMessage> & {
