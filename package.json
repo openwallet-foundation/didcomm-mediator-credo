@@ -13,7 +13,7 @@
     "test": "vitest",
     "changeset": "changeset",
     "version:packages": "pnpm changeset version",
-    "release": "pnpm build && pnpm changeset publish --access public"
+    "release": "pnpm build:all && pnpm changeset publish --access public"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
