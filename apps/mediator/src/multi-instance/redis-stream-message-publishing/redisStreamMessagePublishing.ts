@@ -9,6 +9,8 @@ export interface StreamMessage {
   payload: StreamMessagePayload
 }
 
+export type StreamKey = `server:${string}:message-publishing`
+
 export class RedisStreamMessagePublishing {
   private consumerGroup = 'default'
   private consumerName = `${this.serverId}-consumer`
@@ -39,7 +41,8 @@ export class RedisStreamMessagePublishing {
     return await this.client.get(`connection:${connectionId}`)
   }
 
-  private getStreamKey = (targetServerId: string) => `server:${targetServerId}:message-publishing`
+  private getStreamKey = (targetServerId: string): StreamKey => `server:${targetServerId}:message-publishing` as const
+  private getServerIdFromStreamKey = (streamKey: StreamKey): string => streamKey.split(':')[1]
 
   /**
    * Send a message to a specific server's stream
@@ -176,17 +179,18 @@ export class RedisStreamMessagePublishing {
   /**
    * Get all active server streams
    */
-  private async getOtherServerStreams(): Promise<string[]> {
+  private async getOtherServerStreams() {
     const allStreamsKey = this.getStreamKey('*')
+    const thisServerStreamKey = this.getStreamKey(this.serverId)
     const keys = await this.client.keys(allStreamsKey)
-    return keys.filter((key) => key !== this.getStreamKey(this.serverId))
+    return keys.filter((key): key is `server:${string}:message-publishing` => key !== thisServerStreamKey)
   }
 
   /**
    * Claim and process pending messages from other server streams
    */
   private async _claimPendingMessages(
-    handler: (message: StreamMessage) => Promise<void>,
+    handler: (serverId: string, message: StreamMessage) => Promise<void>,
     { minIdleTimeMs = 60000, batchSize = 10 }
   ): Promise<void> {
     const otherServerStreams = await this.getOtherServerStreams()
@@ -209,7 +213,7 @@ export class RedisStreamMessagePublishing {
         const claimedMessages = this.parseStreamMessages([claimedResponse])
         for (const message of claimedMessages) {
           try {
-            await handler(message)
+            await handler(this.getServerIdFromStreamKey(streamKey), message)
             await this.acknowledgeMessage(streamKey, message.id)
           } catch (error) {
             console.error(`Error processing claimed message ${message.id} from ${streamKey}:`, error)
@@ -227,7 +231,7 @@ export class RedisStreamMessagePublishing {
    * You can provide an `AbortSignal` to allow cancellation
    */
   public async claimPendingMessages(
-    handler: (message: StreamMessage) => Promise<void>,
+    handler: (serverId: string, message: StreamMessage) => Promise<void>,
     {
       intervalMs = 15000,
       minIdleTimeMs = 60000,

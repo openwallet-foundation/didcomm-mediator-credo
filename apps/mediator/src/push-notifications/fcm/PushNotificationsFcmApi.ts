@@ -74,4 +74,14 @@ export class PushNotificationsFcmApi {
   public async getPushNotificationRecordByConnectionId(connectionId: string) {
     return this.pushNotificationsService.getPushNotificationRecordByConnectionId(this.agentContext, connectionId)
   }
+
+  /**
+   * Find push notification record by `connectionId`
+   *
+   * @param connectionId The connection ID string
+   * @returns Promise<PushNotificationsFcmRecord | null>
+   */
+  public async findPushNotificationRecordByConnectionId(connectionId: string) {
+    return this.pushNotificationsService.findPushNotificationRecordByConnectionId(this.agentContext, connectionId)
+  }
 }
