@@ -1,15 +1,11 @@
-import {
-  DidCommEventTypes,
-  DidCommMessageForwardingStrategy,
-  DidCommMessageSentEvent,
-  OutboundMessageSendStatus,
-} from '@credo-ts/didcomm'
+import { DidCommMessageForwardingStrategy } from '@credo-ts/didcomm'
 import {
   PostgresMessagePickupMessageQueuedEvent,
   PostgresMessagePickupMessageQueuedEventType,
 } from '@credo-ts/didcomm-message-pickup-postgres'
 import { MediatorAgent } from '../agent'
 import { config } from '../config'
+import { DidcommMessageQueuedEvent, MediatorEventTypes } from '../events'
 import { sendNotification } from '../push-notifications/sendNotification'
 
 // DirectDelivery sender is built into the storage module and does not need initialization here
@@ -49,15 +45,8 @@ export async function loadPushNotificationSender(agent: MediatorAgent) {
       `Initializing push notification sender on queued messages for ${config.messagePickup.storage.type} pickup type and queue and live mode delivery strategy`
     )
 
-    agent.events.on<DidCommMessageSentEvent>(DidCommEventTypes.DidCommMessageSent, async (event) => {
-      // We're only interested in queued messages
-      if (event.payload.status !== OutboundMessageSendStatus.QueuedForPickup) return
-
-      // We can't do anything if we don't know the connection to send the message to
-      if (!event.payload.message.connection) return
-
-      const connectionId = event.payload.message.connection.id
-      await sendNotification(agent.context, connectionId)
+    agent.events.on<DidcommMessageQueuedEvent>(MediatorEventTypes.DidCommMessageQueued, async (event) => {
+      await sendNotification(agent.context, event.payload.connectionId)
     })
   }
 }

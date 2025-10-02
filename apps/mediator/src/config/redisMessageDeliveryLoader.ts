@@ -1,14 +1,10 @@
 import { randomUUID } from 'node:crypto'
-import {
-  DidCommEventTypes,
-  DidCommMessageForwardingStrategy,
-  DidCommMessageSentEvent,
-  OutboundMessageSendStatus,
-} from '@credo-ts/didcomm'
+import { DidCommMessageForwardingStrategy } from '@credo-ts/didcomm'
 import { DidCommMessagePickupSessionRole } from '@credo-ts/didcomm/build/modules/message-pickup/DidCommMessagePickupSession'
 import Redis from 'ioredis'
 import type { MediatorAgent } from '../agent'
 import { config } from '../config'
+import { DidcommMessageQueuedEvent, MediatorEventTypes } from '../events'
 import { RedisStreamMessagePublishing } from '../multi-instance/redis-stream-message-publishing/redisStreamMessagePublishing'
 import { sendNotification } from '../push-notifications/sendNotification'
 
@@ -44,14 +40,8 @@ export async function loadRedisMessageDelivery({
   // if a server crashes we lose the active socket connections.
   const streamPublishing = new RedisStreamMessagePublishing(agent, client, randomUUID())
 
-  agent.events.on<DidCommMessageSentEvent>(DidCommEventTypes.DidCommMessageSent, async (event) => {
-    // We're only interested in queued messages
-    if (event.payload.status !== OutboundMessageSendStatus.QueuedForPickup) return
-
-    // We can't do anything if we don't know the connection to send the message to
-    if (!event.payload.message.connection) return
-
-    const connectionId = event.payload.message.connection.id
+  agent.events.on<DidcommMessageQueuedEvent>(MediatorEventTypes.DidCommMessageQueued, async (event) => {
+    const connectionId = event.payload.connectionId
 
     // If QueueOnly we haven't tried the local session yet.
     // TODO: do we want to handle when we don't want to send to local sessions?
