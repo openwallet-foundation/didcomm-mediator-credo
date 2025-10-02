@@ -1,4 +1,4 @@
-import { AgentContext } from '@credo-ts/core'
+import { AgentContext, EventEmitter } from '@credo-ts/core'
 import {
   AddMessageOptions,
   DidCommQueueTransportRepository,
@@ -40,6 +40,8 @@ export class DynamoDbMessagePickupRepository implements DidCommQueueTransportRep
       encryptedMessage: options.payload,
     })
 
+    this.emitMessageQueuedEvent(agentContext, options.connectionId)
+
     return id
   }
 
@@ -47,6 +49,19 @@ export class DynamoDbMessagePickupRepository implements DidCommQueueTransportRep
     await this.client.removeMessages({
       connectionId: options.connectionId,
       messageIds: options.messageIds,
+    })
+  }
+
+  private emitMessageQueuedEvent(agentContext: AgentContext, connectionId: string) {
+    const eventEmitter = agentContext.resolve(EventEmitter)
+
+    // NOTE: we can't import from the mediator repo. We might need a core repo
+    // For now we just don't type it
+    eventEmitter.emit(agentContext, {
+      type: 'DidCommMessageQueued',
+      payload: {
+        connectionId,
+      },
     })
   }
 }

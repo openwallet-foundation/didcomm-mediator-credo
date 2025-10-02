@@ -1,4 +1,10 @@
+import {
+  DidCommMessagePickupEventTypes,
+  DidCommMessagePickupLiveSessionSavedEvent,
+  MessagePickupLiveSessionRemovedEvent,
+} from '@credo-ts/didcomm'
 import Redis from 'ioredis'
+import type { MediatorAgent } from '../../agent'
 
 export interface StreamMessagePayload {
   connectionId: string
@@ -16,9 +22,39 @@ export class RedisStreamMessagePublishing {
   private consumerName = `${this.serverId}-consumer`
 
   constructor(
+    agent: MediatorAgent,
     private client: Redis,
     public readonly serverId: string
-  ) {}
+  ) {
+    // Register event handlers
+    agent.events.on(
+      DidCommMessagePickupEventTypes.LiveSessionRemoved,
+      async (event: MessagePickupLiveSessionRemovedEvent) => {
+        const connectionId = event.payload.session.connectionId
+        agent.context.config.logger.info(`*** Session removed for connectionId: ${connectionId} ***`)
+
+        try {
+          await this.unregisterConnection(connectionId)
+        } catch (handlerError) {
+          agent.context.config.logger.error(`Error handling LiveSessionRemoved: ${handlerError}`)
+        }
+      }
+    )
+
+    agent.events.on(
+      DidCommMessagePickupEventTypes.LiveSessionSaved,
+      async (event: DidCommMessagePickupLiveSessionSavedEvent) => {
+        const connectionId = event.payload.session.connectionId
+        agent.context.config.logger.info(`*** Session saved for connectionId: ${connectionId} ***`)
+
+        try {
+          this.registerConnection(connectionId)
+        } catch (handlerError) {
+          agent.context.config.logger.error(`Error handling LiveSessionSaved: ${handlerError}`)
+        }
+      }
+    )
+  }
 
   /**
    * Register a connection to this server instance

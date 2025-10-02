@@ -7,7 +7,8 @@ import type {
   TakeFromQueueOptions,
 } from '@credo-ts/didcomm'
 
-import { AgentContext, utils } from '@credo-ts/core'
+import { AgentContext, EventEmitter, utils } from '@credo-ts/core'
+import { DidcommMessageQueuedEvent, MediatorEventTypes } from '../events'
 import { MessageRecord } from './MessageRecord'
 import { MessageRepository } from './MessageRepository'
 
@@ -73,6 +74,8 @@ export class StorageServiceMessageQueue implements DidCommQueueTransportReposito
       })
     )
 
+    this.emitMessageQueuedEvent(agentContext, connectionId)
+
     return id
   }
 
@@ -85,5 +88,15 @@ export class StorageServiceMessageQueue implements DidCommQueueTransportReposito
     const deletePromises = messageIds.map((messageId) => messageRepository.deleteById(agentContext, messageId))
 
     await Promise.all(deletePromises)
+  }
+
+  private emitMessageQueuedEvent(agentContext: AgentContext, connectionId: string) {
+    const eventEmitter = agentContext.resolve(EventEmitter)
+    eventEmitter.emit<DidcommMessageQueuedEvent>(agentContext, {
+      type: MediatorEventTypes.DidCommMessageQueued,
+      payload: {
+        connectionId,
+      },
+    })
   }
 }

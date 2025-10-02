@@ -156,7 +156,7 @@ export async function createAgent() {
   })
 
   await loadPushNotificationSender(agent)
-  await loadRedisMessageDelivery({ agentContext: agent.context })
+  await loadRedisMessageDelivery({ agent })
 
   return agent
 }
