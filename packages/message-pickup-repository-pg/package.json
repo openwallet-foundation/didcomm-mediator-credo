@@ -1,5 +1,5 @@
 {
-  "name": "@credo-ts/message-pickup-repository-pg",
+  "name": "@credo-ts/didcomm-transport-queue-postgres",
   "main": "build/index.js",
   "types": "build/index.d.ts",
   "private": false,
