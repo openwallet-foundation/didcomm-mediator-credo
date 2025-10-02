@@ -2,6 +2,7 @@
   "name": "@credo-ts/message-pickup-repository-pg",
   "main": "build/index.js",
   "types": "build/index.d.ts",
+  "private": false,
   "version": "0.0.1",
   "files": ["build"],
   "publishConfig": {
