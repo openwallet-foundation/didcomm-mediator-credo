@@ -33,6 +33,8 @@ export async function loadRedisMessageDelivery({
 }: { abortSignal?: AbortSignal; agent: MediatorAgent }) {
   if (config.cache.type !== 'redis' || config.messagePickup.multiInstanceDelivery.type !== 'redis') return
 
+  agent.config.logger.info('Loading redis multi instance message delivery')
+
   // TODO: we should reuse the client from the cache implementation. Requires change in Credo redis-cache package
   const client = new Redis(config.cache.redisUrl)
 
@@ -42,6 +44,10 @@ export async function loadRedisMessageDelivery({
 
   agent.events.on<DidcommMessageQueuedEvent>(MediatorEventTypes.DidCommMessageQueued, async (event) => {
     const connectionId = event.payload.connectionId
+
+    agent.config.logger.debug(
+      `Server ${streamPublishing.serverId} received DidCommMessageQuedEvent for connection ${connectionId}`
+    )
 
     // If QueueOnly we haven't tried the local session yet.
     // TODO: do we want to handle when we don't want to send to local sessions?
@@ -102,6 +108,7 @@ export async function loadRedisMessageDelivery({
           agent.config.logger.debug(
             `Found server '${serverId}' in redis for connection '${connectionId}'. Sending message to server over redis stream.`
           )
+
           await streamPublishing.sendMessageToServer(serverId, {
             connectionId,
           })
@@ -113,6 +120,8 @@ export async function loadRedisMessageDelivery({
           )
         }
       }
+    } else {
+      agent.config.logger.debug(`No server with active delivery session found for connection ${connectionId}`)
     }
 
     await sendNotification(agent.context, connectionId)

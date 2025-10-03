@@ -234,8 +234,17 @@ When running the Askar to Drizzle migration from the docker container make sure 
 
 #### Push Notifications
 
-- `webhookUrl`: URL for webhook notifications
-- `firebase`: `{ projectId, clientEmail, privateKey, notificationTitle, notificationBody }`
+- `webhookUrl`: URL for webhook notifications. If configured a webhook will be sent to the `webhookUrl` for all messages that are queued and could not be delivered directly (also taking into account multi-instance delivery). If an FCM device token is known for the connection, it will be included in the webhook body.
+- `firebase`: `{ projectId, clientEmail, privateKey, notificationTitle, notificationBody }`. Allows sending push notifications directly using Firebase Cloud Messaging.
+
+An example of a webhook sent to the `webhookUrl` is:
+
+```json
+{
+  "connectionId": "95825e8e-1cb4-455a-a61a-5d8e37c2b929",
+  "fcmToken": "<token>"
+}
+```
 
 #### Example: ENV vs JSON
 

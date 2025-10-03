@@ -12,26 +12,29 @@ export async function sendNotification(agentContext: AgentContext, connectionId:
     connectionId,
   })
 
-  if (!pushNotificationFcmRecord?.deviceToken) {
-    agentContext.config.logger.info('No device token found for connectionId so skip sending notification')
-    return
-  }
-
-  if (config.pushNotifications.firebase) {
-    // Check for firebase configuration
-    // Send a Firebase Cloud Message notification to the device found for a given connection
-    await sendFcmPushNotification(agentContext, pushNotificationFcmRecord.deviceToken)
-  }
-
   // Check for webhook Url
   if (config.pushNotifications.webhookUrl) {
-    // Send a notification to the device
+    // Emit a webhook notification, which can send a notification based on the
+    // connectionId or optionally the device token.
     await sendWebhookNotification(
       agentContext,
       config.pushNotifications.webhookUrl,
       connectionId,
-      pushNotificationFcmRecord.deviceToken
+      pushNotificationFcmRecord?.deviceToken
     )
+  }
+
+  if (config.pushNotifications.firebase) {
+    if (!pushNotificationFcmRecord?.deviceToken) {
+      agentContext.config.logger.debug(
+        `No device token found for connection ${connectionId} so skip sending pushing notification`
+      )
+      return
+    }
+
+    // Check for firebase configuration
+    // Send a Firebase Cloud Message notification to the device found for a given connection
+    await sendFcmPushNotification(agentContext, pushNotificationFcmRecord.deviceToken)
   }
 }
 
@@ -39,12 +42,13 @@ async function sendWebhookNotification(
   agentContext: AgentContext,
   webhookUrl: string,
   connectionId: string,
-  deviceToken: string
+  deviceToken?: string | null
 ) {
   try {
     // Prepare a message to be sent to the device
     agentContext.config.logger.info(`Sending notification to ${connectionId}`)
     const body = {
+      connectionId,
       fcmToken: deviceToken,
     }
     const requestOptions = {
