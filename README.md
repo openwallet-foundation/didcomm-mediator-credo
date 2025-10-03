@@ -230,7 +230,7 @@ When running the Askar to Drizzle migration from the docker container make sure 
   - For `dynamodb`: `region`, `accessKeyId`, `secretAccessKey`, `tableName`
 - `multiInstanceDelivery.type`: `none` or `redis`.
   - `none`. In this case multi instance delivery is not enabled. Use this if you're using `postgres` for `messagePickup.storage.type`, or if only deploying a single instance.
-  - For `redis`: You MUST also use `redis` for `cache.type` in this case. The redis URL will be extracted from the cache configuration.
+  - For `redis`: You MUST also use `redis` for `cache.type` in this case. The redis URL will be extracted from the cache configuration. The `redis` multi instance delivery uses Redis streams, ensuring consistent delivery and handling of underliverd messages.
 
 #### Push Notifications
 
