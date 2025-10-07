@@ -1,0 +1,82 @@
+# This sets the container image more information can be found here: https://kubernetes.io/docs/concepts/containers/images/
+image:
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: "562620f"
+
+# This block is for setting up the ingress for more information can be found here: https://kubernetes.io/docs/concepts/services-networking/ingress/
+ingress:
+  enabled: true
+  className: ""
+  annotations: 
+    route.openshift.io/termination: edge
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+  hosts:
+    - host: mediator-credo-dev.apps.silver.devops.gov.bc.ca
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+  tls: []
+  #  - secretName: chart-example-tls
+  #    hosts:
+  #      - chart-example.local
+
+networkPolicy:
+  enabled: true
+  ingress:
+    enabled: true
+    namespaceSelector: 
+      network.openshift.io/policy-group: ingress
+    # namespaceSelector: []
+    ## Example:
+    # network.openshift.io/policy-group: ingress
+    podSelector: {}
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+environment:
+  # This is for setting up environment variables more information can be found here: https://kubernetes.io/docs/concepts/configuration/overview/
+  - name: AGENT_PORT
+    value: "3000"
+  - name: AGENT_NAME
+    value: Mediator
+  - name: WALLET_NAME
+    value: mediator-wallet
+  - name: POSTGRES_USER
+    value: mediator
+  - name: POSTGRES_HOST
+    value: mediator-credo-db
+  - name: POSTGRES_ADMIN_USER
+    value: postgres
+  - name: AGENT_ENDPOINTS
+    value: "https://mediator-credo-dev.apps.silver.devops.gov.bc.ca,wss://mediator-credo-dev.apps.silver.devops.gov.bc.ca"
+  - name: LOG_LEVEL
+    value: "2"
+  - name: POSTGRES_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: mediator-credo-db
+        key: password
+  - name: POSTGRES_ADMIN_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: mediator-credo-db
+        key: postgres-password
+
+autoscaling:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 6
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+postgresql:
+  commonLabels:
+    app.kubernetes.io/name: postgresql
+    app.kubernetes.io/instance: mediator-credo-db
