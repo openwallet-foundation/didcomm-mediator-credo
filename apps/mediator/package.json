@@ -10,7 +10,7 @@
     "type": "git",
     "url": "https://github.com/openwallet-foundation/didcomm-mediator-credo"
   },
-  "packageManager": "pnpm@9.15.3+sha256.c1da43727ccbc1ed42aff4fd6bdb4b1e91e65a818e6efff5b240fbf070ba4eaf",
+  "packageManager": "pnpm@10.7.0+sha512.6b865ad4b62a1d9842b61d674a393903b871d9244954f652b8842c2b553c72176b278f64c463e52d40fff8aba385c235c8c9ecf5cc7de4fd78b8bb6d49633ab6",
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "prepublishOnly": "pnpm build",
@@ -37,6 +37,7 @@
     "@credo-ts/askar-to-drizzle-storage-migration": "catalog:",
     "@credo-ts/node": "catalog:",
     "@credo-ts/redis-cache": "catalog:",
+    "ioredis": "catalog:",
     "@libsql/client": "^0.15.9",
     "@openwallet-foundation/askar-nodejs": "^0.4.2-alpha-20250929092234",
     "class-transformer": "^0.5.1",

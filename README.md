@@ -163,7 +163,7 @@ Below are the top-level configuration options. All can be set via ENV (with doub
 | `kms`               | `{ type: 'askar' }`                                                | `{ type: 'askar' }`             | KMS backend              |
 | `askar`             | `{ storeId, storeKey, keyDerivationMethod, database }`             |                                 | Askar config (see below) |
 | `cache`             | `{ type: 'in-memory' }` or `{ type: 'redis', redisUrl }`           | `{ type: 'in-memory'}`          | Cache backend            |
-| `messagePickup`     | `{ forwardingStrategy, storage }`                                  | See below                       | Message pickup config    |
+| `messagePickup`     | `{ forwardingStrategy, storage, multiInstanceDelivery }`           | See below                       | Message pickup config    |
 | `pushNotifications` | `{ webhookUrl, firebase }`                                         | `{}`                            | Push notification config |
 | `agentPort`         | Number                                                             | `3110`                          | Port for HTTP/WS         |
 | `agentEndpoints`    | Array of URLs                                                      | See below                       | Agent endpoints          |
@@ -228,11 +228,23 @@ When running the Askar to Drizzle migration from the docker container make sure 
 - `storage.type`: `credo`, `postgres`, or `dynamodb`
   - For `postgres`: `host`, `user`, `password`, `database`
   - For `dynamodb`: `region`, `accessKeyId`, `secretAccessKey`, `tableName`
+- `multiInstanceDelivery.type`: `none` or `redis`.
+  - `none`. In this case multi instance delivery is not enabled. Use this if you're using `postgres` for `messagePickup.storage.type`, or if only deploying a single instance.
+  - For `redis`: You MUST also use `redis` for `cache.type` in this case. The redis URL will be extracted from the cache configuration. The `redis` multi instance delivery uses Redis streams, ensuring consistent delivery and handling of underliverd messages.
 
 #### Push Notifications
 
-- `webhookUrl`: URL for webhook notifications
-- `firebase`: `{ projectId, clientEmail, privateKey, notificationTitle, notificationBody }`
+- `webhookUrl`: URL for webhook notifications. If configured a webhook will be sent to the `webhookUrl` for all messages that are queued and could not be delivered directly (also taking into account multi-instance delivery). If an FCM device token is known for the connection, it will be included in the webhook body.
+- `firebase`: `{ projectId, clientEmail, privateKey, notificationTitle, notificationBody }`. Allows sending push notifications directly using Firebase Cloud Messaging.
+
+An example of a webhook sent to the `webhookUrl` is:
+
+```json
+{
+  "connectionId": "95825e8e-1cb4-455a-a61a-5d8e37c2b929",
+  "fcmToken": "<token>"
+}
+```
 
 #### Example: ENV vs JSON
 

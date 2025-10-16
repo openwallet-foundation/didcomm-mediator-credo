@@ -1,8 +1,9 @@
 {
   "agentPort": 3110,
   "agentName": "Credo DIDComm Mediator",
-  "agentEndpoints": ["https://3f4971c426f3.ngrok-free.app", "wss://3f4971c426f3.ngrok-free.app"],
-  "invitationUrl": "https://3f4971c426f3.ngrok-free.app/invitation",
+  "agentEndpoints": ["http://localhost:3110", "ws://localhost:3110"],
+  "invitationUrl": "http://localhost:3110/invitation",
+  "logLevel": "debug",
   "cache": {
     "type": "redis",
     "redisUrl": "redis://127.0.0.1:6379"
@@ -28,11 +29,15 @@
     "type": "askar"
   },
   "messagePickup": {
+    "forwardingStrategy": "QueueAndLiveModeDelivery",
     "storage": {
       "type": "dynamodb",
       "region": "local",
       "accessKeyId": "local",
       "secretAccessKey": "local"
+    },
+    "multiInstanceDelivery": {
+      "type": "redis"
     }
   }
 }

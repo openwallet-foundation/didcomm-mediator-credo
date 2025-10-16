@@ -82,4 +82,10 @@ export class PushNotificationsFcmService {
       connectionId,
     })
   }
+
+  public async findPushNotificationRecordByConnectionId(agentContext: AgentContext, connectionId: string) {
+    return await this.pushNotificationsFcmRepository.findSingleByQuery(agentContext, {
+      connectionId,
+    })
+  }
 }

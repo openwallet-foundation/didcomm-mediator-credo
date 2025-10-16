@@ -24,9 +24,10 @@ import { config, logger } from './config'
 import { loadAskar } from './config/askarLoader'
 import { loadCacheStorage } from './config/cacheLoader'
 import { ExtendedQueueTransportRepository, loadMessagePickupStorage } from './config/messagePickupLoader'
+import { loadPushNotificationSender } from './config/pushNotificationLoader'
+import { loadRedisMessageDelivery } from './config/redisMessageDeliveryLoader'
 import { loadStorage } from './config/storageLoader'
 import { PushNotificationsFcmModule } from './push-notifications/fcm'
-import { initializePushNotificationSender } from './push-notifications/fcm/firebase'
 
 async function createModules({
   queueTransportRepository,
@@ -154,7 +155,8 @@ export async function createAgent() {
     })
   })
 
-  await initializePushNotificationSender(agent)
+  await loadPushNotificationSender(agent)
+  await loadRedisMessageDelivery({ agent })
 
   return agent
 }

@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { AgentContext, DependencyManager } from '@credo-ts/core'
+import { AgentContext, DependencyManager, EventEmitter } from '@credo-ts/core'
 import { beforeAll, expect, suite, test } from 'vitest'
 import { DynamoDbMessagePickupRepository } from '../src'
 
@@ -7,6 +7,8 @@ const agentContext = new AgentContext({
   contextCorrelationId: 'test',
   dependencyManager: new DependencyManager(),
 })
+
+agentContext.dependencyManager.registerInstance(EventEmitter, { emit: () => {} } as unknown as EventEmitter)
 
 suite('dynamoDbMessagePickupRepository', () => {
   let repository: DynamoDbMessagePickupRepository

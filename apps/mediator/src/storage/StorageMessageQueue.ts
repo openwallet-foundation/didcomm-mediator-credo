@@ -7,19 +7,10 @@ import type {
   TakeFromQueueOptions,
 } from '@credo-ts/didcomm'
 
-import { AgentContext, utils } from '@credo-ts/core'
-
-import { PushNotificationsFcmRepository } from '../push-notifications/fcm/repository'
+import { AgentContext, EventEmitter, utils } from '@credo-ts/core'
+import { DidcommMessageQueuedEvent, MediatorEventTypes } from '../events'
 import { MessageRecord } from './MessageRecord'
 import { MessageRepository } from './MessageRepository'
-
-import { config } from '../config'
-import { sendFcmPushNotification } from '../push-notifications/fcm/events/PushNotificationEvent'
-
-export interface NotificationMessage {
-  messageType: string
-  token?: string
-}
 
 export class StorageServiceMessageQueue implements DidCommQueueTransportRepository {
   public async getAvailableMessageCount(agentContext: AgentContext, options: GetAvailableMessageCountOptions) {
@@ -83,7 +74,7 @@ export class StorageServiceMessageQueue implements DidCommQueueTransportReposito
       })
     )
 
-    await this.sendNotification(agentContext, connectionId, 'messageType')
+    this.emitMessageQueuedEvent(agentContext, connectionId)
 
     return id
   }
@@ -99,103 +90,13 @@ export class StorageServiceMessageQueue implements DidCommQueueTransportReposito
     await Promise.all(deletePromises)
   }
 
-  private async sendNotification(agentContext: AgentContext, connectionId: string, messageType?: string) {
-    if (!config.pushNotifications) return
-
-    // Get the device token for the connection
-    const pushNotificationsFcmRepository = agentContext.resolve(PushNotificationsFcmRepository)
-    const pushNotificationFcmRecord = await pushNotificationsFcmRepository.findSingleByQuery(agentContext, {
-      connectionId,
-    })
-
-    if (!pushNotificationFcmRecord?.deviceToken) {
-      agentContext.config.logger.info('No device token found for connectionId so skip sending notification')
-      return
-    }
-
-    if (config.pushNotifications.firebase) {
-      // Check for firebase configuration
-      // Send a Firebase Cloud Message notification to the device found for a given connection
-      await this.sendFcmNotification(agentContext, pushNotificationFcmRecord.deviceToken)
-    }
-
-    // Check for webhook Url
-    if (config.pushNotifications.webhookUrl) {
-      // Send a notification to the device
-      await this.sendWebhookNotification(
-        agentContext,
-        config.pushNotifications.webhookUrl,
+  private emitMessageQueuedEvent(agentContext: AgentContext, connectionId: string) {
+    const eventEmitter = agentContext.resolve(EventEmitter)
+    eventEmitter.emit<DidcommMessageQueuedEvent>(agentContext, {
+      type: MediatorEventTypes.DidCommMessageQueued,
+      payload: {
         connectionId,
-        pushNotificationFcmRecord.deviceToken,
-        messageType
-      )
-    }
-  }
-
-  private async sendFcmNotification(agentContext: AgentContext, deviceToken: string) {
-    try {
-      // Found record, send firebase push notification
-      agentContext.config.logger.info(`Sending FCM notification to device: ${deviceToken}`)
-      await sendFcmPushNotification(agentContext, deviceToken)
-      agentContext.config.logger.info(`FCM push notification sent successfully to ${deviceToken}`)
-    } catch (error) {
-      agentContext.config.logger.error('Error sending FCM notification', {
-        cause: error,
-      })
-    }
-  }
-
-  private async sendWebhookNotification(
-    agentContext: AgentContext,
-    webhookUrl: string,
-    connectionId: string,
-    deviceToken: string,
-    messageType?: string
-  ) {
-    try {
-      // Prepare a message to be sent to the device
-      const message: NotificationMessage = {
-        messageType: messageType ?? 'default',
-        token: deviceToken,
-      }
-
-      agentContext.config.logger.info(`Sending notification to ${connectionId}`)
-      await this.processNotification(agentContext, webhookUrl, message)
-      agentContext.config.logger.info(`Notification sent successfully to ${connectionId}`)
-    } catch (error) {
-      agentContext.config.logger.error('Error sending notification', {
-        cause: error,
-      })
-    }
-  }
-
-  private async processNotification(agentContext: AgentContext, webhookUrl: string, message: NotificationMessage) {
-    try {
-      const body = {
-        fcmToken: message.token,
-        messageType: message.messageType,
-      }
-      const requestOptions = {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(body),
-      }
-
-      const response = await fetch(webhookUrl, requestOptions)
-
-      if (response.ok) {
-        agentContext.config.logger.info('Notification sent successfully')
-      } else {
-        agentContext.config.logger.error('Error sending notification', {
-          cause: response.statusText,
-        })
-      }
-    } catch (error) {
-      agentContext.config.logger.error('Error sending notification', {
-        cause: error,
-      })
-    }
+      },
+    })
   }
 }

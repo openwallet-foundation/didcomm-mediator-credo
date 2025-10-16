@@ -197,11 +197,33 @@ const zConfig = z
           .default({
             type: 'credo',
           }),
+        multiInstanceDelivery: z
+          .discriminatedUnion(
+            'type',
+            [
+              // No multi instance publishing. In case you only run a single mediator instance it is not needed to handle multi instance delivery
+              // Some storage implementations also handle the multi-instance delivery. In that case you should also configure `none` (e.g. `storage.postgres`).
+              z.object({
+                type: z.literal('none'),
+              }),
+              // Use redis multi instance delivery. When using this option the cache implementation MUST also be redis
+              z.object({
+                type: z.literal('redis'),
+              }),
+            ],
+            { error: "Multi instance message delivery type must be one of 'none' (default) | 'redis'" }
+          )
+          .default({
+            type: 'none',
+          }),
       })
       .default({
         forwardingStrategy: DidCommMessageForwardingStrategy.DirectDelivery,
         storage: {
           type: 'credo',
+        },
+        multiInstanceDelivery: {
+          type: 'none',
         },
       }),
 
@@ -289,6 +311,10 @@ const zConfig = z
       .or(z.boolean())
       .optional()
       .default(false),
+  })
+  .refine((config) => config.messagePickup.multiInstanceDelivery.type !== 'redis' || config.cache.type === 'redis', {
+    path: ['messagePickup', 'multiInstanceDelivery', 'type'],
+    error: "When message pickup delivery type is 'redis', the cache type MUST also be 'redis'.",
   })
   .transform((config) => {
     const agentEndpoints =
