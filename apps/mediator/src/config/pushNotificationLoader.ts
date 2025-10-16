@@ -16,8 +16,7 @@ export async function loadPushNotificationSender(agent: MediatorAgent) {
   if (config.messagePickup.multiInstanceDelivery.type !== 'none') return
 
   if (
-    // TODO: why don't we want to send a push notification for queue only?
-    config.messagePickup.forwardingStrategy === DidCommMessageForwardingStrategy.QueueAndLiveModeDelivery &&
+    config.messagePickup.forwardingStrategy !== DidCommMessageForwardingStrategy.DirectDelivery &&
     config.messagePickup.storage.type === 'postgres'
   ) {
     // We only want to listen for queued messages and send push notifications for live mode and postgres pickup type

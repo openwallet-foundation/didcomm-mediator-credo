@@ -95,7 +95,7 @@ export async function loadRedisMessageDelivery({
 
     if (serverId) {
       // Special case. Usually this won't happen because then the above code would already have
-      // handled it. So it means the session was closed, but not removed from reddit. We remove it
+      // handled it. So it means the session was closed, but not removed from redis. We remove it
       // and will send a push notification
       if (serverId === streamPublishing.serverId) {
         agent.config.logger.debug(
