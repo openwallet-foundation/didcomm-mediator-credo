@@ -20,17 +20,17 @@
     "prepublishOnly": "pnpm run build"
   },
   "dependencies": {
-    "@aws-sdk/client-dynamodb": "^3.806.0",
-    "@aws-sdk/util-dynamodb": "^3.806.0"
+    "@aws-sdk/client-dynamodb": "^3.911.0",
+    "@aws-sdk/util-dynamodb": "^3.911.0"
   },
   "devDependencies": {
-    "@credo-ts/didcomm": "catalog:",
     "@credo-ts/core": "catalog:",
+    "@credo-ts/didcomm": "catalog:",
     "@types/node": "catalog:",
     "typescript": "catalog:"
   },
   "peerDependencies": {
-    "@credo-ts/didcomm": "catalog:",
-    "@credo-ts/core": "catalog:"
+    "@credo-ts/core": "catalog:",
+    "@credo-ts/didcomm": "catalog:"
   }
 }

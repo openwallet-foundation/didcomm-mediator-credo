@@ -13,10 +13,7 @@ import {
   RemoveMessagesOptions,
   TakeFromQueueOptions,
 } from '@credo-ts/didcomm'
-import {
-  DidCommMessagePickupSession,
-  DidCommMessagePickupSessionRole,
-} from '@credo-ts/didcomm/build/modules/message-pickup/DidCommMessagePickupSession'
+import { DidCommMessagePickupSession, DidCommMessagePickupSessionRole } from '@credo-ts/didcomm'
 import { Client, Pool } from 'pg'
 import PGPubsub from 'pg-pubsub'
 import {

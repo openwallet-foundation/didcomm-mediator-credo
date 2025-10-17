@@ -20,13 +20,13 @@
     "prepublishOnly": "pnpm run build"
   },
   "dependencies": {
-    "pg": "^8.11.3",
+    "pg": "^8.16.3",
     "pg-pubsub": "^0.8.1"
   },
   "devDependencies": {
     "@credo-ts/core": "catalog:",
     "@credo-ts/didcomm": "catalog:",
-    "@types/pg": "^8.11.10",
+    "@types/pg": "^8.15.5",
     "typescript": "catalog:"
   },
   "peerDependencies": {

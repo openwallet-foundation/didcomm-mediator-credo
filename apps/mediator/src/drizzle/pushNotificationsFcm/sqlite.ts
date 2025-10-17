@@ -1,5 +1,5 @@
 import { getSqliteBaseRecordTable, sqliteBaseRecordIndexes } from '@credo-ts/drizzle-storage'
-import { didcommConnection } from '@credo-ts/drizzle-storage/build/didcomm/connection-record/sqlite'
+import { didcommConnection } from '@credo-ts/drizzle-storage/didcomm/sqlite'
 import { foreignKey, sqliteTable, text } from 'drizzle-orm/sqlite-core'
 
 export const pushNotificationsFcm = sqliteTable(

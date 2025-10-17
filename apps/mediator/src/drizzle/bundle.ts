@@ -2,7 +2,7 @@ import { DrizzleRecordBundle } from '@credo-ts/drizzle-storage'
 
 import { pushNotificationsFcmDrizzleRecord } from './pushNotificationsFcm'
 
-export default {
+export const mediatorBundle = {
   name: 'didcomm-mediator-credo',
   records: [pushNotificationsFcmDrizzleRecord],
   migrations: {

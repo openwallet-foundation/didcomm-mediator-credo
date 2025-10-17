@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { DidCommMessageForwardingStrategy } from '@credo-ts/didcomm'
-import { DidCommMessagePickupSessionRole } from '@credo-ts/didcomm/build/modules/message-pickup/DidCommMessagePickupSession'
+import { DidCommMessagePickupSessionRole } from '@credo-ts/didcomm'
 import Redis from 'ioredis'
 import type { MediatorAgent } from '../agent'
 import { config } from '../config'
@@ -57,7 +57,7 @@ export async function loadRedisMessageDelivery({
         { connectionId }
       )
       try {
-        const session = await agent.modules.messagePickup.getLiveModeSession({
+        const session = await agent.didcomm.messagePickup.getLiveModeSession({
           connectionId,
           role: DidCommMessagePickupSessionRole.MessageHolder,
         })
@@ -67,7 +67,7 @@ export async function loadRedisMessageDelivery({
             'Found a local session to send queued message to session directly. Delivering messages from queue',
             { connectionId }
           )
-          await agent.modules.messagePickup.deliverMessagesFromQueue({
+          await agent.didcomm.messagePickup.deliverMessagesFromQueue({
             pickupSessionId: session.id,
           })
 
@@ -147,7 +147,7 @@ export async function loadRedisMessageDelivery({
         `Server '${streamPublishing.serverId}' received message ${message.id} for connection '${message.payload.connectionId}'. Attempting to deliver to local session.`
       )
 
-      const pickupSession = await agent.modules.messagePickup.getLiveModeSession({
+      const pickupSession = await agent.didcomm.messagePickup.getLiveModeSession({
         connectionId: message.payload.connectionId,
         role: DidCommMessagePickupSessionRole.MessageHolder,
       })
@@ -158,7 +158,7 @@ export async function loadRedisMessageDelivery({
             `Found local session for connection '${message.payload.connectionId}'. Delivering messages from queue.`
           )
 
-          await agent.modules.messagePickup.deliverMessagesFromQueue({
+          await agent.didcomm.messagePickup.deliverMessagesFromQueue({
             pickupSessionId: pickupSession.id,
           })
 

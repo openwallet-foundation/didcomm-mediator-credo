@@ -1,5 +1,3 @@
-import { Agent } from '@credo-ts/core'
-
 import {
   DidCommOutOfBandRecord,
   DidCommOutOfBandRepository,
@@ -22,8 +20,8 @@ function logInvitationUrl(agent: MediatorAgent, outOfBandRecord: DidCommOutOfBan
   agent.config.logger.info(`Out of band invitation url:\n\n\t${mediatorInvitationUrlLong}`)
 }
 
-async function createMediatorInvitation(agent: Agent) {
-  return agent.modules.oob.createInvitation({
+async function createMediatorInvitation(agent: MediatorAgent) {
+  return agent.didcomm.oob.createInvitation({
     multiUseInvitation: true,
     goalCode: config.invitationGoalCode,
     goal: 'Mediator Invitation',

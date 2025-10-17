@@ -1,22 +1,19 @@
 import type { Socket } from 'node:net'
 import { Agent } from '@credo-ts/core'
 import {
-  DidCommConnectionsModule,
   DidCommHttpOutboundTransport,
-  DidCommMediatorModule,
   DidCommMimeType,
+  DidCommModule,
   DidCommOutOfBandRole,
   DidCommOutOfBandState,
   DidCommWsOutboundTransport,
-  getDefaultDidcommModules,
 } from '@credo-ts/didcomm'
 
-// FIXME: export from askar root
-import { AskarStoreDuplicateError } from '@credo-ts/askar/build/error/AskarStoreDuplicateError'
+import { AskarStoreDuplicateError } from '@credo-ts/askar'
 
 import { DidCommHttpInboundTransport, DidCommWsInboundTransport, agentDependencies } from '@credo-ts/node'
 
-import express from 'express'
+import express, { type Express } from 'express'
 import { Server } from 'ws'
 
 import { AskarModule } from '@credo-ts/askar'
@@ -31,22 +28,40 @@ import { PushNotificationsFcmModule } from './push-notifications/fcm'
 
 async function createModules({
   queueTransportRepository,
+  app,
+  socketServer,
 }: {
   queueTransportRepository: ExtendedQueueTransportRepository
+  app: Express
+  socketServer: Server
 }) {
   const modules = {
-    ...getDefaultDidcommModules({
+    didcomm: new DidCommModule({
       endpoints: config.agentEndpoints,
       useDidSovPrefixWhereAllowed: true,
       didCommMimeType: DidCommMimeType.V0,
       queueTransportRepository,
-    }),
-    connections: new DidCommConnectionsModule({
-      autoAcceptConnections: true,
-    }),
-    mediator: new DidCommMediatorModule({
-      autoAcceptMediationRequests: true,
-      messageForwardingStrategy: config.messagePickup.forwardingStrategy,
+
+      transports: {
+        inbound: [
+          new DidCommHttpInboundTransport({ app, port: config.agentPort }),
+          new DidCommWsInboundTransport({ server: socketServer }),
+        ],
+        outbound: [new DidCommHttpOutboundTransport(), new DidCommWsOutboundTransport()],
+      },
+
+      connections: {
+        autoAcceptConnections: true,
+      },
+      mediator: {
+        autoAcceptMediationRequests: true,
+        messageForwardingStrategy: config.messagePickup.forwardingStrategy,
+      },
+
+      // Protocols not needed for mediator
+      basicMessages: false,
+      credentials: false,
+      proofs: false,
     }),
     pushNotificationsFcm: new PushNotificationsFcmModule(),
   } as const
@@ -69,7 +84,11 @@ export async function createAgent() {
     ...storageModules,
     ...askarModules,
     ...cacheModules,
-    ...(await createModules({ queueTransportRepository })),
+    ...(await createModules({
+      queueTransportRepository,
+      app,
+      socketServer,
+    })),
   } as const
 
   const agent = new Agent<typeof modules & { askar: AskarModule }>({
@@ -81,29 +100,17 @@ export async function createAgent() {
     modules: modules as typeof modules & { askar: AskarModule },
   })
 
-  // Create all transports
-  const httpInboundTransport = new DidCommHttpInboundTransport({ app, port: config.agentPort })
-  const httpOutboundTransport = new DidCommHttpOutboundTransport()
-  const wsInboundTransport = new DidCommWsInboundTransport({ server: socketServer })
-  const wsOutboundTransport = new DidCommWsOutboundTransport()
-
-  // Register all Transports
-  agent.modules.didcomm.registerInboundTransport(httpInboundTransport)
-  agent.modules.didcomm.registerOutboundTransport(httpOutboundTransport)
-  agent.modules.didcomm.registerInboundTransport(wsInboundTransport)
-  agent.modules.didcomm.registerOutboundTransport(wsOutboundTransport)
-
   // Added health check endpoint
-  httpInboundTransport.app.get('/health', async (_req, res) => {
+  app.get('/health', async (_req, res) => {
     res.sendStatus(202)
   })
 
-  httpInboundTransport.app.get('/invite', async (req, res) => {
+  app.get('/invite', async (req, res) => {
     if (!req.query._oobid || typeof req.query._oobid !== 'string') {
       return res.status(400).send('Missing or invalid _oobid')
     }
 
-    const outOfBandRecord = await agent.modules.oob.findById(req.query._oobid)
+    const outOfBandRecord = await agent.didcomm.oob.findById(req.query._oobid)
 
     if (
       !outOfBandRecord ||
@@ -135,21 +142,25 @@ export async function createAgent() {
 
   await agent.initialize()
 
-  httpInboundTransport.server?.on('listening', () => {
+  const inboundTransport = agent.didcomm.config.inboundTransports.find(
+    (transport) => transport instanceof DidCommHttpInboundTransport
+  )
+
+  inboundTransport?.server?.on('listening', () => {
     logger.info(`Agent listening on port ${config.agentPort}`)
   })
 
-  httpInboundTransport.server?.on('error', (err) => {
+  inboundTransport?.server?.on('error', (err) => {
     logger.error(`Agent failed to start on port ${config.agentPort}`, err)
   })
 
-  httpInboundTransport.server?.on('close', () => {
+  inboundTransport?.server?.on('close', () => {
     logger.info(`Agent stopped listening on port ${config.agentPort}`)
   })
 
   // When an 'upgrade' to WS is made on our http server, we forward the
   // request to the WS server
-  httpInboundTransport.server?.on('upgrade', (request, socket, head) => {
+  inboundTransport?.server?.on('upgrade', (request, socket, head) => {
     socketServer.handleUpgrade(request, socket as Socket, head, (socket) => {
       socketServer.emit('connection', socket, request)
     })
