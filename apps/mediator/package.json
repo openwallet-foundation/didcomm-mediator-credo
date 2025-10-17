@@ -18,6 +18,8 @@
     "start": "node build/index.js",
     "migrate-askar-to-drizzle": "node build/askarToDrizzleMigration.js",
     "migrate-askar-to-drizzle:dev": "ts-node src/askarToDrizzleMigration.ts",
+    "migrate-askar-to-drizzle-delete-storage-records": "node build/askarToDrizzleDeleteAskarStorageRecords.js",
+    "migrate-askar-to-drizzle-delete-storage-records:dev": "ts-node src/askarToDrizzleDeleteAskarStorageRecords.ts",
     "drizzle": "drizzle-storage --bundle core --bundle didcomm --bundle ./build/drizzle/bundle.js",
     "drizzle:generate": "drizzle-storage --bundle ./build/drizzle/bundle.js generate",
     "drizzle:migrate:sqlite": "pnpm drizzle migrate --dialect sqlite",

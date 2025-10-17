@@ -201,13 +201,14 @@ When running migrations from the docker container make sure to set:
 
 ##### Migrating from Askar
 
-If you're migrating from an Askar database to a drizzle database you first need to run the Drizzle migraiton. You can do this by running the provided PNPM script: `pnpm migrate-askar-to-drizzle` from the `apps/mediator` directory. Note you still need to keep Askar for the KMS, and thus you can't fully migrate away from Askar.
+If you're migrating from an Askar database to a drizzle database you first need to run the Drizzle migraiton. You can do this by running the provided PNPM script: `pnpm migrate-askar-to-drizzle` from the `apps/mediator` directory. Note you still need to keep Askar for the KMS, and thus you can't fully migrate away from Askar. When you have succesfully migrated (make sure to verify this!) you can remove the storage records from Askar using the `pnpm migrate-askar-to-drizzle-delete-storage-records` command from the `apps/mediator` directory.
 
 Make sure to:
 
 - Provide the same configuration you'd provide to the mediator
 - Provide the aksar configuration
 - Configure Drizzle storage to be used
+- Backup your database beforehand.
 
 If you're using the provided Docker image, you can reuse the same image to migrate from Askar to Drizzle Storage. This migration only has to be run once before running your mediator container configured with Drizzle as the storage type.
 
@@ -215,6 +216,14 @@ When running the Askar to Drizzle migration from the docker container make sure 
 
 - Entrypoint to `["sh", "-c"]`
 - Command to `pnpm --filter didcomm-mediator-service run migrate-askar-to-drizzle`
+  - To avoid using `pnpm` in a docker container, it may be desired to run the node command directly: `node apps/mediator migrate-askar-to-drizzle`
+- Environment variables and configuration options as you'd use with the mediator container
+
+When running the Askar to Drizzle storage delettion after successul migration from the docker container make sure to set:
+
+- Entrypoint to `["sh", "-c"]`
+- Command to `pnpm --filter didcomm-mediator-service run migrate-askar-to-drizzle-delete-storage-records`
+  - To avoid using `pnpm` in a docker container, it may be desired to run the node command directly: `node apps/mediator/build/askarToDrizzleDeleteAskarStorageRecords.js`
 - Environment variables and configuration options as you'd use with the mediator container
 
 #### Cache
