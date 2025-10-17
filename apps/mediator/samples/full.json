@@ -29,7 +29,7 @@
     "type": "askar"
   },
   "messagePickup": {
-    "forwardingStrategy": "QueueAndLiveModeDelivery",
+    "forwardingStrategy": "QueueOnly",
     "storage": {
       "type": "dynamodb",
       "region": "local",

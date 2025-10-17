@@ -49,9 +49,8 @@ export async function loadRedisMessageDelivery({
       `Server ${streamPublishing.serverId} received DidCommMessageQuedEvent for connection ${connectionId}`
     )
 
-    // If QueueOnly we haven't tried the local session yet.
     // TODO: do we want to handle when we don't want to send to local sessions?
-    if (config.messagePickup.forwardingStrategy === DidCommMessageForwardingStrategy.QueueOnly) {
+    if (config.messagePickup.forwardingStrategy !== DidCommMessageForwardingStrategy.DirectDelivery) {
       agent.config.logger.debug(
         'Trying to send queued message to session directly, since forwarding strategy is set to QueueOnly',
         { connectionId }
