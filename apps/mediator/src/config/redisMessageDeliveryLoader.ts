@@ -30,13 +30,13 @@ import { sendNotification } from '../push-notifications/sendNotification'
 export async function loadRedisMessageDelivery({
   abortSignal,
   agent,
-}: { abortSignal?: AbortSignal; agent: MediatorAgent }) {
+  redisClient,
+}: { abortSignal?: AbortSignal; agent: MediatorAgent; redisClient?: Redis }) {
   if (config.cache.type !== 'redis' || config.messagePickup.multiInstanceDelivery.type !== 'redis') return
 
   agent.config.logger.info('Loading redis multi instance message delivery')
 
-  // TODO: we should reuse the client from the cache implementation. Requires change in Credo redis-cache package
-  const client = new Redis(config.cache.redisUrl)
+  const client = redisClient ?? new Redis(config.cache.redisUrl)
 
   // We generate a random server instance, it does not really matter as long as it's unique between active servers
   // if a server crashes we lose the active socket connections.

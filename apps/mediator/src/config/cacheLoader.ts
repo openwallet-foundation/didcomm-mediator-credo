@@ -1,17 +1,17 @@
 import { CacheModule, InMemoryLruCache } from '@credo-ts/core'
 import { RedisCache } from '@credo-ts/redis-cache'
 
+import Redis from 'ioredis'
 import { config, logger } from '../config'
 
-export function loadCacheStorage() {
+export function loadCacheStorage({ redisClient }: { redisClient?: Redis } = {}) {
   const { cache } = config
   if (cache.type === 'redis') {
     logger.info('Using redis cache storage')
+
     return {
       cache: new CacheModule({
-        // FIXME: should allow string as type
-        // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-        cache: new RedisCache(cache.redisUrl as any),
+        cache: new RedisCache(redisClient ?? new Redis(cache.redisUrl)),
         useCachedStorageService: true,
       }),
     }

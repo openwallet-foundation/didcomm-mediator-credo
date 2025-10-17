@@ -10,6 +10,7 @@ import {
 } from '@credo-ts/didcomm'
 
 import { AskarStoreDuplicateError } from '@credo-ts/askar'
+import Redis from 'ioredis'
 
 import { DidCommHttpInboundTransport, DidCommWsInboundTransport, agentDependencies } from '@credo-ts/node'
 
@@ -74,11 +75,14 @@ export async function createAgent() {
   // but allows use to use the same server (and port) for both WebSockets and HTTP
   const app = express()
   const socketServer = new Server({ noServer: true })
+  const redisClient = config.cache.type === 'redis' ? new Redis(config.cache.redisUrl) : undefined
 
   const queueTransportRepository = await loadMessagePickupStorage()
   const storageModules = loadStorage()
   const askarModules = await loadAskar()
-  const cacheModules = loadCacheStorage()
+  const cacheModules = loadCacheStorage({
+    redisClient,
+  })
 
   const modules = {
     ...storageModules,
@@ -167,7 +171,7 @@ export async function createAgent() {
   })
 
   await loadPushNotificationSender(agent)
-  await loadRedisMessageDelivery({ agent })
+  await loadRedisMessageDelivery({ agent, redisClient })
 
   return agent
 }
