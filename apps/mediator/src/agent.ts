@@ -171,7 +171,11 @@ export async function createAgent() {
   })
 
   await loadPushNotificationSender(agent)
-  await loadRedisMessageDelivery({ agent, redisClient })
+  await loadRedisMessageDelivery({
+    agent,
+    // FIXME: somehow reusing the same Redis client makes everything fail
+    /* redisClient */
+  })
 
   return agent
 }
