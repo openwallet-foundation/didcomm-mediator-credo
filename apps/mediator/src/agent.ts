@@ -92,7 +92,7 @@ export async function createAgent() {
 
   // Load the message pickup repository if configured
   let messagePickupRepository = undefined
-  if (config.get('agent:pickup').type !== undefined) {
+  if (config.get('agent:pickup').type) {
     logger.info(`Loading ${config.get('agent:pickup').type} pickup protocol`)
     messagePickupRepository = await loadPickup(config.get('agent:pickup').type, config.get('agent:pickup').strategy)
   }

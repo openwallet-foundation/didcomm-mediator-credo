@@ -14,7 +14,9 @@ export const firebase: admin.app.App | undefined = !config.get('agent:usePushNot
         credential: admin.credential.cert({
           projectId: config.get('agent:firebase:projectId'),
           clientEmail: config.get('agent:firebase:clientEmail'),
-          privateKey: config.get('agent:firebase:privateKey')?.replace(/\\n/g, '\n'),
+          privateKey: config.get('agent:firebase:privateKey')?.includes('\\n')
+            ? config.get('agent:firebase:privateKey')?.replace(/\\n/g, '\n')
+            : config.get('agent:firebase:privateKey')?.trim(),
         }),
       })
 
