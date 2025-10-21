@@ -1,4 +1,4 @@
-import { PostgresMessagePickupRepository } from '../../../../packages/message-pickup-repository-pg/src/PostgresMessagePickupRepository'
+import { TransportQueuePostgres } from '../../../../packages/transport-queue-postgres/src/TransportQueuePostgres'
 import config from '../config'
 import { askarPostgresConfig } from '../database'
 import { Logger } from '../logger'
@@ -43,10 +43,10 @@ export class PostgresPickupLoader extends PickupLoader {
     }
   }
 
-  async load(): Promise<PostgresMessagePickupRepository> {
-    logger.info('Loading Postgres message pickup repository...')
+  async load(): Promise<TransportQueuePostgres> {
+    logger.info('Loading transport queue postgres repository...')
     const databaseConfig = this.getDatabaseConfig()
-    return new PostgresMessagePickupRepository({
+    return new TransportQueuePostgres({
       postgresHost: databaseConfig.host,
       postgresUser: databaseConfig.user,
       postgresPassword: databaseConfig.password,

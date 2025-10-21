@@ -1,5 +1,5 @@
 {
-  "name": "@credo-ts/didcomm-transport-queue-postgres",
+  "name": "@credo-ts/transport-queue-postgres",
   "main": "build/index.js",
   "types": "build/index.d.ts",
   "private": false,
@@ -8,13 +8,13 @@
   "publishConfig": {
     "access": "public"
   },
-  "description": "Message Pickup Repository Postgres module",
+  "description": "Transport Queue Postgres module",
   "license": "Apache-2.0",
-  "homepage": "https://github.com/openwallet-foundation/didcomm-mediator-credo/tree/main/packages/message-pickup-repository-pg",
+  "homepage": "https://github.com/openwallet-foundation/didcomm-mediator-credo/tree/main/packages/transport-queue-postgres",
   "repository": {
     "type": "git",
     "url": "https://github.com/openwallet-foundation/didcomm-mediator-credo",
-    "directory": "packages/message-pickup-repository-pg"
+    "directory": "packages/transport-queue-postgres"
   },
   "scripts": {
     "types:check": "tsc --noEmit",

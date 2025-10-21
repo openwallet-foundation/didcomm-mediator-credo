@@ -1,7 +1,7 @@
 import { EncryptedMessage, Logger } from '@credo-ts/core'
 import { MessagePickupSession } from '@credo-ts/core/build/modules/message-pickup/MessagePickupSession'
 
-export interface PostgresMessagePickupRepositoryConfig {
+export interface TransportQueuePostgresConfig {
   logger?: Logger
   postgresUser: string
   postgresPassword: string
