@@ -9,7 +9,7 @@ import type {
 
 import { AgentContext, injectable, utils } from '@credo-ts/core'
 
-import { PushNotificationsFcmRepository } from '../push-notifications/fcm/repository'
+import { PushNotificationsFcmRepository, PushNotificationsFcmRecord } from '../push-notifications/fcm/repository'
 import { MessageRecord } from './MessageRecord'
 import { MessageRepository } from './MessageRepository'
 
@@ -126,7 +126,7 @@ export class StorageServiceMessageQueue implements MessagePickupRepository {
     // Check for firebase configuration
     if (config.get('agent:firebase:projectId')) {
       // Send a Firebase Cloud Message notification to the device found for a given connection
-      await this.sendFcmNotification(pushNotificationFcmRecord.deviceToken)
+      await this.sendFcmNotification(pushNotificationFcmRecord)
     }
 
     // Check for webhook Url
@@ -136,12 +136,9 @@ export class StorageServiceMessageQueue implements MessagePickupRepository {
     }
   }
 
-  private async sendFcmNotification(deviceToken: string) {
+  private async sendFcmNotification(pushNotificationFcmRecord: PushNotificationsFcmRecord) {
     try {
-      // Found record, send firebase push notification
-      this.agentContext.config.logger.info(`Sending FCM notification to device: ${deviceToken}`)
-      await sendFcmPushNotification(deviceToken, this.agentContext.config.logger as Logger)
-      this.agentContext.config.logger.info(`FCM push notification sent successfully to ${deviceToken}`)
+      await sendFcmPushNotification(this.agentContext, this.pushNotificationsFcmRepository, pushNotificationFcmRecord, this.agentContext.config.logger as Logger)
     } catch (error) {
       this.agentContext.config.logger.error('Error sending FCM notification', {
         cause: error,

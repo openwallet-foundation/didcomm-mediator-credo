@@ -24,7 +24,7 @@ import { askarPostgresConfig } from './database'
 import { Logger } from './logger'
 import { loadPickup } from './pickup/loader'
 import { PushNotificationsFcmModule } from './push-notifications/fcm'
-import { initializePushNotificationSender } from './push-notifications/fcm/firebase'
+import { initializeFirebase } from './push-notifications/fcm/firebase'
 import { StorageMessageQueueModule } from './storage/StorageMessageQueueModule'
 
 function createModules(messagePickupRepository?: MessagePickupRepository) {
@@ -175,7 +175,7 @@ export async function createAgent() {
     })
   })
 
-  await initializePushNotificationSender(agent)
+  await initializeFirebase(agent)
 
   return agent
 }

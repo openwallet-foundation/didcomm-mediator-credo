@@ -1,33 +1,68 @@
+import { Agent, AgentContext } from '@credo-ts/core';
 import config from '../../../config'
 import { Logger } from '../../../logger'
-import { firebase } from '../firebase'
+import { firebaseApps } from '../firebase';
+import { PushNotificationsFcmRecord, PushNotificationsFcmRepository } from '../repository'
 
-export const sendFcmPushNotification = async (deviceToken: string, logger: Logger) => {
-  if (firebase === undefined) {
-    logger.warn('Firebase is not initialized. Push notifications are disabled.')
-    return
-  }
+export const sendFcmPushNotification = async (agentContext: AgentContext, repository: PushNotificationsFcmRepository, pushNotificationRecord: PushNotificationsFcmRecord, logger: Logger) => {
 
   const title = config.get('agent:pushNotificationTitle')
   const body = config.get('agent:pushNotificationBody')
 
   if (!title || !body) {
-    throw new Error('Push notification title or body is missing')
+    logger.warn('Push notification title or body is missing in configuration')
+    return
   }
 
-  try {
-    const response = await firebase.messaging().send({
-      token: deviceToken,
-      notification: {
-        title,
-        body,
-      },
-    })
+  if (pushNotificationRecord.deviceToken === null) {
+    logger.warn('Device token is null, cannot send push notification')
+    return
+  }
 
-    return response
-  } catch (error) {
-    logger.error('Error sending notification', {
-      cause: error,
-    })
+  // Try to send using the specified projectId first
+  let firebase = firebaseApps.get(pushNotificationRecord.projectId || '')
+  if (firebase) {
+    try {
+      logger.debug(`Sending push notification using Firebase projectId: ${pushNotificationRecord.projectId}`)
+      const response = await firebase.messaging().send({
+        token: pushNotificationRecord.deviceToken,
+        notification: {
+          title,
+          body,
+        },
+      })
+      if (response) {
+        logger.info('Push notification sent successfully', { projectId: pushNotificationRecord.projectId, response })
+        return response
+      }
+    } catch (error) {
+      logger.debug('Error sending notification', {
+        cause: error,
+      })
+    }
+  }
+
+  // If attempt fails or no projectId specified, try all available firebase apps
+  for (const [projectId, firebase] of firebaseApps) {
+    try {
+      logger.debug(`Sending push notification using Firebase projectId: ${projectId}`)
+      const response = await firebase.messaging().send({
+        token: pushNotificationRecord.deviceToken,
+        notification: {
+          title,
+          body,
+        },
+      })
+      if (response) {
+        logger.info('Push notification sent successfully', { projectId, response })
+        pushNotificationRecord.projectId = projectId // Update record with working projectId
+        await repository.update(agentContext, pushNotificationRecord)
+        return response
+      }
+    } catch (error) {
+      logger.debug('Error sending notification', {
+        cause: error,
+      })
+    }
   }
 }
