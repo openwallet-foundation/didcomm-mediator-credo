@@ -46,8 +46,6 @@ export async function initializePushNotificationSender(agent: Agent) {
       )
       if (pushNotificationRecord?.deviceToken) {
         sendFcmPushNotification(pushNotificationRecord.deviceToken, agent.config.logger as Logger)
-      } else {
-        agent.config.logger.debug(`No push notification record found for connection id ${message.connectionId}`)
       }
     })
   }
