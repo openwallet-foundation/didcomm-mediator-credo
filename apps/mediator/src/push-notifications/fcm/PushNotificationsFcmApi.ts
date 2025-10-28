@@ -8,6 +8,7 @@ import {
   PushNotificationsFcmSetDeviceInfoHandler,
 } from './handlers'
 import { PushNotificationsFcmService } from './services/PushNotificationsFcmService'
+import { PushNotificationsFcmRecord } from './repository/PushNotificationsFcmRecord'
 
 @injectable()
 export class PushNotificationsFcmApi {
@@ -63,7 +64,7 @@ export class PushNotificationsFcmApi {
    * @param connectionId The connection ID string
    * @returns Promise<PushNotificationsFcmRecord>
    */
-  public async getPushNotificationRecordByConnectionId(connectionId: string) {
+  public async getPushNotificationRecordByConnectionId(connectionId: string) : Promise<PushNotificationsFcmRecord | undefined> {
     return this.pushNotificationsService.getPushNotificationRecordByConnectionId(this.agentContext, connectionId)
   }
 }
