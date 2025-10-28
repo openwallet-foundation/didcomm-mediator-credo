@@ -44,8 +44,9 @@ export async function initializePushNotificationSender(agent: Agent) {
       const pushNotificationRecord = await agent.modules.pushNotificationsFcm.getPushNotificationRecordByConnectionId(
         message.connectionId
       )
-      if (pushNotificationRecord.deviceToken)
+      if (pushNotificationRecord?.deviceToken) {
         sendFcmPushNotification(pushNotificationRecord.deviceToken, agent.config.logger as Logger)
+      }
     })
   }
 }

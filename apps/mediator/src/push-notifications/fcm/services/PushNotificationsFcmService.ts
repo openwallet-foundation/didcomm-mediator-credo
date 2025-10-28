@@ -1,5 +1,5 @@
 import type { AgentContext, InboundMessageContext, Logger } from '@credo-ts/core'
-import { CredoError, InjectionSymbols, TransportService, inject, injectable } from '@credo-ts/core'
+import { CredoError, InjectionSymbols, RecordNotFoundError, TransportService, inject, injectable } from '@credo-ts/core'
 import { PushNotificationsFcmProblemReportError, PushNotificationsFcmProblemReportReason } from '../errors'
 import { PushNotificationsFcmDeviceInfoMessage, PushNotificationsFcmSetDeviceInfoMessage } from '../messages'
 import type { FcmDeviceInfo } from '../models/FcmDeviceInfo'
@@ -77,9 +77,20 @@ export class PushNotificationsFcmService {
     }
   }
 
-  public async getPushNotificationRecordByConnectionId(agentContext: AgentContext, connectionId: string) {
-    return await this.pushNotificationsFcmRepository.getSingleByQuery(agentContext, {
-      connectionId,
-    })
+  public async getPushNotificationRecordByConnectionId(
+    agentContext: AgentContext,
+    connectionId: string
+  ): Promise<PushNotificationsFcmRecord | undefined> {
+    try {
+      return await this.pushNotificationsFcmRepository.getSingleByQuery(agentContext, {
+        connectionId,
+      })
+    } catch (error) {
+      if (error instanceof RecordNotFoundError) {
+        this.logger.debug(`No push notification record found for connection id ${connectionId}`)
+        return undefined
+      }
+      throw error
+    }
   }
 }
