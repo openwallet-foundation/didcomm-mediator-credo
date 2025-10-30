@@ -24,12 +24,12 @@ import {
   ExtendedMessagePickupSession,
   MessageQueuedEvent,
   MessageQueuedEventType,
-  PostgresMessagePickupRepositoryConfig,
+  TransportQueuePostgresConfig,
 } from './interfaces'
 import { buildPgDatabaseWithMigrations } from './utils/buildPgDatabaseWithMigrations'
 
 @injectable()
-export class PostgresMessagePickupRepository implements MessagePickupRepository {
+export class TransportQueuePostgres implements MessagePickupRepository {
   private logger?: Logger
   private messagesCollection?: Pool
   private agent?: Agent
@@ -40,7 +40,7 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
   private postgresHost: string
   private postgresDatabaseName: string
 
-  public constructor(options: PostgresMessagePickupRepositoryConfig) {
+  public constructor(options: TransportQueuePostgresConfig) {
     const { logger, postgresUser, postgresPassword, postgresHost, postgresDatabaseName } = options
 
     this.logger = logger

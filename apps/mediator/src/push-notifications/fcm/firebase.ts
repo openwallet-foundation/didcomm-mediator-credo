@@ -29,11 +29,9 @@ export async function initializePushNotificationSender(agent: Agent) {
     config.get('agent:pickup:strategy') === MessageForwardingStrategy.QueueAndLiveModeDelivery &&
     config.get('agent:pickup:type') === PickupType.Postgres.toLowerCase()
   ) {
-    const { MessageQueuedEventType } = await import(
-      '../../../../../packages/message-pickup-repository-pg/src/interfaces'
-    )
+    const { MessageQueuedEventType } = await import('../../../../../packages/transport-queue-postgres/src/interfaces')
     type MessageQueuedEvent = import(
-      '../../../../../packages/message-pickup-repository-pg/src/interfaces'
+      '../../../../../packages/transport-queue-postgres/src/interfaces'
     ).MessageQueuedEvent
 
     agent.config.logger.info(

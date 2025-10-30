@@ -1,5 +1,5 @@
 import { Mock, beforeEach, describe, expect, it, vi } from 'vitest'
-import { PostgresMessagePickupRepository } from '../../../../../packages/message-pickup-repository-pg/src/PostgresMessagePickupRepository'
+import { TransportQueuePostgres } from '../../../../../packages/transport-queue-postgres/src/TransportQueuePostgres'
 import config from '../../config'
 import { PostgresPickupLoader } from '../postgresLoader'
 
@@ -11,7 +11,7 @@ vi.mock('../../database', () => ({
     },
   },
 }))
-vi.mock('../../../../../packages/message-pickup-repository-pg/src/PostgresMessagePickupRepository')
+vi.mock('../../../../../packages/transport-queue-postgres/src/TransportQueuePostgres')
 
 describe('PostgresPickupLoader', () => {
   beforeEach(() => {
@@ -109,7 +109,7 @@ describe('PostgresPickupLoader', () => {
     )
   })
 
-  it('should call PostgresMessagePickupRepository with correct config in load()', async () => {
+  it('should call TransportQueuePostgres with correct config in load()', async () => {
     ;(config.get as Mock).mockImplementation((...args: any[]) => {
       const mockValues: Record<string, any> = {
         'agent:pickup': {
@@ -129,7 +129,7 @@ describe('PostgresPickupLoader', () => {
     const loader = new PostgresPickupLoader()
     await loader.load()
 
-    expect(PostgresMessagePickupRepository).toHaveBeenCalledWith(
+    expect(TransportQueuePostgres).toHaveBeenCalledWith(
       expect.objectContaining({
         postgresHost: 'host',
         postgresUser: 'user',
