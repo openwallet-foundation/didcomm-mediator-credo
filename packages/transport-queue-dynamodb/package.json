@@ -1,5 +1,5 @@
 {
-  "name": "@credo-ts/didcomm-msg-pickup-repository-dynamodb",
+  "name": "@credo-ts/transport-queue-dynamodb",
   "main": "build/index.js",
   "types": "build/index.d.ts",
   "version": "0.0.1",
@@ -7,13 +7,13 @@
   "publishConfig": {
     "access": "public"
   },
-  "description": "DIDComm Message Pickup Repository using AWS Dynamodb",
+  "description": "DIDComm transport queue using AWS Dynamodb",
   "license": "Apache-2.0",
-  "homepage": "https://github.com/openwallet-foundation/didcomm-mediator-credo/tree/main/packages/message-pickup-repository-dynamodb",
+  "homepage": "https://github.com/openwallet-foundation/didcomm-mediator-credo/tree/main/packages/transport-queue-dynamodb",
   "repository": {
     "type": "git",
     "url": "https://github.com/openwallet-foundation/didcomm-mediator-credo",
-    "directory": "packages/message-pickup-repository-dynamodb"
+    "directory": "packages/transport-queue-dynamodb"
   },
   "scripts": {
     "types:check": "tsc --noEmit",

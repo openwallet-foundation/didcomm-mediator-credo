@@ -51,7 +51,7 @@ jobs:
 
       - name: Get current package version
         id: get_version
-        run: echo "CURRENT_PACKAGE_VERSION=$(node -p \"require('./packages/message-pickup-repository-pg/package.json').version\")" >> $GITHUB_ENV
+        run: echo "CURRENT_PACKAGE_VERSION=$(node -p \"require('./packages/transport-queue-postgres/package.json').version\")" >> $GITHUB_ENV
 
       - name: Create Github Release
         if: steps.changesets.outputs.published == 'true'
@@ -98,7 +98,7 @@ jobs:
           cat << 'EOF' > .changeset/snapshot-template-changeset.md
           ---
           '@credo-ts/transport-queue-postgres': patch
-          '@credo-ts/didcomm-msg-pickup-repository-dynamodb': patch
+          '@credo-ts/transport-queue-dynamodb': patch
           ---
 
           snapshot release

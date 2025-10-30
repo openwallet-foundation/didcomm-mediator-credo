@@ -8,7 +8,7 @@ import {
 } from '@credo-ts/core'
 import { DynamoDbClientRepository, DynamoDbClientRepositoryOptions } from './client'
 
-export class DynamoDbMessagePickupRepository implements MessagePickupRepository {
+export class TransportQueueDynamoDb implements MessagePickupRepository {
   private client: DynamoDbClientRepository
 
   private constructor(client: DynamoDbClientRepository) {
@@ -16,7 +16,7 @@ export class DynamoDbMessagePickupRepository implements MessagePickupRepository 
   }
 
   public static async initialize(options: DynamoDbClientRepositoryOptions) {
-    return new DynamoDbMessagePickupRepository(await DynamoDbClientRepository.initialize(options))
+    return new TransportQueueDynamoDb(await DynamoDbClientRepository.initialize(options))
   }
 
   public async getAvailableMessageCount({ connectionId }: GetAvailableMessageCountOptions): Promise<number> {
