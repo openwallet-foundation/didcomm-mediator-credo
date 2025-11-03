@@ -13,6 +13,7 @@ import {
   MessagePickupRepository,
   MessagePickupSessionService,
   MessageSender,
+  OutOfBandService,
   QueuedMessage,
   RemoveMessagesOptions,
   TakeFromQueueOptions,
@@ -140,6 +141,7 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
       const connectionsService = this.agent.dependencyManager.resolve(ConnectionService)
       const pickupSessionService = this.agent.dependencyManager.resolve(MessagePickupSessionService)
       const messageSender = this.agent.dependencyManager.resolve(MessageSender)
+      const outOfBandService = this.agent.dependencyManager.resolve(OutOfBandService)
 
       // This is for backwards compatibility with mobile agents which use implicit pickup
       if (this.agent.mediator.config.messageForwardingStrategy === MessageForwardingStrategy.QueueAndLiveModeDelivery) {
@@ -151,6 +153,15 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
               connectionId: connectionRecord.id,
             })
           ) {
+            const oobRecord = await outOfBandService.getById(
+              options.agent.context,
+              connectionRecord.outOfBandId!
+            )
+            if (oobRecord && !oobRecord.metadata.get("_internal/legacyInvitation")) {
+              // If the connection was not created from a legacy invitation, 
+              // do not manually create a pickup session
+              return
+            }
             pickupSessionService.saveLiveSession(options.agent.context, {
               connectionId: connectionRecord.id,
               protocolVersion: 'v2',
