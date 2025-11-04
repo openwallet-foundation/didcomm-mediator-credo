@@ -13,7 +13,6 @@ import {
   MessagePickupRepository,
   MessagePickupSessionService,
   MessageSender,
-  OutOfBandService,
   QueuedMessage,
   RemoveMessagesOptions,
   TakeFromQueueOptions,
@@ -141,33 +140,31 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
       const connectionsService = this.agent.dependencyManager.resolve(ConnectionService)
       const pickupSessionService = this.agent.dependencyManager.resolve(MessagePickupSessionService)
       const messageSender = this.agent.dependencyManager.resolve(MessageSender)
-      const outOfBandService = this.agent.dependencyManager.resolve(OutOfBandService)
+
+      const connectionIdWaitSet = new Set<string>()
 
       // This is for backwards compatibility with mobile agents which use implicit pickup
       if (this.agent.mediator.config.messageForwardingStrategy === MessageForwardingStrategy.QueueAndLiveModeDelivery) {
         options.agent.events.on(TrustPingEventTypes.TrustPingReceivedEvent, async (data) => {
           const connectionRecord = data.payload.connectionRecord as ConnectionRecord
 
-          if (
-            !pickupSessionService.getLiveSessionByConnectionId(options.agent.context, {
-              connectionId: connectionRecord.id,
-            })
-          ) {
-            const oobRecord = await outOfBandService.getById(
-              options.agent.context,
-              connectionRecord.outOfBandId!
-            )
-            if (oobRecord && !oobRecord.metadata.get("_internal/legacyInvitation")) {
-              // If the connection was not created from a legacy invitation, 
-              // do not manually create a pickup session
-              return
-            }
+          if (connectionIdWaitSet.has(connectionRecord.id)) return
+
+          connectionIdWaitSet.add(connectionRecord.id)
+
+          // Wait a moment to allow pickup v2 session to be established
+          await new Promise((resolve) => setTimeout(resolve, 500))
+
+          const sessionInDB = await this.findLiveSessionInDb(connectionRecord.id)
+          if (!sessionInDB) {
             pickupSessionService.saveLiveSession(options.agent.context, {
               connectionId: connectionRecord.id,
               protocolVersion: 'v2',
               role: MessagePickupSessionRole.MessageHolder,
             })
           }
+
+          connectionIdWaitSet.delete(connectionRecord.id)
 
           const messagesToDeliver = await this.takeFromQueue({
             connectionId: connectionRecord.id,
