@@ -27,11 +27,11 @@
     "@aws-sdk/util-dynamodb": "^3.806.0"
   },
   "devDependencies": {
-    "@credo-ts/core": "v0.5.18-alpha-20250926091534",
+    "@credo-ts/core": "v0.5.18",
     "@types/node": "^22.15.17",
     "typescript": "^5.6.3"
   },
   "peerDependencies": {
-    "@credo-ts/core": "v0.5.18-alpha-20250926091534"
+    "@credo-ts/core": "v0.5.18"
   }
 }

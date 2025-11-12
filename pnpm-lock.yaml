@@ -18,14 +18,14 @@ importers:
   apps/mediator:
     dependencies:
       '@credo-ts/askar':
-        specifier: v0.5.18-alpha-20250926091534
-        version: 0.5.18-alpha-20250926091534(@hyperledger/aries-askar-nodejs@0.2.3)(@openwallet-foundation/askar-nodejs@0.4.1)(expo@53.0.9(@babel/core@7.28.0)(react-native@0.79.2(@babel/core@7.28.0)(react@19.1.0))(react@19.1.0))(react-native@0.79.2(@babel/core@7.28.0)(react@19.1.0))(web-streams-polyfill@3.3.3)
+        specifier: v0.5.18
+        version: 0.5.18(@hyperledger/aries-askar-nodejs@0.2.3)(@openwallet-foundation/askar-nodejs@0.4.1)(expo@53.0.9(@babel/core@7.28.0)(react-native@0.79.2(@babel/core@7.28.0)(react@19.1.0))(react@19.1.0))(react-native@0.79.2(@babel/core@7.28.0)(react@19.1.0))(web-streams-polyfill@3.3.3)
       '@credo-ts/core':
-        specifier: v0.5.18-alpha-20250926091534
-        version: 0.5.18-alpha-20250926091534(expo@53.0.9(@babel/core@7.28.0)(react-native@0.79.2(@babel/core@7.28.0)(react@19.1.0))(react@19.1.0))(react-native@0.79.2(@babel/core@7.28.0)(react@19.1.0))(web-streams-polyfill@3.3.3)
+        specifier: v0.5.18
+        version: 0.5.18(expo@53.0.9(@babel/core@7.28.0)(react-native@0.79.2(@babel/core@7.28.0)(react@19.1.0))(react@19.1.0))(react-native@0.79.2(@babel/core@7.28.0)(react@19.1.0))(web-streams-polyfill@3.3.3)
       '@credo-ts/node':
-        specifier: v0.5.18-alpha-20250926091534
-        version: 0.5.18-alpha-20250926091534(expo@53.0.9(@babel/core@7.28.0)(react-native@0.79.2(@babel/core@7.28.0)(react@19.1.0))(react@19.1.0))(react-native@0.79.2(@babel/core@7.28.0)(react@19.1.0))(web-streams-polyfill@3.3.3)
+        specifier: v0.5.18
+        version: 0.5.18(expo@53.0.9(@babel/core@7.28.0)(react-native@0.79.2(@babel/core@7.28.0)(react@19.1.0))(react@19.1.0))(react-native@0.79.2(@babel/core@7.28.0)(react@19.1.0))(web-streams-polyfill@3.3.3)
       '@openwallet-foundation/askar-nodejs':
         specifier: ^0.4.1
         version: 0.4.1
@@ -92,8 +92,8 @@ importers:
         version: 3.806.0(@aws-sdk/client-dynamodb@3.806.0)
     devDependencies:
       '@credo-ts/core':
-        specifier: v0.5.18-alpha-20250926091534
-        version: 0.5.18-alpha-20250926091534(expo@53.0.9(@babel/core@7.28.0)(react-native@0.79.2(@babel/core@7.28.0)(react@19.1.0))(react@19.1.0))(react-native@0.79.2(@babel/core@7.28.0)(react@19.1.0))(web-streams-polyfill@3.3.3)
+        specifier: v0.5.18
+        version: 0.5.18(expo@53.0.9(@babel/core@7.28.0)(react-native@0.79.2(@babel/core@7.28.0)(react@19.1.0))(react@19.1.0))(react-native@0.79.2(@babel/core@7.28.0)(react@19.1.0))(web-streams-polyfill@3.3.3)
       '@types/node':
         specifier: ^22.15.17
         version: 22.15.17
@@ -114,8 +114,8 @@ importers:
         specifier: ^1.9.4
         version: 1.9.4
       '@credo-ts/core':
-        specifier: v0.5.18-alpha-20250926091534
-        version: 0.5.18-alpha-20250926091534(expo@53.0.9(@babel/core@7.28.0)(react-native@0.79.2(@babel/core@7.28.0)(react@19.1.0))(react@19.1.0))(react-native@0.79.2(@babel/core@7.28.0)(react@19.1.0))(web-streams-polyfill@3.3.3)
+        specifier: v0.5.18
+        version: 0.5.18(expo@53.0.9(@babel/core@7.28.0)(react-native@0.79.2(@babel/core@7.28.0)(react@19.1.0))(react@19.1.0))(react-native@0.79.2(@babel/core@7.28.0)(react@19.1.0))(web-streams-polyfill@3.3.3)
       '@types/node':
         specifier: ^16.0.0
         version: 16.18.126
@@ -836,14 +836,14 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@credo-ts/askar@0.5.18-alpha-20250926091534':
-    resolution: {integrity: sha512-lwEohiQnS+SCn1NOmBwHQ2AJjKAvG8kAh3waAYBeErO8EPXtPoFy1graTsX1YqVYS3F+qi9Rqtr4gmfH0oz0rA==}
+  '@credo-ts/askar@0.5.18':
+    resolution: {integrity: sha512-AF/latIvHnJHL5MIkGUNOHDovLXpBqBU5NPCoMR9HqsgZOLwvoF3ZI+aDETCDOCZAdKMmsN7HuuxpNKKNsGmSA==}
     peerDependencies:
       '@animo-id/expo-secure-environment': ^0.0.1-alpha.0
       '@hyperledger/aries-askar-nodejs': ^0.2.3
       '@hyperledger/aries-askar-react-native': ^0.2.3
-      '@openwallet-foundation/askar-nodejs': ^0.4.1
-      '@openwallet-foundation/askar-react-native': ^0.4.1
+      '@openwallet-foundation/askar-nodejs': ^0.4.2
+      '@openwallet-foundation/askar-react-native': ^0.4.2
     peerDependenciesMeta:
       '@animo-id/expo-secure-environment':
         optional: true
@@ -856,11 +856,11 @@ packages:
       '@openwallet-foundation/askar-react-native':
         optional: true
 
-  '@credo-ts/core@0.5.18-alpha-20250926091534':
-    resolution: {integrity: sha512-bUkz5lp2Zx/lFymwWHiAxcIPZxxeLfFedrEwqVkBJ2iSCmL6WpplyLOHQeo51OpYxrB3VJ6ryxepVYIuzsWf3g==}
+  '@credo-ts/core@0.5.18':
+    resolution: {integrity: sha512-Qh/ufvGWS1YvRqWg4RkVFGawnmEea+tlLYNaEvfoJkAc7+JdDvwAWatmcXHJpczQaudne61al+R7zVicNRE79w==}
 
-  '@credo-ts/node@0.5.18-alpha-20250926091534':
-    resolution: {integrity: sha512-V8dP8Oe9a9X/1VVhbyjsVBl2R5YaHpxpc/WMheZY4+3NyFRIMlYyjESxHjC0EbR2Jsj17JLy5UaLk7f+iQLVQQ==}
+  '@credo-ts/node@0.5.18':
+    resolution: {integrity: sha512-136+vopErGTPamtoCcN7x6O6cLGOexmtHj3kj5K7HQyvO6z2Tabv0jSdzZ8q8i2pYIZJOZehR7xJMgnQUJfySA==}
 
   '@cspotcode/source-map-support@0.8.1':
     resolution: {integrity: sha512-IchNf6dN4tHoMFIn/7OE8LWZ19Y6q/67Bmf6vnGREv8RSbBVb9LPJxEcnwrcwX6ixSvaiGoomAUvu4YSxXrVgw==}
@@ -1438,6 +1438,9 @@ packages:
 
   '@openwallet-foundation/askar-shared@0.4.1':
     resolution: {integrity: sha512-r9xF68R+xYkalG0+6L+fcywo/87l29RuU1AtCSLFj3w0nKlzmxaK0HbJ4zvJjfVqvd+qglvn3HTFdUuKC/Pwrg==}
+
+  '@openwallet-foundation/askar-shared@0.4.3':
+    resolution: {integrity: sha512-Zt9zlvjJxNs8UWlnRydZH594Lak15YPHY72VT1+iDbXh0OjTdyq6Bf0FIsh9sfFnRYIgh2zd8+VoXxZ07GjADA==}
 
   '@peculiar/asn1-cms@2.3.15':
     resolution: {integrity: sha512-B+DoudF+TCrxoJSTjjcY8Mmu+lbv8e7pXGWrhNp2/EGJp9EEcpzjBCar7puU57sGifyzaRVM03oD5L7t7PghQg==}
@@ -6597,11 +6600,11 @@ snapshots:
   '@biomejs/cli-win32-x64@1.9.4':
     optional: true
 
-  '@credo-ts/askar@0.5.18-alpha-20250926091534(@hyperledger/aries-askar-nodejs@0.2.3)(@openwallet-foundation/askar-nodejs@0.4.1)(expo@53.0.9(@babel/core@7.28.0)(react-native@0.79.2(@babel/core@7.28.0)(react@19.1.0))(react@19.1.0))(react-native@0.79.2(@babel/core@7.28.0)(react@19.1.0))(web-streams-polyfill@3.3.3)':
+  '@credo-ts/askar@0.5.18(@hyperledger/aries-askar-nodejs@0.2.3)(@openwallet-foundation/askar-nodejs@0.4.1)(expo@53.0.9(@babel/core@7.28.0)(react-native@0.79.2(@babel/core@7.28.0)(react@19.1.0))(react@19.1.0))(react-native@0.79.2(@babel/core@7.28.0)(react@19.1.0))(web-streams-polyfill@3.3.3)':
     dependencies:
-      '@credo-ts/core': 0.5.18-alpha-20250926091534(expo@53.0.9(@babel/core@7.28.0)(react-native@0.79.2(@babel/core@7.28.0)(react@19.1.0))(react@19.1.0))(react-native@0.79.2(@babel/core@7.28.0)(react@19.1.0))(web-streams-polyfill@3.3.3)
+      '@credo-ts/core': 0.5.18(expo@53.0.9(@babel/core@7.28.0)(react-native@0.79.2(@babel/core@7.28.0)(react@19.1.0))(react@19.1.0))(react-native@0.79.2(@babel/core@7.28.0)(react@19.1.0))(web-streams-polyfill@3.3.3)
       '@hyperledger/aries-askar-shared': 0.2.3
-      '@openwallet-foundation/askar-shared': 0.4.1
+      '@openwallet-foundation/askar-shared': 0.4.3
       bn.js: 5.2.2
       class-transformer: 0.5.1
       class-validator: 0.14.1
@@ -6618,7 +6621,7 @@ snapshots:
       - supports-color
       - web-streams-polyfill
 
-  '@credo-ts/core@0.5.18-alpha-20250926091534(expo@53.0.9(@babel/core@7.28.0)(react-native@0.79.2(@babel/core@7.28.0)(react@19.1.0))(react@19.1.0))(react-native@0.79.2(@babel/core@7.28.0)(react@19.1.0))(web-streams-polyfill@3.3.3)':
+  '@credo-ts/core@0.5.18(expo@53.0.9(@babel/core@7.28.0)(react-native@0.79.2(@babel/core@7.28.0)(react@19.1.0))(react@19.1.0))(react-native@0.79.2(@babel/core@7.28.0)(react@19.1.0))(web-streams-polyfill@3.3.3)':
     dependencies:
       '@animo-id/mdoc': 0.2.38
       '@animo-id/pex': 4.1.1-alpha.0
@@ -6643,7 +6646,6 @@ snapshots:
       '@sphereon/ssi-types': 0.30.2-next.135
       '@stablelib/ed25519': 1.0.3
       '@types/ws': 8.18.1
-      abort-controller: 3.0.0
       big-integer: 1.6.52
       borc: 3.0.0
       buffer: 6.0.3
@@ -6670,11 +6672,11 @@ snapshots:
       - supports-color
       - web-streams-polyfill
 
-  '@credo-ts/node@0.5.18-alpha-20250926091534(expo@53.0.9(@babel/core@7.28.0)(react-native@0.79.2(@babel/core@7.28.0)(react@19.1.0))(react@19.1.0))(react-native@0.79.2(@babel/core@7.28.0)(react@19.1.0))(web-streams-polyfill@3.3.3)':
+  '@credo-ts/node@0.5.18(expo@53.0.9(@babel/core@7.28.0)(react-native@0.79.2(@babel/core@7.28.0)(react@19.1.0))(react@19.1.0))(react-native@0.79.2(@babel/core@7.28.0)(react@19.1.0))(web-streams-polyfill@3.3.3)':
     dependencies:
       '@2060.io/ffi-napi': 4.0.9
       '@2060.io/ref-napi': 3.0.6
-      '@credo-ts/core': 0.5.18-alpha-20250926091534(expo@53.0.9(@babel/core@7.28.0)(react-native@0.79.2(@babel/core@7.28.0)(react@19.1.0))(react@19.1.0))(react-native@0.79.2(@babel/core@7.28.0)(react@19.1.0))(web-streams-polyfill@3.3.3)
+      '@credo-ts/core': 0.5.18(expo@53.0.9(@babel/core@7.28.0)(react-native@0.79.2(@babel/core@7.28.0)(react@19.1.0))(react@19.1.0))(react-native@0.79.2(@babel/core@7.28.0)(react@19.1.0))(web-streams-polyfill@3.3.3)
       '@types/express': 4.17.21
       express: 4.21.2
       rxjs: 7.8.2
@@ -7569,6 +7571,11 @@ snapshots:
       - supports-color
 
   '@openwallet-foundation/askar-shared@0.4.1':
+    dependencies:
+      buffer: 6.0.3
+      tar: 7.4.3
+
+  '@openwallet-foundation/askar-shared@0.4.3':
     dependencies:
       buffer: 6.0.3
       tar: 7.4.3
