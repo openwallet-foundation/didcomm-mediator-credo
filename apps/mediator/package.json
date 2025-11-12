@@ -21,7 +21,7 @@
     "@credo-ts/askar": "v0.5.18",
     "@credo-ts/core": "v0.5.18",
     "@credo-ts/node": "v0.5.18",
-    "@openwallet-foundation/askar-nodejs": "^0.4.1",
+    "@openwallet-foundation/askar-nodejs": "^0.4.3",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
     "dotenv": "^16.4.7",
