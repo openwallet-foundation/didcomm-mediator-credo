@@ -45,30 +45,37 @@ export const initializeFirebase = async (agent: Agent) => {
     return
   }
 
-  const firebaseConfigs = config.get('agent:firebase') as { projectId: string; clientEmail: string; privateKey: string }[]
-  
+  const firebaseConfigs = config.get('agent:firebase') as {
+    projectId: string
+    clientEmail: string
+    privateKey: string
+  }[]
+
   if (!Array.isArray(firebaseConfigs) || firebaseConfigs.length === 0) {
     throw new Error('Firebase configuration is missing or invalid.')
   }
 
-  firebaseConfigs.forEach((firebaseConfig) => {
+  for (const firebaseConfig of firebaseConfigs) {
     if (!firebaseConfig.projectId || !firebaseConfig.clientEmail || !firebaseConfig.privateKey) {
       throw new Error('Firebase configuration is incomplete. Please provide projectId, clientEmail, and privateKey.')
     }
 
     if (!firebaseApps.has(firebaseConfig.projectId)) {
-      const app = admin.initializeApp({
-        credential: admin.credential.cert({
-          projectId: firebaseConfig.projectId,
-          clientEmail: firebaseConfig.clientEmail,
-          privateKey: firebaseConfig.privateKey?.includes('\\n')
-            ? firebaseConfig.privateKey.replace(/\\n/g, '\n')
-            : firebaseConfig.privateKey?.trim(),
-        }),
-      }, firebaseConfig.projectId) // Use projectId as the app name
+      const app = admin.initializeApp(
+        {
+          credential: admin.credential.cert({
+            projectId: firebaseConfig.projectId,
+            clientEmail: firebaseConfig.clientEmail,
+            privateKey: firebaseConfig.privateKey?.includes('\\n')
+              ? firebaseConfig.privateKey.replace(/\\n/g, '\n')
+              : firebaseConfig.privateKey?.trim(),
+          }),
+        },
+        firebaseConfig.projectId
+      ) // Use projectId as the app name
       firebaseApps.set(firebaseConfig.projectId, app)
     }
-  })
+  }
 
   await setupFirebaseSender(agent)
 }

@@ -1,11 +1,15 @@
-import { Agent, AgentContext } from '@credo-ts/core';
+import { AgentContext } from '@credo-ts/core'
 import config from '../../../config'
 import { Logger } from '../../../logger'
-import { firebaseApps } from '../firebase';
+import { firebaseApps } from '../firebase'
 import { PushNotificationsFcmRecord, PushNotificationsFcmRepository } from '../repository'
 
-export const sendFcmPushNotification = async (agentContext: AgentContext, repository: PushNotificationsFcmRepository, pushNotificationRecord: PushNotificationsFcmRecord, logger: Logger) => {
-
+export const sendFcmPushNotification = async (
+  agentContext: AgentContext,
+  repository: PushNotificationsFcmRepository,
+  pushNotificationRecord: PushNotificationsFcmRecord,
+  logger: Logger
+) => {
   const title = config.get('agent:pushNotificationTitle')
   const body = config.get('agent:pushNotificationBody')
 
@@ -20,7 +24,7 @@ export const sendFcmPushNotification = async (agentContext: AgentContext, reposi
   }
 
   // Try to send using the specified projectId first
-  let firebase = firebaseApps.get(pushNotificationRecord.projectId || '')
+  const firebase = firebaseApps.get(pushNotificationRecord.projectId || '')
   if (firebase) {
     try {
       logger.debug(`Sending push notification using Firebase projectId: ${pushNotificationRecord.projectId}`)

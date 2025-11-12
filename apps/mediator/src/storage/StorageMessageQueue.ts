@@ -9,7 +9,7 @@ import type {
 
 import { AgentContext, injectable, utils } from '@credo-ts/core'
 
-import { PushNotificationsFcmRepository, PushNotificationsFcmRecord } from '../push-notifications/fcm/repository'
+import { PushNotificationsFcmRecord, PushNotificationsFcmRepository } from '../push-notifications/fcm/repository'
 import { MessageRecord } from './MessageRecord'
 import { MessageRepository } from './MessageRepository'
 
@@ -138,7 +138,12 @@ export class StorageServiceMessageQueue implements MessagePickupRepository {
 
   private async sendFcmNotification(pushNotificationFcmRecord: PushNotificationsFcmRecord) {
     try {
-      await sendFcmPushNotification(this.agentContext, this.pushNotificationsFcmRepository, pushNotificationFcmRecord, this.agentContext.config.logger as Logger)
+      await sendFcmPushNotification(
+        this.agentContext,
+        this.pushNotificationsFcmRepository,
+        pushNotificationFcmRecord,
+        this.agentContext.config.logger as Logger
+      )
     } catch (error) {
       this.agentContext.config.logger.error('Error sending FCM notification', {
         cause: error,
