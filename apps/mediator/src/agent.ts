@@ -14,7 +14,7 @@ import {
   WsOutboundTransport,
 } from '@credo-ts/core'
 import { HttpInboundTransport, WsInboundTransport, agentDependencies } from '@credo-ts/node'
-import { ariesAskar } from '@hyperledger/aries-askar-nodejs'
+import { askar } from '@openwallet-foundation/askar-nodejs'
 
 import express from 'express'
 import { Server } from 'ws'
@@ -47,7 +47,7 @@ function createModules(messagePickupRepository?: MessagePickupRepository) {
       messageForwardingStrategy: config.get('agent:pickup').strategy,
     }),
     askar: new AskarModule({
-      ariesAskar,
+      ariesAskar: askar,
       multiWalletDatabaseScheme: AskarMultiWalletDatabaseScheme.ProfilePerWallet,
     }),
     pushNotificationsFcm: new PushNotificationsFcmModule(),
