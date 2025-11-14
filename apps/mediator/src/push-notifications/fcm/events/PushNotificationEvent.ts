@@ -15,7 +15,6 @@ const filterAppsByProjectId = (projectId: string | undefined) => {
   }
 }
 
-
 export const sendFcmPushNotification = async (
   agentContext: AgentContext,
   repository: PushNotificationsFcmRepository,

@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { sendFcmPushNotification } from '../PushNotificationEvent'
-import { firebaseApps } from '../../firebase'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import config from '../../../../config'
+import { firebaseApps } from '../../firebase'
+import { sendFcmPushNotification } from '../PushNotificationEvent'
 
 describe('sendFcmPushNotification', () => {
   const mockMessagingSend = vi.fn()
@@ -50,23 +50,14 @@ describe('sendFcmPushNotification', () => {
       mockLogger as any
     )
 
-    expect(mockLogger.warn).toHaveBeenCalledWith(
-      'Push notification title or body is missing in configuration'
-    )
+    expect(mockLogger.warn).toHaveBeenCalledWith('Push notification title or body is missing in configuration')
     expect(mockMessagingSend).not.toHaveBeenCalled()
   })
 
   it('logs and returns if device token is null', async () => {
-    await sendFcmPushNotification(
-      agentContext,
-      mockRepository as any,
-      { deviceToken: null } as any,
-      mockLogger as any
-    )
+    await sendFcmPushNotification(agentContext, mockRepository as any, { deviceToken: null } as any, mockLogger as any)
 
-    expect(mockLogger.warn).toHaveBeenCalledWith(
-      'Device token is null, cannot send push notification'
-    )
+    expect(mockLogger.warn).toHaveBeenCalledWith('Device token is null, cannot send push notification')
   })
 
   it('logs warning if projectId is specified but no app exists', async () => {
@@ -82,9 +73,7 @@ describe('sendFcmPushNotification', () => {
       mockLogger as any
     )
 
-    expect(mockLogger.warn).toHaveBeenCalledWith(
-      'No Firebase app found for projectId: missing-project'
-    )
+    expect(mockLogger.warn).toHaveBeenCalledWith('No Firebase app found for projectId: missing-project')
   })
 
   it('sends push notification successfully and updates repository', async () => {
@@ -95,12 +84,7 @@ describe('sendFcmPushNotification', () => {
       firebaseProjectId: 'proj1',
     } as any
 
-    const result = await sendFcmPushNotification(
-      agentContext,
-      mockRepository as any,
-      record,
-      mockLogger as any
-    )
+    const result = await sendFcmPushNotification(agentContext, mockRepository as any, record, mockLogger as any)
 
     expect(mockMessagingSend).toHaveBeenCalled()
     expect(mockLogger.info).toHaveBeenCalled()
@@ -113,19 +97,14 @@ describe('sendFcmPushNotification', () => {
     // First attempt fails
     mockMessagingSend
       .mockRejectedValueOnce(new Error('fail')) // proj1
-      .mockResolvedValueOnce('ok')             // proj2
+      .mockResolvedValueOnce('ok') // proj2
 
     const record = {
       deviceToken: 'abc',
       firebaseProjectId: undefined,
     } as any
 
-    const result = await sendFcmPushNotification(
-      agentContext,
-      mockRepository as any,
-      record,
-      mockLogger as any
-    )
+    const result = await sendFcmPushNotification(agentContext, mockRepository as any, record, mockLogger as any)
 
     expect(mockMessagingSend).toHaveBeenCalledTimes(2)
     expect(result).toBe('ok')
