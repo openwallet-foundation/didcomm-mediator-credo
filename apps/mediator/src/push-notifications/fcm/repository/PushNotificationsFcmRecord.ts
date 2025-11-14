@@ -14,7 +14,7 @@ export interface PushNotificationsFcmStorageProps {
   devicePlatform: string | null
   connectionId: string
   tags?: CustomPushNotificationsFcmTags
-  projectId?: string
+  firebaseProjectId?: string
 }
 
 export class PushNotificationsFcmRecord extends BaseRecord<
@@ -24,7 +24,7 @@ export class PushNotificationsFcmRecord extends BaseRecord<
   public deviceToken!: string | null
   public devicePlatform!: string | null
   public connectionId!: string
-  public projectId?: string
+  public firebaseProjectId?: string
   public static readonly type = 'PushNotificationsFcmRecord'
   public readonly type = PushNotificationsFcmRecord.type
 
@@ -36,7 +36,7 @@ export class PushNotificationsFcmRecord extends BaseRecord<
       this.devicePlatform = props.devicePlatform
       this.deviceToken = props.deviceToken
       this.connectionId = props.connectionId
-      this.projectId = props.projectId
+      this.firebaseProjectId = props.firebaseProjectId
       this._tags = props.tags ?? {}
     }
   }
