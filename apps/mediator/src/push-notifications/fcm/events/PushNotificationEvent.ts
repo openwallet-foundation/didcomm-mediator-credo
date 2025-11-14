@@ -4,6 +4,18 @@ import { Logger } from '../../../logger'
 import { firebaseApps } from '../firebase'
 import { PushNotificationsFcmRecord, PushNotificationsFcmRepository } from '../repository'
 
+const filterAppsByProjectId = (projectId: string | undefined) => {
+  if (!projectId) {
+    return firebaseApps
+  }
+
+  const app = firebaseApps.get(projectId)
+  if (app) {
+    return new Map([[projectId, app]])
+  }
+}
+
+
 export const sendFcmPushNotification = async (
   agentContext: AgentContext,
   repository: PushNotificationsFcmRepository,
@@ -24,30 +36,14 @@ export const sendFcmPushNotification = async (
   }
 
   // Try to send using the specified projectId first
-  const firebase = firebaseApps.get(pushNotificationRecord.projectId || '')
-  if (firebase) {
-    try {
-      logger.debug(`Sending push notification using Firebase projectId: ${pushNotificationRecord.projectId}`)
-      const response = await firebase.messaging().send({
-        token: pushNotificationRecord.deviceToken,
-        notification: {
-          title,
-          body,
-        },
-      })
-      if (response) {
-        logger.info('Push notification sent successfully', { projectId: pushNotificationRecord.projectId, response })
-        return response
-      }
-    } catch (error) {
-      logger.debug('Error sending notification', {
-        cause: error,
-      })
-    }
+  const filteredFirebaseApps = filterAppsByProjectId(pushNotificationRecord.firebaseProjectId)
+  if (!filteredFirebaseApps) {
+    logger.warn(`No Firebase app found for projectId: ${pushNotificationRecord.firebaseProjectId}`)
+    return
   }
 
   // If attempt fails or no projectId specified, try all available firebase apps
-  for (const [projectId, firebase] of firebaseApps) {
+  for (const [projectId, firebase] of filteredFirebaseApps) {
     try {
       logger.debug(`Sending push notification using Firebase projectId: ${projectId}`)
       const response = await firebase.messaging().send({
@@ -59,7 +55,7 @@ export const sendFcmPushNotification = async (
       })
       if (response) {
         logger.info('Push notification sent successfully', { projectId, response })
-        pushNotificationRecord.projectId = projectId // Update record with working projectId
+        pushNotificationRecord.firebaseProjectId = projectId // Update record with working projectId
         await repository.update(agentContext, pushNotificationRecord)
         return response
       }
