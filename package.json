@@ -1,5 +1,5 @@
 {
-  "name": "animo-mediator",
+  "name": "CREDEBL-Mediator",
   "version": "0.0.0",
   "description": "Mediator agent",
   "private": true,
@@ -8,10 +8,10 @@
   "files": [
     "build"
   ],
-  "author": "Animo Solutions <contact@animo.id>",
+  "author": "",
   "repository": {
     "type": "git",
-    "url": "https://github.com/animo/animo-mediator"
+    "url": "https://github.com/credebl/mediator-agent"
   },
   "packageManager": "yarn@1.22.19",
   "scripts": {

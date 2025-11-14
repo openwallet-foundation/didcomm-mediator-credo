@@ -1,31 +1,4 @@
-<p align="center">
-  <picture>
-   <source media="(prefers-color-scheme: light)" srcset="https://res.cloudinary.com/animo-solutions/image/upload/v1656578320/animo-logo-light-no-text_ok9auy.svg">
-   <source media="(prefers-color-scheme: dark)" srcset="https://res.cloudinary.com/animo-solutions/image/upload/v1656578320/animo-logo-dark-no-text_fqqdq9.svg">
-   <img alt="Animo Logo" height="250px" />
-  </picture>
-</p>
-
-<h1 align="center" ><b>Animo Development Mediator</b></h1>
-
-<h4 align="center">Powered by &nbsp; 
-  <picture>
-    <source media="(prefers-color-scheme: light)" srcset="https://res.cloudinary.com/animo-solutions/image/upload/v1656579715/animo-logo-light-text_cma2yo.svg">
-    <source media="(prefers-color-scheme: dark)" srcset="https://res.cloudinary.com/animo-solutions/image/upload/v1656579715/animo-logo-dark-text_uccvqa.svg">
-    <img alt="Animo Logo" height="12px" />
-  </picture>
-</h4><br>
-
-<!-- TODO: Add relevant badges, like CI/CD, license, codecov, etc. -->
-
-<p align="center">
-  <a href="https://typescriptlang.org">
-    <img src="https://img.shields.io/badge/%3C%2F%3E-TypeScript-%230074c1.svg" />
-  </a>
-  <a href="https://github.com/animo/animo-mediator/pkgs/container/animo-mediator">
-    <img alt="GitHub release (latest by date)" src="https://img.shields.io/github/v/release/animo/animo-mediator?display_name=tag&label=docker%20tag">
-  </a>
-</p>
+<h1 align="center" ><b>CREDEBL Mediator</b></h1>
 
 <p align="center">
   <a href="#getting-started">Getting started</a> 
@@ -53,9 +26,6 @@ Why should you use this mediator?
 - Pick up messages implicitly using WebSockets, using the [Pickup V1 Protocol](https://github.com/hyperledger/aries-rfcs/tree/main/features/0212-pickup), and the [Pickup V2 Protocol](https://github.com/hyperledger/aries-rfcs/tree/main/features/0685-pickup-v2).
 - Configured to persist queued messages for recipient in a postgres.
 - Use the pre-built docker image for easy deployment of your mediator.
-
-> **Warning**
-> The repository is marked as the Animo **Development** Mediator because we have primarily used this repository for the publicly hosted Animo Development Mediator. There's nothing preventing it to be used in a production scenario, but it might needs some tweaks to make it production ready. We welcome contributions that work towards this effort, and we will try to make this repository more production ready in the future.
 
 ## Getting Started
 
@@ -115,7 +85,7 @@ The `POSTGRES_` variables won't be used in development mode (`NODE_ENV=developme
 
 ## Postgres Database
 
-To deploy the mediator, a postgres database is required. Any postgres database will do. The mediator deployed to `https://mediator.dev.animo.id` is deployed to a DigitalOcean managed postgres database.
+To deploy the mediator, a postgres database is required. Any postgres database will do.
 
 1. Create a postgres database and make sure it is publicly exposed.
 2. Set the `POSTGRES_HOST`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_ADMIN_USER`, `POSTGRES_ADMIN_PASSWORD` variables. For the mediator we use the same username and password for the admin user and the regular user, but you might want to create a separate user for the admin user.
@@ -140,10 +110,10 @@ docker run \
   -e "POSTGRES_ADMIN_USER=postgres" \
   -e "POSTGRES_ADMIN_PASSWORD=<your-postgres-password>" \
   -p 3000:3000 \
-  ghcr.io/animo/animo-mediator:latest
+  mediator-agent:latest
 ```
 
-Make sure to use the correct tag. By default `latest` will be used which can have unexpected breakage. See the releases for the latest stable tag. Currently the last released tag is ![GitHub release (latest by date)](https://img.shields.io/github/v/release/animo/animo-mediator?display_name=tag&label=tag)
+Make sure to use the correct tag. By default `latest` will be used which can have unexpected breakage.
 
 You can also adapt the `docker-compose.yml` file to your needs.
 
@@ -153,7 +123,7 @@ You can build the docker image using the following command:
 
 ```
 docker build \
-   -t ghcr.io/animo/animo-mediator \
+   -t mediator-agent \
    -f Dockerfile \
    .
 ```
@@ -176,4 +146,4 @@ This mediator is open source and you're more than welcome to customize and use i
 
 ## License
 
-The Animo Mediator is licensed under the Apache License Version 2.0 (Apache-2.0).
+This Mediator is licensed under the [Apache License 2.0](https://github.com/animo/animo-mediator/blob/main/LICENSE).
