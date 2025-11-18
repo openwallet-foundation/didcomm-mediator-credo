@@ -5,23 +5,11 @@ import config from '../../config'
 import { Logger } from '../../logger'
 import { PickupType } from '../../pickup/type'
 import { sendFcmPushNotification } from './events/PushNotificationEvent'
+import { PushNotificationsFcmRepository } from './repository'
 
-export const firebase: admin.app.App | undefined = !config.get('agent:usePushNotifications')
-  ? undefined
-  : admin.apps.length
-    ? admin.app()
-    : admin.initializeApp({
-        credential: admin.credential.cert({
-          projectId: config.get('agent:firebase:projectId'),
-          clientEmail: config.get('agent:firebase:clientEmail'),
-          privateKey: config.get('agent:firebase:privateKey')?.includes('\\n')
-            ? config.get('agent:firebase:privateKey')?.replace(/\\n/g, '\n')
-            : config.get('agent:firebase:privateKey')?.trim(),
-        }),
-      })
+export const firebaseApps: Map<string, admin.app.App> = new Map()
 
-// DirectDelivery sender is built into the storage module and does not need initialization here
-export async function initializePushNotificationSender(agent: Agent) {
+const setupFirebaseSender = async (agent: Agent) => {
   if (!config.get('agent:usePushNotifications')) return
 
   // For live mode and postgres pickup type, listen for queued messages and send push notifications
@@ -44,9 +32,50 @@ export async function initializePushNotificationSender(agent: Agent) {
       const pushNotificationRecord = await agent.modules.pushNotificationsFcm.getPushNotificationRecordByConnectionId(
         message.connectionId
       )
-      if (pushNotificationRecord?.deviceToken) {
-        sendFcmPushNotification(pushNotificationRecord.deviceToken, agent.config.logger as Logger)
+      if (pushNotificationRecord.deviceToken) {
+        const repository = agent.dependencyManager.resolve(PushNotificationsFcmRepository)
+        sendFcmPushNotification(agent.context, repository, pushNotificationRecord, agent.config.logger as Logger)
       }
     })
   }
+}
+
+export const initializeFirebase = async (agent: Agent) => {
+  if (!config.get('agent:usePushNotifications')) {
+    return
+  }
+
+  const firebaseConfigs = config.get('agent:firebase') as {
+    projectId: string
+    clientEmail: string
+    privateKey: string
+  }[]
+
+  if (!Array.isArray(firebaseConfigs) || firebaseConfigs.length === 0) {
+    throw new Error('Firebase configuration is missing or invalid.')
+  }
+
+  for (const firebaseConfig of firebaseConfigs) {
+    if (!firebaseConfig.projectId || !firebaseConfig.clientEmail || !firebaseConfig.privateKey) {
+      throw new Error('Firebase configuration is incomplete. Please provide projectId, clientEmail, and privateKey.')
+    }
+
+    if (!firebaseApps.has(firebaseConfig.projectId)) {
+      const app = admin.initializeApp(
+        {
+          credential: admin.credential.cert({
+            projectId: firebaseConfig.projectId,
+            clientEmail: firebaseConfig.clientEmail,
+            privateKey: firebaseConfig.privateKey?.includes('\\n')
+              ? firebaseConfig.privateKey.replace(/\\n/g, '\n')
+              : firebaseConfig.privateKey?.trim(),
+          }),
+        },
+        firebaseConfig.projectId
+      ) // Use projectId as the app name
+      firebaseApps.set(firebaseConfig.projectId, app)
+    }
+  }
+
+  await setupFirebaseSender(agent)
 }
