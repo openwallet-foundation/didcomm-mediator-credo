@@ -61,6 +61,8 @@ export class PushNotificationsFcmService {
 
       // Update the record with new device token
       pushNotificationsFcmRecord.deviceToken = message.deviceToken
+      // Reset project in case the firebase project might have changed
+      pushNotificationsFcmRecord.firebaseProjectId = undefined
 
       this.logger.debug(`Device token changed for connection ${connection.id}. Updating record`)
       await this.pushNotificationsFcmRepository.update(agentContext, pushNotificationsFcmRecord)
