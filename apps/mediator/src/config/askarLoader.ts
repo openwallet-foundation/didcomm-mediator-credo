@@ -1,6 +1,6 @@
 import { AskarModule } from '@credo-ts/askar'
 import { askar } from '@openwallet-foundation/askar-nodejs'
-import { config, logger } from '../config'
+import { config, logger } from '../config.js'
 
 export async function loadAskar({
   enableStorage,

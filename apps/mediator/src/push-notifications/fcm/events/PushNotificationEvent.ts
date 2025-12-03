@@ -1,6 +1,6 @@
 import { AgentContext } from '@credo-ts/core'
-import { config } from '../../../config'
-import { firebase } from '../firebase'
+import { config } from '../../../config.js'
+import { firebase } from '../firebase.js'
 
 export const sendFcmPushNotification = async (agentContext: AgentContext, deviceToken: string) => {
   if (!config.pushNotifications.firebase || !firebase) {

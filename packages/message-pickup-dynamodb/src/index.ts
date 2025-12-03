@@ -1,2 +1,2 @@
-export type { DynamoDbClientRepositoryOptions as DynamodbClientRepositoryOptions } from './client'
-export { DynamoDbMessagePickupRepository } from './DynamoDbMessagePickupRepository'
+export type { DynamoDbClientRepositoryOptions as DynamodbClientRepositoryOptions } from './client.js'
+export { DynamoDbMessagePickupRepository } from './DynamoDbMessagePickupRepository.js'

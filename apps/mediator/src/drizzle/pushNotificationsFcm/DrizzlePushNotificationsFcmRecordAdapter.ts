@@ -1,9 +1,9 @@
 import { JsonTransformer, TagsBase } from '@credo-ts/core'
 
 import { BaseDrizzleRecordAdapter, DrizzleAdapterRecordValues, DrizzleDatabase } from '@credo-ts/drizzle-storage'
-import { PushNotificationsFcmRecord } from '../../push-notifications/fcm/repository'
-import * as postgres from './postgres'
-import * as sqlite from './sqlite'
+import { PushNotificationsFcmRecord } from '../../push-notifications/fcm/repository/PushNotificationsFcmRecord.js'
+import * as postgres from './postgres.js'
+import * as sqlite from './sqlite.js'
 
 type DrizzlePushNotificationsFcmAdapterValues = DrizzleAdapterRecordValues<(typeof sqlite)['pushNotificationsFcm']>
 export class DrizzlePushNotificationsFcmRecordAdapter extends BaseDrizzleRecordAdapter<

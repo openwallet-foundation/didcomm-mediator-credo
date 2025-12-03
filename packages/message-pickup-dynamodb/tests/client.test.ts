@@ -1,6 +1,6 @@
 import { DidCommEncryptedMessage } from '@credo-ts/didcomm'
 import { beforeAll, expect, suite, test } from 'vitest'
-import { DynamoDbClientRepository } from '../src/client'
+import { DynamoDbClientRepository } from '../src/client.js'
 
 const connectionId = '4ffdd113-117b-4827-9af5-28aa73ec4bad'
 const recipientDids = ['did:key:123', 'did:jwk:123', 'did:peer:3abba']

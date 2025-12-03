@@ -1,1 +1,1 @@
-export * from './pushNotificationsFcm/postgres'
+export * from './pushNotificationsFcm/postgres.js'

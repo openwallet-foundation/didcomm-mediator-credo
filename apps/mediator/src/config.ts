@@ -5,7 +5,7 @@ import { $ZodError } from 'zod/v4/core'
 import { loadConfigSync } from 'zod-config'
 import { envAdapter } from 'zod-config/env-adapter'
 import { jsonAdapter } from 'zod-config/json-adapter'
-import { Logger } from './logger'
+import { Logger } from './logger/index.js'
 
 const zConfig = z
   .object({

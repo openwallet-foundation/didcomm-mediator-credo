@@ -22,8 +22,8 @@ import {
   PostgresMessagePickupMessageQueuedEvent,
   PostgresMessagePickupMessageQueuedEventType,
   PostgresMessagePickupRepositoryConfig,
-} from './interfaces'
-import { buildPgDatabaseWithMigrations } from './utils/buildPgDatabaseWithMigrations'
+} from './interfaces.js'
+import { buildPgDatabaseWithMigrations } from './utils/buildPgDatabaseWithMigrations.js'
 
 export class PostgresMessagePickupRepository implements DidCommQueueTransportRepository {
   private logger?: Logger

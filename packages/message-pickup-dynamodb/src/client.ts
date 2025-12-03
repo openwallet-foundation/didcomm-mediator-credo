@@ -15,8 +15,9 @@ import {
   UpdateItemCommand,
 } from '@aws-sdk/client-dynamodb'
 import { marshall, unmarshall } from '@aws-sdk/util-dynamodb'
+import { Logger } from '@credo-ts/core'
 import { DidCommEncryptedMessage } from '@credo-ts/didcomm'
-import { attributeDefinitions, keySchema, QueuedMessage } from './structure'
+import { attributeDefinitions, keySchema, QueuedMessage } from './structure.js'
 
 export type AddQueuedMessageOptions = {
   connectionId: string
@@ -35,15 +36,19 @@ export type DynamoDbClientRepositoryOptions = DynamoDBClientConfigType & {
    * @default queued_messages
    */
   tableName?: string
+
+  logger: Logger
 }
 
 export class DynamoDbClientRepository {
   private dynamodbClient: DynamoDBClient
   private tableName: string
+  private logger: Logger
 
   private constructor(options: DynamoDbClientRepositoryOptions) {
     this.dynamodbClient = new DynamoDBClient(options)
     this.tableName = options.tableName ?? 'queued_messages'
+    this.logger = options.logger
   }
 
   public static async initialize(options: DynamoDbClientRepositoryOptions): Promise<DynamoDbClientRepository> {
@@ -123,7 +128,7 @@ export class DynamoDbClientRepository {
       const response = await this.dynamodbClient.send(command)
       return response.Count || 0
     } catch (error) {
-      console.error('Error getting entries count:', error)
+      this.logger.error('Error getting entries count:', { error })
       throw error
     }
   }

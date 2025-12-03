@@ -9,10 +9,10 @@ import {
   PushNotificationsFcmDeviceInfoHandler,
   PushNotificationsFcmProblemReportHandler,
   PushNotificationsFcmSetDeviceInfoHandler,
-} from './handlers'
-import type { FcmDeviceInfo } from './models'
-import { PushNotificationsFcmRecord } from './repository/PushNotificationsFcmRecord'
-import { PushNotificationsFcmService } from './services/PushNotificationsFcmService'
+} from './handlers/index.js'
+import type { FcmDeviceInfo } from './models/index.js'
+import { PushNotificationsFcmRecord } from './repository/PushNotificationsFcmRecord.js'
+import { PushNotificationsFcmService } from './services/PushNotificationsFcmService.js'
 
 @injectable()
 export class PushNotificationsFcmApi {

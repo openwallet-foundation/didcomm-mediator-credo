@@ -1,10 +1,10 @@
 import type { AgentContext, DependencyManager, Module } from '@credo-ts/core'
 
 import { DidCommFeatureRegistry, DidCommProtocol } from '@credo-ts/didcomm'
-import { PushNotificationsFcmRole } from './models'
-import { PushNotificationsFcmApi } from './PushNotificationsFcmApi'
-import { PushNotificationsFcmRepository } from './repository'
-import { PushNotificationsFcmService } from './services/PushNotificationsFcmService'
+import { PushNotificationsFcmRole } from './models/index.js'
+import { PushNotificationsFcmApi } from './PushNotificationsFcmApi.js'
+import { PushNotificationsFcmRepository } from './repository/index.js'
+import { PushNotificationsFcmService } from './services/PushNotificationsFcmService.js'
 
 /**
  * Module that exposes push notification get and set functionality

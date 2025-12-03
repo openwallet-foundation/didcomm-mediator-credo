@@ -14,15 +14,15 @@ import { agentDependencies, DidCommHttpInboundTransport, DidCommWsInboundTranspo
 
 import express, { type Express } from 'express'
 import Redis from 'ioredis'
-import { Server } from 'ws'
-import { config, logger } from './config'
-import { loadAskar } from './config/askarLoader'
-import { loadCacheStorage } from './config/cacheLoader'
-import { ExtendedQueueTransportRepository, loadMessagePickupStorage } from './config/messagePickupLoader'
-import { loadPushNotificationSender } from './config/pushNotificationLoader'
-import { loadRedisMessageDelivery } from './config/redisMessageDeliveryLoader'
-import { loadStorage } from './config/storageLoader'
-import { PushNotificationsFcmModule } from './push-notifications/fcm'
+import { WebSocketServer } from 'ws'
+import { loadAskar } from './config/askarLoader.js'
+import { loadCacheStorage } from './config/cacheLoader.js'
+import { ExtendedQueueTransportRepository, loadMessagePickupStorage } from './config/messagePickupLoader.js'
+import { loadPushNotificationSender } from './config/pushNotificationLoader.js'
+import { loadRedisMessageDelivery } from './config/redisMessageDeliveryLoader.js'
+import { loadStorage } from './config/storageLoader.js'
+import { config, logger } from './config.js'
+import { PushNotificationsFcmModule } from './push-notifications/fcm/PushNotificationsFcmModule.js'
 
 async function createModules({
   queueTransportRepository,
@@ -31,7 +31,7 @@ async function createModules({
 }: {
   queueTransportRepository: ExtendedQueueTransportRepository
   app: Express
-  socketServer: Server
+  socketServer: WebSocketServer
 }) {
   const modules = {
     didcomm: new DidCommModule({
@@ -71,8 +71,8 @@ export async function createAgent() {
   // We create our own instance of express here. This is not required
   // but allows use to use the same server (and port) for both WebSockets and HTTP
   const app = express()
-  const socketServer = new Server({ noServer: true })
-  const redisClient = config.cache.type === 'redis' ? new Redis(config.cache.redisUrl) : undefined
+  const socketServer = new WebSocketServer({ noServer: true })
+  const redisClient = config.cache.type === 'redis' ? new Redis.default(config.cache.redisUrl) : undefined
 
   const queueTransportRepository = await loadMessagePickupStorage()
   const storageModules = loadStorage()

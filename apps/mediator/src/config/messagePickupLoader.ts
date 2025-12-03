@@ -2,8 +2,8 @@ import { Agent } from '@credo-ts/core'
 import { DidCommQueueTransportRepository } from '@credo-ts/didcomm'
 import { DynamoDbMessagePickupRepository } from '@credo-ts/didcomm-message-pickup-dynamodb'
 import { PostgresMessagePickupRepository } from '@credo-ts/didcomm-message-pickup-postgres'
-import { config, logger } from '../config'
-import { StorageServiceMessageQueue } from '../storage/StorageMessageQueue'
+import { config, logger } from '../config.js'
+import { StorageServiceMessageQueue } from '../storage/StorageMessageQueue.js'
 
 export interface ExtendedQueueTransportRepository extends DidCommQueueTransportRepository {
   initialize?: (agent: Agent) => Promise<void>
@@ -15,6 +15,7 @@ export async function loadMessagePickupStorage(): Promise<ExtendedQueueTransport
   if (storage.type === 'dynamodb') {
     logger.info('Using dynamodb message pickup storage')
     return await DynamoDbMessagePickupRepository.initialize({
+      logger,
       region: storage.region,
       tableName: storage.tableName,
       credentials: {

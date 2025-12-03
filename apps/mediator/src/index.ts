@@ -4,8 +4,8 @@ import {
   DidCommOutOfBandRole,
   DidCommOutOfBandState,
 } from '@credo-ts/didcomm'
-import { createAgent, MediatorAgent } from './agent'
-import { config } from './config'
+import { createAgent, MediatorAgent } from './agent.js'
+import { config } from './config.js'
 
 function logInvitationUrl(agent: MediatorAgent, outOfBandRecord: DidCommOutOfBandRecord) {
   const httpEndpoint = config.agentEndpoints.find((e) => e.startsWith('http'))

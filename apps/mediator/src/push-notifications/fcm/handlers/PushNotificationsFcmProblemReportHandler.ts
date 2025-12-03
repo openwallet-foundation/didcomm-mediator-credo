@@ -1,6 +1,6 @@
 import type { DidCommMessageHandler, DidCommMessageHandlerInboundMessage } from '@credo-ts/didcomm'
 
-import { PushNotificationsFcmProblemReportMessage } from '../messages'
+import { PushNotificationsFcmProblemReportMessage } from '../messages/index.js'
 
 /**
  * Handler for incoming push notification problem report messages

@@ -1,7 +1,7 @@
 import { AgentContext } from '@credo-ts/core'
-import { config } from '../config'
-import { sendFcmPushNotification } from './fcm/events/PushNotificationEvent'
-import { PushNotificationsFcmRepository } from './fcm/repository'
+import { config } from '../config.js'
+import { sendFcmPushNotification } from './fcm/events/PushNotificationEvent.js'
+import { PushNotificationsFcmRepository } from './fcm/repository/index.js'
 
 export async function sendNotification(agentContext: AgentContext, connectionId: string) {
   if (!config.pushNotifications) return

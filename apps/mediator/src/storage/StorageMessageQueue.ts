@@ -7,9 +7,9 @@ import type {
   RemoveMessagesOptions,
   TakeFromQueueOptions,
 } from '@credo-ts/didcomm'
-import { DidcommMessageQueuedEvent, MediatorEventTypes } from '../events'
-import { MessageRecord } from './MessageRecord'
-import { MessageRepository } from './MessageRepository'
+import { DidcommMessageQueuedEvent, MediatorEventTypes } from '../events.js'
+import { MessageRecord } from './MessageRecord.js'
+import { MessageRepository } from './MessageRepository.js'
 
 export class StorageServiceMessageQueue implements DidCommQueueTransportRepository {
   public async getAvailableMessageCount(agentContext: AgentContext, options: GetAvailableMessageCountOptions) {

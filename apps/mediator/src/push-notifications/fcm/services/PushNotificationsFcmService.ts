@@ -1,10 +1,10 @@
 import type { AgentContext, Logger } from '@credo-ts/core'
 import { CredoError, InjectionSymbols, inject, injectable } from '@credo-ts/core'
 import { DidCommInboundMessageContext } from '@credo-ts/didcomm'
-import { PushNotificationsFcmProblemReportError, PushNotificationsFcmProblemReportReason } from '../errors'
-import { PushNotificationsFcmDeviceInfoMessage, PushNotificationsFcmSetDeviceInfoMessage } from '../messages'
-import type { FcmDeviceInfo } from '../models/FcmDeviceInfo'
-import { PushNotificationsFcmRecord, PushNotificationsFcmRepository } from '../repository'
+import { PushNotificationsFcmProblemReportError, PushNotificationsFcmProblemReportReason } from '../errors/index.js'
+import { PushNotificationsFcmDeviceInfoMessage, PushNotificationsFcmSetDeviceInfoMessage } from '../messages/index.js'
+import type { FcmDeviceInfo } from '../models/FcmDeviceInfo.js'
+import { PushNotificationsFcmRecord, PushNotificationsFcmRepository } from '../repository/index.js'
 
 @injectable()
 export class PushNotificationsFcmService {

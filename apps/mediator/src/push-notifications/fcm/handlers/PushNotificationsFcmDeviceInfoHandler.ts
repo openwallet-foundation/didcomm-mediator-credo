@@ -1,6 +1,6 @@
 import type { DidCommMessageHandler, DidCommMessageHandlerInboundMessage } from '@credo-ts/didcomm'
 
-import { PushNotificationsFcmDeviceInfoMessage } from '../messages'
+import { PushNotificationsFcmDeviceInfoMessage } from '../messages/index.js'
 
 /**
  * Handler for incoming fcm push notification device info messages

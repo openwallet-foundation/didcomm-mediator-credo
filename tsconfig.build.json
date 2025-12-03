@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "types": [],
+    "types": ["node"],
     "module": "nodenext",
     "target": "ES2020",
     "moduleResolution": "nodenext",
@@ -8,7 +8,7 @@
     "sourceMap": true,
     "strict": true,
     "noEmitOnError": true,
-    "lib": ["ES2015"],
+    "lib": ["ES2017"],
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,

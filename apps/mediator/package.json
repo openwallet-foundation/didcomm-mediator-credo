@@ -17,12 +17,12 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "prepublishOnly": "pnpm build",
-    "dev": "ts-node dev.ts",
+    "dev": "vite-node dev.ts",
     "start": "node build/index.js",
     "migrate-askar-to-drizzle": "node build/askarToDrizzleMigration.js",
-    "migrate-askar-to-drizzle:dev": "ts-node src/askarToDrizzleMigration.ts",
+    "migrate-askar-to-drizzle:dev": "vite-node src/askarToDrizzleMigration.ts",
     "migrate-askar-to-drizzle-delete-storage-records": "node build/askarToDrizzleDeleteAskarStorageRecords.js",
-    "migrate-askar-to-drizzle-delete-storage-records:dev": "ts-node src/askarToDrizzleDeleteAskarStorageRecords.ts",
+    "migrate-askar-to-drizzle-delete-storage-records:dev": "vite-node src/askarToDrizzleDeleteAskarStorageRecords.ts",
     "drizzle": "drizzle-storage --bundle core --bundle didcomm --bundle ./build/drizzle/bundle.js",
     "drizzle:generate": "drizzle-storage --bundle ./build/drizzle/bundle.js generate",
     "drizzle:migrate:sqlite": "pnpm drizzle migrate --dialect sqlite",
@@ -58,13 +58,12 @@
     "zod-config": "^1.4.0"
   },
   "devDependencies": {
-    "@ngrok/ngrok": "^1.5.2",
+    "@ngrok/ngrok": "^1.6.0",
     "@types/express": "^5.0.3",
     "@types/node": "catalog:",
     "@types/pg": "catalog:",
     "@types/ws": "^8.18.1",
     "dotenv": "^17.2.3",
-    "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
     "typescript": "catalog:"
   },

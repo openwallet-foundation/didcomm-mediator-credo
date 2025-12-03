@@ -1,3 +1,3 @@
-export { PushNotificationsFcmDeviceInfoMessage } from './PushNotificationsFcmDeviceInfoMessage'
-export { PushNotificationsFcmProblemReportMessage } from './PushNotificationsFcmProblemReportMessage'
-export { PushNotificationsFcmSetDeviceInfoMessage } from './PushNotificationsFcmSetDeviceInfoMessage'
+export { PushNotificationsFcmDeviceInfoMessage } from './PushNotificationsFcmDeviceInfoMessage.js'
+export { PushNotificationsFcmProblemReportMessage } from './PushNotificationsFcmProblemReportMessage.js'
+export { PushNotificationsFcmSetDeviceInfoMessage } from './PushNotificationsFcmSetDeviceInfoMessage.js'

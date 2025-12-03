@@ -4,7 +4,7 @@ import {
   MessagePickupLiveSessionRemovedEvent,
 } from '@credo-ts/didcomm'
 import Redis from 'ioredis'
-import type { MediatorAgent } from '../../agent'
+import type { MediatorAgent } from '../../agent.js'
 
 export interface StreamMessagePayload {
   connectionId: string
@@ -22,8 +22,8 @@ export class RedisStreamMessagePublishing {
   private consumerName = `${this.serverId}-consumer`
 
   constructor(
-    agent: MediatorAgent,
-    private client: Redis,
+    private agent: MediatorAgent,
+    private client: Redis.default,
     public readonly serverId: string
   ) {
     // Register event handlers
@@ -123,11 +123,11 @@ export class RedisStreamMessagePublishing {
             await handler(message)
             await this.acknowledgeMessage(streamKey, message.id)
           } catch (error) {
-            console.error(`Error processing message ${message.id}:`, error)
+            this.agent.config.logger.error(`Error processing message ${message.id}:`, { error })
           }
         }
       } catch (error) {
-        console.error('Error reading from stream', error)
+        this.agent.config.logger.error('Error reading from stream', { error })
       }
     }
   }
@@ -163,7 +163,7 @@ export class RedisStreamMessagePublishing {
         typeof responseItem[0] !== 'string' ||
         !Array.isArray(responseItem[1])
       ) {
-        console.error('Received invalid stream message, ignoring.', {
+        this.agent.config.logger.error('Received invalid stream message, ignoring.', {
           responseItem,
         })
         continue
@@ -179,7 +179,7 @@ export class RedisStreamMessagePublishing {
           responseMessage[1][0] !== 'message' ||
           typeof responseMessage[1][1] !== 'string'
         ) {
-          console.error('Received invalid stream message, ignoring.', {
+          this.agent.config.logger.error('Received invalid stream message, ignoring.', {
             responseMessages,
           })
           continue
@@ -192,7 +192,7 @@ export class RedisStreamMessagePublishing {
             payload: JSON.parse(responseMessage[1][1]),
           }
         } catch (_error) {
-          console.error('Error parsing stream message as JSON, ignoring.', {
+          this.agent.config.logger.error('Error parsing stream message as JSON, ignoring.', {
             responseItem,
           })
           continue
@@ -252,11 +252,13 @@ export class RedisStreamMessagePublishing {
             await handler(this.getServerIdFromStreamKey(streamKey), message)
             await this.acknowledgeMessage(streamKey, message.id)
           } catch (error) {
-            console.error(`Error processing claimed message ${message.id} from ${streamKey}:`, error)
+            this.agent.config.logger.error(`Error processing claimed message ${message.id} from ${streamKey}:`, {
+              error,
+            })
           }
         }
       } catch (error) {
-        console.error(`Error claiming from stream ${streamKey}:`, error)
+        this.agent.config.logger.error(`Error claiming from stream ${streamKey}:`, { error })
       }
     }
   }

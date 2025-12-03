@@ -3,10 +3,10 @@ import {
   PostgresMessagePickupMessageQueuedEvent,
   PostgresMessagePickupMessageQueuedEventType,
 } from '@credo-ts/didcomm-message-pickup-postgres'
-import { MediatorAgent } from '../agent'
-import { config } from '../config'
-import { DidcommMessageQueuedEvent, MediatorEventTypes } from '../events'
-import { sendNotification } from '../push-notifications/sendNotification'
+import { MediatorAgent } from '../agent.js'
+import { config } from '../config.js'
+import { DidcommMessageQueuedEvent, MediatorEventTypes } from '../events.js'
+import { sendNotification } from '../push-notifications/sendNotification.js'
 
 // DirectDelivery sender is built into the storage module and does not need initialization here
 export async function loadPushNotificationSender(agent: MediatorAgent) {

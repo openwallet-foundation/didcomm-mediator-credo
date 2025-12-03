@@ -7,7 +7,7 @@ import {
   RemoveMessagesOptions,
   TakeFromQueueOptions,
 } from '@credo-ts/didcomm'
-import { DynamoDbClientRepository, DynamoDbClientRepositoryOptions } from './client'
+import { DynamoDbClientRepository, DynamoDbClientRepositoryOptions } from './client.js'
 
 export class DynamoDbMessagePickupRepository implements DidCommQueueTransportRepository {
   private client: DynamoDbClientRepository

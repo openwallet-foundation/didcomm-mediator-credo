@@ -2,8 +2,8 @@ import { DrizzleStorageModule } from '@credo-ts/drizzle-storage'
 import { didcommBundle } from '@credo-ts/drizzle-storage/didcomm'
 import { drizzle as drizzleSqlite } from 'drizzle-orm/libsql'
 import { drizzle as drizzlePostgres } from 'drizzle-orm/node-postgres'
-import { config, logger } from '../config'
-import { mediatorBundle } from '../drizzle/bundle'
+import { config, logger } from '../config.js'
+import { mediatorBundle } from '../drizzle/bundle.js'
 
 export function loadStorage(): { drizzle?: DrizzleStorageModule } {
   const { storage } = config

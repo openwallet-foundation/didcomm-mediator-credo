@@ -1,1 +1,1 @@
-export * from './pushNotificationsFcm/sqlite'
+export * from './pushNotificationsFcm/sqlite.js'

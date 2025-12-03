@@ -3,5 +3,5 @@ export {
   PostgresMessagePickupMessageQueuedEvent,
   PostgresMessagePickupMessageQueuedEventType,
   PostgresMessagePickupRepositoryConfig,
-} from './interfaces'
-export { PostgresMessagePickupRepository } from './PostgresMessagePickupRepository'
+} from './interfaces.js'
+export { PostgresMessagePickupRepository } from './PostgresMessagePickupRepository.js'

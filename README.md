@@ -107,13 +107,15 @@ For example:
 
 ### External Access
 
-To reach the mediator from external devices or for testing with mobile apps, set up an ngrok tunnel. Since the `.env.local` file isn't loaded, you'll need to provide the auth token directly with the command:
+To reach the mediator from external devices or for testing with mobile apps, set up an ngrok tunnel.
 
-```bash
-NGROK_AUTH_TOKEN=your_token_here pnpm dev
+Read more on setting up your ngrok tunnel here: https://ngrok.com/docs/getting-started.
+
+Make sure to set the `AGENT_HOSTS` environment variable when running the dev script:
+
 ```
-
-You can obtain an auth token from: https://dashboard.ngrok.com/get-started/your-authtoken
+AGENT_HOSTS=https://652a89f3d681.ngrok-free.app,wss://652a89f3d681.ngrok-free.app pnpm dev
+```
 
 ## Configuration
 

@@ -1,5 +1,5 @@
 import admin from 'firebase-admin'
-import { config } from '../../config'
+import { config } from '../../config.js'
 
 export const firebase: admin.app.App | undefined = !config.pushNotifications?.firebase
   ? undefined

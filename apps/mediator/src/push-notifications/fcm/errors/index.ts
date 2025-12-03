@@ -1,2 +1,2 @@
-export * from './PushNotificationsFcmProblemReportError'
-export * from './PushNotificationsFcmProblemReportReason'
+export * from './PushNotificationsFcmProblemReportError.js'
+export * from './PushNotificationsFcmProblemReportReason.js'

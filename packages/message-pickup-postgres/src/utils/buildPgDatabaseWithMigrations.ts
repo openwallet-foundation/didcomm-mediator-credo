@@ -17,7 +17,7 @@ export async function buildPgDatabaseWithMigrations(
   logger: Logger | undefined,
   postgresConfig: { user: string; password: string; host: string; port?: number },
   targetDatabase: string,
-  migrationsDir: string = path.resolve(__dirname, '../../migrations')
+  migrationsDir: string = path.resolve(import.meta.dirname, '../../migrations')
 ): Promise<void> {
   const adminClient = new Client(postgresConfig)
 

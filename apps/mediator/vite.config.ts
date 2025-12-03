@@ -6,16 +6,15 @@ export default defineConfig({
     alias: {
       '@credo-ts/didcomm-message-pickup-dynamodb': path.resolve(
         import.meta.dirname,
-        './packages/message-pickup-dynamodb/src/index.ts'
+        '../../packages/message-pickup-dynamodb/src/index.ts'
       ),
       '@credo-ts/didcomm-message-pickup-postgres': path.resolve(
         import.meta.dirname,
-        './packages/message-pickup-postgres/src/index.ts'
+        '../../packages/message-pickup-postgres/src/index.ts'
       ),
     },
   },
-  test: {
-    watch: false,
-    include: ['**/*.{test,tests}.ts'],
+  ssr: {
+    noExternal: true,
   },
 })

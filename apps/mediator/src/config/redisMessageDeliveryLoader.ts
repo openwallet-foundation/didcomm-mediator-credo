@@ -1,11 +1,11 @@
 import { randomUUID } from 'node:crypto'
 import { DidCommMessageForwardingStrategy, DidCommMessagePickupSessionRole } from '@credo-ts/didcomm'
 import Redis from 'ioredis'
-import type { MediatorAgent } from '../agent'
-import { config } from '../config'
-import { DidcommMessageQueuedEvent, MediatorEventTypes } from '../events'
-import { RedisStreamMessagePublishing } from '../multi-instance/redis-stream-message-publishing/redisStreamMessagePublishing'
-import { sendNotification } from '../push-notifications/sendNotification'
+import type { MediatorAgent } from '../agent.js'
+import { config } from '../config.js'
+import { DidcommMessageQueuedEvent, MediatorEventTypes } from '../events.js'
+import { RedisStreamMessagePublishing } from '../multi-instance/redis-stream-message-publishing/redisStreamMessagePublishing.js'
+import { sendNotification } from '../push-notifications/sendNotification.js'
 
 /**
  * Initialize redis message publishing for queued mediator messages. This message publishing implementation is not
@@ -33,13 +33,13 @@ export async function loadRedisMessageDelivery({
 }: {
   abortSignal?: AbortSignal
   agent: MediatorAgent
-  redisClient?: Redis
+  redisClient?: Redis.default
 }) {
   if (config.cache.type !== 'redis' || config.messagePickup.multiInstanceDelivery.type !== 'redis') return
 
   agent.config.logger.info('Loading redis multi instance message delivery')
 
-  const client = redisClient ?? new Redis(config.cache.redisUrl)
+  const client = redisClient ?? new Redis.default(config.cache.redisUrl)
 
   // We generate a random server instance, it does not really matter as long as it's unique between active servers
   // if a server crashes we lose the active socket connections.
