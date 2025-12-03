@@ -3,6 +3,7 @@ import config from '../../../config'
 import { Logger } from '../../../logger'
 import { firebaseApps } from '../firebase'
 import { PushNotificationsFcmRecord, PushNotificationsFcmRepository } from '../repository'
+import { FirebaseError } from 'firebase-admin';
 
 const filterAppsByProjectId = (projectId: string | undefined) => {
   if (!projectId) {
@@ -14,6 +15,14 @@ const filterAppsByProjectId = (projectId: string | undefined) => {
     return new Map([[projectId, app]])
   }
 }
+
+const isFirebaseLikeError = (error: unknown) =>
+  error &&
+  typeof error === 'object' &&
+  error !== null &&
+  typeof (error as any).code === 'string' &&
+  /(app|auth|messaging|storage|firestore|database)\//.test((error as any).code);
+
 
 export const sendFcmPushNotification = async (
   agentContext: AgentContext,
@@ -59,9 +68,11 @@ export const sendFcmPushNotification = async (
         return response
       }
     } catch (error) {
-      logger.debug('Error sending notification', {
-        cause: error,
-      })
+      if (isFirebaseLikeError(error)) {
+        logger.debug('Error sending notification', { cause: error });
+      } else {
+        logger.error('Unexpected error sending push notification', { cause: error });
+      }
     }
   }
 }
