@@ -6,7 +6,9 @@
   "main": "build/index.js",
   "types": "build/index.d.ts",
   "type": "module",
-  "files": ["build"],
+  "files": [
+    "build"
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/openwallet-foundation/didcomm-mediator-credo"

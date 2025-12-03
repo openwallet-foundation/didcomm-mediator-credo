@@ -1,10 +1,10 @@
 import { LogLevel } from '@credo-ts/core'
 import { DidCommMessageForwardingStrategy } from '@credo-ts/didcomm'
+import { z } from 'zod/v4'
+import { $ZodError } from 'zod/v4/core'
 import { loadConfigSync } from 'zod-config'
 import { envAdapter } from 'zod-config/env-adapter'
 import { jsonAdapter } from 'zod-config/json-adapter'
-import { z } from 'zod/v4'
-import { $ZodError } from 'zod/v4/core'
 import { Logger } from './logger'
 
 const zConfig = z

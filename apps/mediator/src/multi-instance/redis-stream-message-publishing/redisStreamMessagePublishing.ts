@@ -191,7 +191,7 @@ export class RedisStreamMessagePublishing {
             id: responseMessage[0],
             payload: JSON.parse(responseMessage[1][1]),
           }
-        } catch (error) {
+        } catch (_error) {
           console.error('Error parsing stream message as JSON, ignoring.', {
             responseItem,
           })
@@ -300,7 +300,7 @@ export class RedisStreamMessagePublishing {
       }
 
       return pending[0]
-    } catch (error) {
+    } catch (_error) {
       return 0
     }
   }

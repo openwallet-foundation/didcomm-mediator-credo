@@ -1,5 +1,3 @@
-import type { FcmDeviceInfo } from './models'
-
 import { AgentContext, injectable } from '@credo-ts/core'
 import {
   DidCommConnectionService,
@@ -7,12 +5,12 @@ import {
   DidCommMessageSender,
   DidCommOutboundMessageContext,
 } from '@credo-ts/didcomm'
-
 import {
   PushNotificationsFcmDeviceInfoHandler,
   PushNotificationsFcmProblemReportHandler,
   PushNotificationsFcmSetDeviceInfoHandler,
 } from './handlers'
+import type { FcmDeviceInfo } from './models'
 import { PushNotificationsFcmRecord } from './repository/PushNotificationsFcmRecord'
 import { PushNotificationsFcmService } from './services/PushNotificationsFcmService'
 

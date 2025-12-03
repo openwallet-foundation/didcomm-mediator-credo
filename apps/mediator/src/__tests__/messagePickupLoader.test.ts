@@ -1,6 +1,5 @@
-import { describe, expect, it } from 'vitest'
-
 import { PostgresMessagePickupRepository } from '@credo-ts/didcomm-message-pickup-postgres'
+import { describe, expect, it } from 'vitest'
 
 describe('loadMessagePickupStorage', () => {
   it('returns PostgresMessagePickupRepository for postgres message pickup storage', async () => {

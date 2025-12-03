@@ -1,6 +1,5 @@
-import type { DidCommEncryptedMessage } from '@credo-ts/didcomm'
-
 import { BaseRecord, utils } from '@credo-ts/core'
+import type { DidCommEncryptedMessage } from '@credo-ts/didcomm'
 
 export type DefaultMessageRecordTags = {
   connectionId: string

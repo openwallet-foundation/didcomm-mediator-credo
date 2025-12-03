@@ -1,6 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { DidCommMessageForwardingStrategy } from '@credo-ts/didcomm'
-import { DidCommMessagePickupSessionRole } from '@credo-ts/didcomm'
+import { DidCommMessageForwardingStrategy, DidCommMessagePickupSessionRole } from '@credo-ts/didcomm'
 import Redis from 'ioredis'
 import type { MediatorAgent } from '../agent'
 import { config } from '../config'
@@ -31,7 +30,11 @@ export async function loadRedisMessageDelivery({
   abortSignal,
   agent,
   redisClient,
-}: { abortSignal?: AbortSignal; agent: MediatorAgent; redisClient?: Redis }) {
+}: {
+  abortSignal?: AbortSignal
+  agent: MediatorAgent
+  redisClient?: Redis
+}) {
   if (config.cache.type !== 'redis' || config.messagePickup.multiInstanceDelivery.type !== 'redis') return
 
   agent.config.logger.info('Loading redis multi instance message delivery')
@@ -80,7 +83,7 @@ export async function loadRedisMessageDelivery({
         }
 
         // We didn't send the message yet, we need to check other instances
-      } catch (error) {
+      } catch (_error) {
         agent.config.logger.debug(
           // In case of an error we didn't send the message yet, we need to check other instances
           'An error occurred while retrieving or sending queued messages to a local session. Continuing with other servers or falling back to sending a push notifications.',

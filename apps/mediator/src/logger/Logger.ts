@@ -26,7 +26,7 @@ export class Logger extends BaseLogger {
     })
   }
 
-  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+  // biome-ignore lint/suspicious/noExplicitAny: no explanation
   private log(level: Exclude<LogLevel, LogLevel.off>, message: string, data?: Record<string, any>): void {
     const tsLogLevel = this.tsLogLevelMap[level]
 
@@ -39,37 +39,37 @@ export class Logger extends BaseLogger {
     }
   }
 
-  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+  // biome-ignore lint/suspicious/noExplicitAny: no explanation
   public test(message: string, data?: Record<string, any>): void {
     this.log(LogLevel.test, message, data)
   }
 
-  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+  // biome-ignore lint/suspicious/noExplicitAny: no explanation
   public trace(message: string, data?: Record<string, any>): void {
     this.log(LogLevel.trace, message, data)
   }
 
-  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+  // biome-ignore lint/suspicious/noExplicitAny: no explanation
   public debug(message: string, data?: Record<string, any>): void {
     this.log(LogLevel.debug, message, data)
   }
 
-  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+  // biome-ignore lint/suspicious/noExplicitAny: no explanation
   public info(message: string, data?: Record<string, any>): void {
     this.log(LogLevel.info, message, data)
   }
 
-  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+  // biome-ignore lint/suspicious/noExplicitAny: no explanation
   public warn(message: string, data?: Record<string, any>): void {
     this.log(LogLevel.warn, message, data)
   }
 
-  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+  // biome-ignore lint/suspicious/noExplicitAny: no explanation
   public error(message: string, data?: Record<string, any>): void {
     this.log(LogLevel.error, message, data)
   }
 
-  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+  // biome-ignore lint/suspicious/noExplicitAny: no explanation
   public fatal(message: string, data?: Record<string, any>): void {
     this.log(LogLevel.fatal, message, data)
   }

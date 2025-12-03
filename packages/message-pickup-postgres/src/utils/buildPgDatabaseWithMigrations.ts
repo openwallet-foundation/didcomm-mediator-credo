@@ -69,7 +69,7 @@ export async function buildPgDatabaseWithMigrations(
 
     const files = fs
       .readdirSync(migrationsDir)
-      .filter((file) => /^\d{3,}-[\w\-]+\.sql$/.test(file))
+      .filter((file) => /^\d{3,}-[\w-]+\.sql$/.test(file))
       .sort()
 
     for (const file of files) {

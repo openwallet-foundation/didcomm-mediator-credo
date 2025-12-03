@@ -1,3 +1,4 @@
+import { AgentContext, EventEmitter, utils } from '@credo-ts/core'
 import type {
   AddMessageOptions,
   DidCommQueueTransportRepository,
@@ -6,8 +7,6 @@ import type {
   RemoveMessagesOptions,
   TakeFromQueueOptions,
 } from '@credo-ts/didcomm'
-
-import { AgentContext, EventEmitter, utils } from '@credo-ts/core'
 import { DidcommMessageQueuedEvent, MediatorEventTypes } from '../events'
 import { MessageRecord } from './MessageRecord'
 import { MessageRepository } from './MessageRepository'

@@ -1,7 +1,5 @@
-import { Logger } from '@credo-ts/core'
-import { BaseEvent } from '@credo-ts/core'
-import { DidCommEncryptedMessage } from '@credo-ts/didcomm'
-import { DidCommMessagePickupSession } from '@credo-ts/didcomm'
+import { BaseEvent, Logger } from '@credo-ts/core'
+import { DidCommEncryptedMessage, DidCommMessagePickupSession } from '@credo-ts/didcomm'
 
 export interface PostgresMessagePickupRepositoryConfig {
   logger?: Logger

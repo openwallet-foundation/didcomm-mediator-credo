@@ -4,7 +4,7 @@ import {
   DidCommOutOfBandRole,
   DidCommOutOfBandState,
 } from '@credo-ts/didcomm'
-import { MediatorAgent, createAgent } from './agent'
+import { createAgent, MediatorAgent } from './agent'
 import { config } from './config'
 
 function logInvitationUrl(agent: MediatorAgent, outOfBandRecord: DidCommOutOfBandRecord) {

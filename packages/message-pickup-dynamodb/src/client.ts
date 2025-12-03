@@ -16,7 +16,7 @@ import {
 } from '@aws-sdk/client-dynamodb'
 import { marshall, unmarshall } from '@aws-sdk/util-dynamodb'
 import { DidCommEncryptedMessage } from '@credo-ts/didcomm'
-import { QueuedMessage, attributeDefinitions, keySchema } from './structure'
+import { attributeDefinitions, keySchema, QueuedMessage } from './structure'
 
 export type AddQueuedMessageOptions = {
   connectionId: string

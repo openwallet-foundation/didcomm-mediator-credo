@@ -1,4 +1,5 @@
 import type { Socket } from 'node:net'
+import { AskarModule, AskarStoreDuplicateError } from '@credo-ts/askar'
 import { Agent } from '@credo-ts/core'
 import {
   DidCommHttpOutboundTransport,
@@ -9,15 +10,11 @@ import {
   DidCommWsOutboundTransport,
 } from '@credo-ts/didcomm'
 
-import { AskarStoreDuplicateError } from '@credo-ts/askar'
-import Redis from 'ioredis'
-
-import { DidCommHttpInboundTransport, DidCommWsInboundTransport, agentDependencies } from '@credo-ts/node'
+import { agentDependencies, DidCommHttpInboundTransport, DidCommWsInboundTransport } from '@credo-ts/node'
 
 import express, { type Express } from 'express'
+import Redis from 'ioredis'
 import { Server } from 'ws'
-
-import { AskarModule } from '@credo-ts/askar'
 import { config, logger } from './config'
 import { loadAskar } from './config/askarLoader'
 import { loadCacheStorage } from './config/cacheLoader'

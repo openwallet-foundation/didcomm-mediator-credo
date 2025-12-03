@@ -3,7 +3,10 @@
   "main": "build/index.js",
   "types": "build/index.d.ts",
   "version": "0.0.1",
-  "files": ["build", "migrations"],
+  "files": [
+    "build",
+    "migrations"
+  ],
   "publishConfig": {
     "access": "public"
   },

@@ -1,8 +1,7 @@
-import type { FcmDeviceInfo } from '../models'
-
 import { DidCommMessage, IsValidMessageType, parseMessageType } from '@credo-ts/didcomm'
 import { Expose } from 'class-transformer'
 import { IsString, ValidateIf } from 'class-validator'
+import type { FcmDeviceInfo } from '../models'
 
 interface PushNotificationsFcmSetDeviceInfoOptions extends FcmDeviceInfo {
   id?: string

@@ -1,9 +1,7 @@
 import type { DidCommProblemReportErrorOptions } from '@credo-ts/didcomm'
-import type { PushNotificationsFcmProblemReportReason } from './PushNotificationsFcmProblemReportReason'
-
 import { DidCommProblemReportError } from '@credo-ts/didcomm'
-
 import { PushNotificationsFcmProblemReportMessage } from '../messages'
+import type { PushNotificationsFcmProblemReportReason } from './PushNotificationsFcmProblemReportReason'
 
 /**
  * @internal

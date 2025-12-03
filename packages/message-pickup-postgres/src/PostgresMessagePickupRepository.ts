@@ -6,6 +6,8 @@ import {
   DidCommMessagePickupApi,
   DidCommMessagePickupEventTypes,
   DidCommMessagePickupLiveSessionSavedEvent,
+  DidCommMessagePickupSession,
+  DidCommMessagePickupSessionRole,
   DidCommQueueTransportRepository,
   GetAvailableMessageCountOptions,
   MessagePickupLiveSessionRemovedEvent,
@@ -13,7 +15,6 @@ import {
   RemoveMessagesOptions,
   TakeFromQueueOptions,
 } from '@credo-ts/didcomm'
-import { DidCommMessagePickupSession, DidCommMessagePickupSessionRole } from '@credo-ts/didcomm'
 import { Pool } from 'pg'
 import PGPubsub from 'pg-pubsub'
 import {
@@ -506,7 +507,7 @@ export class PostgresMessagePickupRepository implements DidCommQueueTransportRep
       return recordFound
         ? { ...queryLiveSession.rows[0], role: DidCommMessagePickupSessionRole.MessageHolder, isLocalSession: false }
         : undefined
-    } catch (error) {
+    } catch (_error) {
       agentContext.config.logger.debug(`[findLiveSessionInDb] Error find to connectionId ${connectionId}`)
       return undefined // Return false in case of an error
     }
@@ -536,7 +537,7 @@ export class PostgresMessagePickupRepository implements DidCommQueueTransportRep
       this.logger?.debug(
         `[addLiveSessionOnDb] add liveSession to liveSessionId ${liveSessionId} to connectionId ${connectionId}`
       )
-    } catch (error) {
+    } catch (_error) {
       agentContext.config.logger.debug(`[addLiveSessionOnDb] error add liveSession DB ${connectionId}`)
     }
   }

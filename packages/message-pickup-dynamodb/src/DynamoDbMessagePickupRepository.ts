@@ -21,14 +21,14 @@ export class DynamoDbMessagePickupRepository implements DidCommQueueTransportRep
   }
 
   public async getAvailableMessageCount(
-    agentContext: AgentContext,
+    _agentContext: AgentContext,
     { connectionId }: GetAvailableMessageCountOptions
   ): Promise<number> {
     return await this.client.getMessageCount(connectionId)
   }
 
   public async takeFromQueue(
-    agentContext: AgentContext,
+    _agentContext: AgentContext,
     options: TakeFromQueueOptions
   ): Promise<Array<QueuedDidCommMessage>> {
     return await this.client.getMessages(options)
@@ -45,7 +45,7 @@ export class DynamoDbMessagePickupRepository implements DidCommQueueTransportRep
     return id
   }
 
-  public async removeMessages(agentContext: AgentContext, options: RemoveMessagesOptions): Promise<void> {
+  public async removeMessages(_agentContext: AgentContext, options: RemoveMessagesOptions): Promise<void> {
     await this.client.removeMessages({
       connectionId: options.connectionId,
       messageIds: options.messageIds,

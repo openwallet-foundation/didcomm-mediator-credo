@@ -1,8 +1,8 @@
 import type { AgentContext, DependencyManager, Module } from '@credo-ts/core'
 
 import { DidCommFeatureRegistry, DidCommProtocol } from '@credo-ts/didcomm'
-import { PushNotificationsFcmApi } from './PushNotificationsFcmApi'
 import { PushNotificationsFcmRole } from './models'
+import { PushNotificationsFcmApi } from './PushNotificationsFcmApi'
 import { PushNotificationsFcmRepository } from './repository'
 import { PushNotificationsFcmService } from './services/PushNotificationsFcmService'
 
