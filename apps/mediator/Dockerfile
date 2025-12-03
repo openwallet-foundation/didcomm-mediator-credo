@@ -1,4 +1,4 @@
-FROM node:20.11 AS base
+FROM node:22 AS base
 
 RUN apt-get update && \
   apt-get upgrade -y && \ 
