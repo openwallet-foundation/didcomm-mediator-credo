@@ -1,3 +1,4 @@
+import { ConsoleLogger, LogLevel } from '@credo-ts/core'
 import { DidCommEncryptedMessage } from '@credo-ts/didcomm'
 import { beforeAll, expect, suite, test } from 'vitest'
 import { DynamoDbClientRepository } from '../src/client.js'
@@ -16,6 +17,7 @@ suite('dynamodb client', () => {
 
   beforeAll(async () => {
     client = await DynamoDbClientRepository.initialize({
+      logger: new ConsoleLogger(LogLevel.off),
       region: 'local',
       credentials: {
         accessKeyId: 'local',

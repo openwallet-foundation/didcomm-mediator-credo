@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
-import { AgentContext, DependencyManager, EventEmitter } from '@credo-ts/core'
+import { AgentContext, ConsoleLogger, DependencyManager, EventEmitter, LogLevel } from '@credo-ts/core'
 import { beforeAll, expect, suite, test } from 'vitest'
-import { DynamoDbMessagePickupRepository } from '../src.js'
+import { DynamoDbMessagePickupRepository } from '../src/index.js'
 
 const agentContext = new AgentContext({
   contextCorrelationId: 'test',
@@ -17,6 +17,7 @@ suite('dynamoDbMessagePickupRepository', () => {
 
   beforeAll(async () => {
     repository = await DynamoDbMessagePickupRepository.initialize({
+      logger: new ConsoleLogger(LogLevel.off),
       region: 'local',
       credentials: { accessKeyId: 'local', secretAccessKey: 'local' },
     })
