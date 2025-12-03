@@ -1,0 +1,40 @@
+{
+  "name": "@credo-ts/didcomm-message-pickup-postgres",
+  "main": "build/index.js",
+  "types": "build/index.d.ts",
+  "version": "0.0.1",
+  "files": [
+    "build",
+    "migrations"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "description": "DIDComm Message Pickup Repository Postgres module",
+  "license": "Apache-2.0",
+  "homepage": "https://github.com/openwallet-foundation/didcomm-mediator-credo/tree/main/packages/didcomm-message-pickup-postgres",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/openwallet-foundation/didcomm-mediator-credo",
+    "directory": "packages/didcomm-message-pickup-postgres"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "prepublishOnly": "pnpm run build"
+  },
+  "dependencies": {
+    "pg": "catalog:",
+    "pg-pubsub": "^0.8.1"
+  },
+  "devDependencies": {
+    "@credo-ts/core": "catalog:",
+    "@credo-ts/didcomm": "catalog:",
+    "@types/pg": "catalog:",
+    "typescript": "catalog:"
+  },
+  "peerDependencies": {
+    "@credo-ts/core": "catalog:",
+    "@credo-ts/didcomm": "catalog:"
+  }
+}

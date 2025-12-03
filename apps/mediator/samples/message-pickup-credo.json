@@ -1,0 +1,11 @@
+{
+  "askar": {
+    "storeId": "test",
+    "storeKey": "test"
+  },
+  "messagePickup": {
+    "storage": {
+      "type": "credo"
+    }
+  }
+}
