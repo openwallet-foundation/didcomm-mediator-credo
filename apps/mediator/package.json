@@ -3,8 +3,9 @@
   "version": "0.0.0",
   "description": "Credo mediator agent",
   "private": true,
-  "main": "build/index",
-  "types": "build/index",
+  "main": "build/index.js",
+  "types": "build/index.d.ts",
+  "type": "module",
   "files": ["build"],
   "repository": {
     "type": "git",
@@ -48,11 +49,11 @@
     "firebase-admin": "^13.5.0",
     "ioredis": "catalog:",
     "pg": "catalog:",
-    "tslog": "^3.3.4",
+    "tslog": "^4.10.2",
     "tsyringe": "^4.10.0",
     "ws": "^8.18.3",
-    "zod": "^3.25.76",
-    "zod-config": "^1.3.0"
+    "zod": "^4.1.13",
+    "zod-config": "^1.4.0"
   },
   "devDependencies": {
     "@ngrok/ngrok": "^1.5.2",
@@ -60,12 +61,12 @@
     "@types/node": "catalog:",
     "@types/pg": "catalog:",
     "@types/ws": "^8.18.1",
-    "dotenv": "^16.6.1",
+    "dotenv": "^17.2.3",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
     "typescript": "catalog:"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   }
 }

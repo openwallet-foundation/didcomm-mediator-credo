@@ -7,6 +7,7 @@
   "publishConfig": {
     "access": "public"
   },
+  "type": "module",
   "description": "DIDComm Message Pickup Repository Postgres module",
   "license": "Apache-2.0",
   "homepage": "https://github.com/openwallet-foundation/didcomm-mediator-credo/tree/main/packages/didcomm-message-pickup-postgres",

@@ -4,6 +4,7 @@
   "types": "build/index.d.ts",
   "version": "0.0.1",
   "files": ["build"],
+  "type": "module",
   "publishConfig": {
     "access": "public"
   },

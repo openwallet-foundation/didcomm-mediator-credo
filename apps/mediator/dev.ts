@@ -12,6 +12,7 @@ if (sample) {
   console.log('loading .env.development and .env.local')
   dotenv.config({
     path: ['../../.env.development', '../../.env.local'],
+    quiet: true,
   })
 }
 

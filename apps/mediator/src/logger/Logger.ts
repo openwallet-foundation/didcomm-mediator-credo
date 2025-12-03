@@ -1,10 +1,10 @@
 import { BaseLogger, LogLevel } from '@credo-ts/core'
-import { Logger as TSLogger } from 'tslog'
+import { ILogObj, Logger as TSLogger } from 'tslog'
 
-import { replaceError } from './replaceError'
+import { replaceError } from './replaceError.js'
 
 export class Logger extends BaseLogger {
-  private logger: TSLogger
+  private logger: TSLogger<ILogObj>
 
   // Map our log levels to tslog levels
   private tsLogLevelMap = {
@@ -22,8 +22,7 @@ export class Logger extends BaseLogger {
 
     this.logger = new TSLogger({
       name: 'Mediator Agent',
-      minLevel: this.logLevel === LogLevel.off ? 'fatal' : this.tsLogLevelMap[this.logLevel],
-      ignoreStackLevels: 5,
+      minLevel: this.logLevel,
     })
   }
 

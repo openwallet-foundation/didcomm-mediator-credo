@@ -4,13 +4,13 @@ packages:
 
 catalog:
   typescript: "^5.6.3"
-  "@credo-ts/askar": "0.6.0-alpha-20251017114456"
-  "@credo-ts/core": "0.6.0-alpha-20251017114456"
-  "@credo-ts/didcomm": "0.6.0-alpha-20251017114456"
-  "@credo-ts/node": "0.6.0-alpha-20251017114456"
-  "@credo-ts/drizzle-storage": "0.6.0-alpha-20251017114456"
-  "@credo-ts/askar-to-drizzle-storage-migration": "0.6.0-alpha-20251017114456"
-  "@credo-ts/redis-cache": "0.6.0-alpha-20251017114456"
+  "@credo-ts/askar": "0.6.0-alpha-20251202115902"
+  "@credo-ts/core": "0.6.0-alpha-20251202115902"
+  "@credo-ts/didcomm": "0.6.0-alpha-20251202115902"
+  "@credo-ts/node": "0.6.0-alpha-20251202115902"
+  "@credo-ts/drizzle-storage": "0.6.0-alpha-20251202115902"
+  "@credo-ts/askar-to-drizzle-storage-migration": "0.6.0-alpha-20251202115902"
+  "@credo-ts/redis-cache": "0.6.0-alpha-20251202115902"
   # Keep in sync with redis-cache version
   ioredis: ^5.8.1
   "@types/node": "^22.15.17"
