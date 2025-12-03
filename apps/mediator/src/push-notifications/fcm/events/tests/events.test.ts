@@ -13,6 +13,7 @@ describe('sendFcmPushNotification', () => {
     warn: vi.fn(),
     info: vi.fn(),
     debug: vi.fn(),
+    error: vi.fn(),
   }
 
   const mockRepository = {
