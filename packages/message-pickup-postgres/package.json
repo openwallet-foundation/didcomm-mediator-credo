@@ -3,7 +3,7 @@
   "main": "build/index.js",
   "types": "build/index.d.ts",
   "version": "0.0.1",
-  "files": ["build"],
+  "files": ["build", "migrations"],
   "publishConfig": {
     "access": "public"
   },
@@ -20,13 +20,13 @@
     "prepublishOnly": "pnpm run build"
   },
   "dependencies": {
-    "pg": "^8.16.3",
+    "pg": "catalog:",
     "pg-pubsub": "^0.8.1"
   },
   "devDependencies": {
     "@credo-ts/core": "catalog:",
     "@credo-ts/didcomm": "catalog:",
-    "@types/pg": "^8.15.5",
+    "@types/pg": "catalog:",
     "typescript": "catalog:"
   },
   "peerDependencies": {

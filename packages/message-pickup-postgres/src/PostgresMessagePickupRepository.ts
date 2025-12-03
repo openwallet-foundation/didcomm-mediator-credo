@@ -14,23 +14,15 @@ import {
   TakeFromQueueOptions,
 } from '@credo-ts/didcomm'
 import { DidCommMessagePickupSession, DidCommMessagePickupSessionRole } from '@credo-ts/didcomm'
-import { Client, Pool } from 'pg'
+import { Pool } from 'pg'
 import PGPubsub from 'pg-pubsub'
-import {
-  createTableLive,
-  createTableMessage,
-  createTypeMessageState,
-  liveSessionTableIndex,
-  liveSessionTableName,
-  messageTableIndex,
-  messagesTableName,
-} from './config/dbCollections'
 import {
   ExtendedMessagePickupSession,
   PostgresMessagePickupMessageQueuedEvent,
   PostgresMessagePickupMessageQueuedEventType,
   PostgresMessagePickupRepositoryConfig,
 } from './interfaces'
+import { buildPgDatabaseWithMigrations } from './utils/buildPgDatabaseWithMigrations'
 
 export class PostgresMessagePickupRepository implements DidCommQueueTransportRepository {
   private logger?: Logger
@@ -72,9 +64,16 @@ export class PostgresMessagePickupRepository implements DidCommQueueTransportRep
   public async initialize(agent: Agent): Promise<void> {
     try {
       // Initialize the database
-
-      await this.buildPgDatabase(agent.context)
-      agent.context.config.logger.info('[initialize] The database has been built successfully')
+      await buildPgDatabaseWithMigrations(
+        this.logger,
+        {
+          user: this.postgresUser,
+          password: this.postgresPassword,
+          host: this.postgresHost,
+        },
+        this.postgresDatabaseName
+      )
+      this.logger?.info('[initialize] The database has been build successfully')
 
       // Configure PostgreSQL pool for the messages collections
       this.messagesCollection = new Pool({
@@ -149,7 +148,7 @@ export class PostgresMessagePickupRepository implements DidCommQueueTransportRep
       if (deleteMessages) {
         const query = `
         SELECT id, encrypted_message, state, created_at 
-        FROM ${messagesTableName} 
+        FROM queued_message 
         WHERE (connection_id = $1 OR $2 = ANY (recipient_dids)) AND state = 'pending' 
         ORDER BY created_at 
         LIMIT $3
@@ -165,24 +164,24 @@ export class PostgresMessagePickupRepository implements DidCommQueueTransportRep
         return result.rows.map((message) => ({
           id: message.id,
           encryptedMessage: message.encrypted_message,
+          receivedAt: new Date(message.created_at),
           state: message.state,
-          receivedAt: message.received_at,
         }))
       }
 
       // Use UPDATE and RETURNING to fetch and update messages in one step
       const query = `
-      UPDATE ${messagesTableName}
+      UPDATE queued_message
       SET state = 'sending'
       WHERE id IN (
         SELECT id 
-        FROM ${messagesTableName} 
+        FROM queued_message 
         WHERE (connection_id = $1 OR $2 = ANY (recipient_dids)) 
         AND state = 'pending' 
         ORDER BY created_at 
         LIMIT $3
       )
-      RETURNING id, encrypted_message, state;
+      RETURNING id, encrypted_message, state, created_at;
     `
       const params = [connectionId, recipientDid, limit ?? 0]
       const result = await this.messagesCollection?.query(query, params)
@@ -198,8 +197,8 @@ export class PostgresMessagePickupRepository implements DidCommQueueTransportRep
       return result.rows.map((message) => ({
         id: message.id,
         encryptedMessage: message.encrypted_message,
+        receivedAt: new Date(message.created_at),
         state: 'sending',
-        receivedAt: message.created_at,
       }))
     } catch (error) {
       agentContext.config.logger.error(`[takeFromQueue] Error: ${error}`)
@@ -225,7 +224,7 @@ export class PostgresMessagePickupRepository implements DidCommQueueTransportRep
       // Query to count pending messages for the specified connection ID
       const query = `
       SELECT COUNT(*) AS count 
-      FROM ${messagesTableName} 
+      FROM queued_message 
       WHERE connection_id = $1 AND state = 'pending'
     `
       const params = [connectionId]
@@ -262,6 +261,11 @@ export class PostgresMessagePickupRepository implements DidCommQueueTransportRep
   public async addMessage(agentContext: AgentContext, options: AddMessageOptions): Promise<string> {
     const { connectionId, recipientDids, payload } = options
     agentContext.config.logger.debug(`[addMessage] Initializing new message for connectionId: ${connectionId}`)
+    const receivedAt = new Date()
+
+    if (!this.messagesCollection) {
+      throw new Error('messagesCollection is not defined')
+    }
 
     try {
       // Retrieve local live session details
@@ -269,21 +273,26 @@ export class PostgresMessagePickupRepository implements DidCommQueueTransportRep
 
       // Insert message into database
       const query = `
-        INSERT INTO ${messagesTableName}(connection_id, recipient_dids, encrypted_message, state) 
-        VALUES($1, $2, $3, $4) 
-        RETURNING id, created_at, encrypted_message
+        INSERT INTO queued_message(connection_id, recipient_dids, encrypted_message, state, created_at) 
+        VALUES($1, $2, $3, $4, $5) 
+        RETURNING id
       `
 
       const state = localLiveSession ? 'sending' : 'pending'
 
-      const result = await this.messagesCollection?.query(query, [connectionId, recipientDids, payload, state])
+      const result = await this.messagesCollection.query(query, [
+        connectionId,
+        recipientDids,
+        payload,
+        state,
+        receivedAt,
+      ])
 
       const messageRecord = result?.rows[0]
 
-      agentContext.config.logger.debug(
-        `[addMessage] Message added with ID: ${messageRecord.id} for connectionId: ${connectionId}`
+      this.logger?.debug(
+        `[addMessage] Message added with ID: ${messageRecord.id}, receivedAt: ${receivedAt.toISOString()} for connectionId: ${connectionId}`
       )
-
       // Verify if a live session exists in DB (other instances)
       const liveSessionInPostgres = await this.findLiveSessionInDb(agentContext, connectionId)
 
@@ -293,8 +302,8 @@ export class PostgresMessagePickupRepository implements DidCommQueueTransportRep
           id: messageRecord.id,
           connectionId,
           recipientDids,
-          encryptedMessage: messageRecord.encrypted_message,
-          receivedAt: messageRecord.created_at,
+          encryptedMessage: payload,
+          receivedAt,
           state,
         },
         session: localLiveSession || liveSessionInPostgres || undefined,
@@ -306,7 +315,7 @@ export class PostgresMessagePickupRepository implements DidCommQueueTransportRep
         const messagePickupApi = agentContext.resolve(DidCommMessagePickupApi)
         await messagePickupApi.deliverMessages({
           pickupSessionId: localLiveSession.id,
-          messages: [{ id: messageRecord.id, encryptedMessage: payload, receivedAt: messageRecord.created_at }],
+          messages: [{ id: messageRecord.id, encryptedMessage: payload, receivedAt }],
         })
       } else if (liveSessionInPostgres) {
         agentContext.config.logger.debug(
@@ -348,7 +357,7 @@ export class PostgresMessagePickupRepository implements DidCommQueueTransportRep
       const placeholders = messageIds.map((_, index) => `$${index + 2}`).join(', ')
 
       // Construct the SQL DELETE query
-      const query = `DELETE FROM ${messagesTableName} WHERE connection_id = $1 AND id IN (${placeholders})`
+      const query = `DELETE FROM queued_message WHERE connection_id = $1 AND id IN (${placeholders})`
 
       // Combine connectionId with messageIds as query parameters
       const queryParams = [connectionId, ...messageIds]
@@ -416,89 +425,6 @@ export class PostgresMessagePickupRepository implements DidCommQueueTransportRep
   }
 
   /**
-   * This method allow create database and tables they are used for the operation of the messageRepository
-   *
-   */
-  private async buildPgDatabase(agentContext: AgentContext): Promise<void> {
-    agentContext.config.logger.info('[buildPgDatabase] PostgresDbService Initializing')
-
-    const clientConfig = {
-      user: this.postgresUser,
-      host: this.postgresHost,
-      password: this.postgresPassword,
-      port: 5432,
-    }
-
-    const poolConfig = {
-      ...clientConfig,
-      database: this.postgresDatabaseName,
-    }
-
-    const client = new Client(clientConfig)
-
-    try {
-      await client.connect()
-
-      // Use advisory lock to prevent
-      await client.query('SELECT pg_advisory_lock(99998)')
-
-      // Check if the database already exists.
-      const result = await client.query('SELECT 1 FROM pg_database WHERE datname = $1', [this.postgresDatabaseName])
-      agentContext.config.logger.debug(`[buildPgDatabase] PostgresDbService exist ${result.rowCount}`)
-
-      if (result.rowCount === 0) {
-        // If it doesn't exist, create the database.
-        await client.query(`CREATE DATABASE ${this.postgresDatabaseName}`)
-        agentContext.config.logger.info(
-          `[buildPgDatabase] PostgresDbService Database "${this.postgresDatabaseName}" created.`
-        )
-      }
-
-      await client.query('SELECT pg_advisory_unlock(99998)')
-
-      // Create a new client connected to the specific database.
-      const dbClient = new Client(poolConfig)
-
-      try {
-        await dbClient.connect()
-
-        // Use advisory lock to prevent race conditions
-        await client.query('SELECT pg_advisory_lock(99999)')
-
-        // Check if the 'messagesTableName' table exists.
-        const messageTableResult = await dbClient.query(`SELECT to_regclass('${messagesTableName}')`)
-        if (!messageTableResult.rows[0].to_regclass) {
-          // If it doesn't exist, create the table.
-          await dbClient.query(createTypeMessageState)
-          await dbClient.query(createTableMessage)
-          await dbClient.query(messageTableIndex)
-          agentContext.config.logger.info(`[buildPgDatabase] PostgresDbService Table "${messagesTableName}" created.`)
-        }
-
-        // Check if the table exists.
-        const liveTableResult = await dbClient.query(`SELECT to_regclass('${liveSessionTableName}')`)
-        if (!liveTableResult.rows[0].to_regclass) {
-          // If it doesn't exist, create the table.
-          await dbClient.query(createTableLive)
-          await dbClient.query(liveSessionTableIndex)
-          agentContext.config.logger.info(
-            `[buildPgDatabase] PostgresDbService Table "${liveSessionTableName}" created.`
-          )
-        }
-
-        // Unlock after table creation
-        await dbClient.query('SELECT pg_advisory_unlock(99999)')
-      } finally {
-        await dbClient.end()
-      }
-    } catch (error) {
-      agentContext.config.logger.error(`[buildPgDatabase] PostgresDbService Error creating database: ${error}`)
-    } finally {
-      await client.end()
-    }
-  }
-
-  /**
    * This function checks that messages from the connectionId, which were left in the 'sending'
    * state after a liveSessionRemove event, are updated to the 'pending' state for subsequent sending
    * @param connectionID
@@ -508,13 +434,13 @@ export class PostgresMessagePickupRepository implements DidCommQueueTransportRep
     try {
       agentContext.config.logger.debug(`[checkQueueMessages] Init verify messages state 'sending'`)
       const messagesToSend = await this.messagesCollection?.query(
-        `SELECT * FROM ${messagesTableName} WHERE state = $1 and connection_id = $2`,
+        'SELECT * FROM queued_message WHERE state = $1 and connection_id = $2',
         ['sending', connectionId]
       )
       if (messagesToSend && messagesToSend.rows.length > 0) {
         for (const message of messagesToSend.rows) {
           // Update the message state to 'pending'
-          await this.messagesCollection?.query(`UPDATE ${messagesTableName} SET state = $1 WHERE id = $2`, [
+          await this.messagesCollection?.query('UPDATE queued_message SET state = $1 WHERE id = $2', [
             'pending',
             message.id,
           ])
@@ -569,7 +495,7 @@ export class PostgresMessagePickupRepository implements DidCommQueueTransportRep
     if (!connectionId) throw new Error('connectionId is not defined')
     try {
       const queryLiveSession = await this.messagesCollection?.query(
-        `SELECT session_id, connection_id, protocol_version FROM ${liveSessionTableName} WHERE connection_id = $1 LIMIT $2`,
+        'SELECT session_id, connection_id, protocol_version FROM live_session WHERE connection_id = $1 LIMIT $2',
         [connectionId, 1]
       )
       // Check if liveSession is not empty (record found)
@@ -603,12 +529,12 @@ export class PostgresMessagePickupRepository implements DidCommQueueTransportRep
     if (!session) throw new Error('session is not defined')
     try {
       const insertMessageDB = await this.messagesCollection?.query(
-        `INSERT INTO ${liveSessionTableName} (session_id, connection_id, protocol_version, instance) VALUES($1, $2, $3, $4) RETURNING session_id`,
+        'INSERT INTO live_session (session_id, connection_id, protocol_version, instance) VALUES($1, $2, $3, $4) RETURNING session_id',
         [id, connectionId, protocolVersion, instance]
       )
-      const liveSessionId = insertMessageDB?.rows[0].session_id
-      agentContext.config.logger.debug(
-        `[addLiveSessionOnDb] add liveSession to ${connectionId} and result ${liveSessionId}`
+      const liveSessionId: DidCommMessagePickupSession['id'] = insertMessageDB?.rows[0].session_id
+      this.logger?.debug(
+        `[addLiveSessionOnDb] add liveSession to liveSessionId ${liveSessionId} to connectionId ${connectionId}`
       )
     } catch (error) {
       agentContext.config.logger.debug(`[addLiveSessionOnDb] error add liveSession DB ${connectionId}`)
@@ -626,7 +552,7 @@ export class PostgresMessagePickupRepository implements DidCommQueueTransportRep
     if (!connectionId) throw new Error('connectionId is not defined')
     try {
       // Construct the SQL query with the placeholders
-      const query = `DELETE FROM ${liveSessionTableName} WHERE connection_id = $1`
+      const query = 'DELETE FROM live_session WHERE connection_id = $1'
 
       // Add connectionId  for query parameters
       const queryParams = [connectionId]

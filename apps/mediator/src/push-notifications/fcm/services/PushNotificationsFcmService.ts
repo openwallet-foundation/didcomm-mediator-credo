@@ -77,7 +77,10 @@ export class PushNotificationsFcmService {
     }
   }
 
-  public async getPushNotificationRecordByConnectionId(agentContext: AgentContext, connectionId: string) {
+  public async getPushNotificationRecordByConnectionId(
+    agentContext: AgentContext,
+    connectionId: string
+  ): Promise<PushNotificationsFcmRecord> {
     return await this.pushNotificationsFcmRepository.getSingleByQuery(agentContext, {
       connectionId,
     })

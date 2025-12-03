@@ -250,7 +250,7 @@ const zConfig = z
                 error:
                   "Firebase push notifications private key must be a string when firebase is configured. Can also be set using 'PUSH_NOTIFICATIONS__FIREBASE__PRIVATE_KEY' environment variable",
               })
-              .transform((key) => key.replace(/\\n/g, '\n')),
+              .transform((key) => (key.includes('\\n') ? key.replace(/\\n/g, '\n') : key.trim())),
             notificationTitle: z.string({
               error:
                 "Firebase push notifications title must be a string when firebase is configured. Can also be set using 'PUSH_NOTIFICATIONS__FIREBASE__NOTIFICATION_TITLE' environment variable",
