@@ -20,6 +20,12 @@ if (env === 'development') {
 
 const agentPort = Number(process.env.AGENT_PORT ?? 3110)
 
+type FirebaseConfigObject = {
+  projectId: string
+  clientEmail: string
+  privateKey: string
+}
+
 // overrides are always as defined
 nconf.overrides({
   db: {
@@ -43,11 +49,7 @@ nconf.overrides({
     notificationWebhookUrl: process.env.NOTIFICATION_WEBHOOK_URL,
     pushNotificationTitle: process.env.PUSH_NOTIFICATION_TITLE,
     pushNotificationBody: process.env.PUSH_NOTIFICATION_BODY,
-    firebase: {
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY,
-    },
+    firebase: JSON.parse(process.env.FIREBASE_APPS ?? '[]') as FirebaseConfigObject[],
     pickup: {
       type: process.env.PICKUP_TYPE?.toString().toLowerCase(),
       strategy: process.env.PICKUP_STRATEGY ?? MessageForwardingStrategy.DirectDelivery,
