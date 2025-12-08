@@ -46,7 +46,7 @@
     "@openwallet-foundation/askar-nodejs": "^0.4.3",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.2",
-    "drizzle-orm": "^0.44.6",
+    "drizzle-orm": "^0.44.7",
     "express": "^5.1.0",
     "firebase-admin": "^13.5.0",
     "ioredis": "catalog:",
