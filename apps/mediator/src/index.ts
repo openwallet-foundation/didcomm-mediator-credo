@@ -1,3 +1,4 @@
+import '@openwallet-foundation/askar-nodejs'
 import {
   DidCommOutOfBandRecord,
   DidCommOutOfBandRepository,

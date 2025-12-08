@@ -71,6 +71,7 @@ export class DynamoDbClientRepository {
       await dcr.dynamodbClient.send(command)
       await dcr.waitForTableToExist()
     } catch (error) {
+      // Already exists
       if (error instanceof Error && error.name === 'ResourceInUseException') {
         return dcr
       }
