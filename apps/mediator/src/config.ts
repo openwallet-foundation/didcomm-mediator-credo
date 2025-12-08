@@ -170,6 +170,12 @@ const zConfig = z
               }),
               z.object({
                 type: z.literal('dynamodb'),
+                endpoint: z
+                  .url({
+                    error:
+                      "Message pickup storage endpoint, if defined, must be an url when message pickup storage type is 'dynamodb'. Can also be set using 'MESSAGE_PICKUP__STORAGE__ENDPOINT' environment variable",
+                  })
+                  .optional(),
                 region: z
                   .string({
                     error:

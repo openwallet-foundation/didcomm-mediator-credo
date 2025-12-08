@@ -15,6 +15,8 @@ export async function loadMessagePickupStorage(): Promise<ExtendedQueueTransport
   if (storage.type === 'dynamodb') {
     logger.info('Using dynamodb message pickup storage')
     return await DynamoDbMessagePickupRepository.initialize({
+      // Endpoint is not needed when deploying to AWS, but for local development it can be useful
+      endpoint: storage.endpoint,
       logger,
       region: storage.region,
       tableName: storage.tableName,
