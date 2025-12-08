@@ -25,7 +25,7 @@ export async function sendNotification(agentContext: AgentContext, connectionId:
   }
 
   if (config.pushNotifications.firebase) {
-    if (!pushNotificationFcmRecord?.deviceToken) {
+    if (!pushNotificationFcmRecord) {
       agentContext.config.logger.debug(
         `No device token found for connection ${connectionId} so skip sending pushing notification`
       )
@@ -34,7 +34,7 @@ export async function sendNotification(agentContext: AgentContext, connectionId:
 
     // Check for firebase configuration
     // Send a Firebase Cloud Message notification to the device found for a given connection
-    await sendFcmPushNotification(agentContext, pushNotificationFcmRecord.deviceToken)
+    await sendFcmPushNotification(agentContext, pushNotificationFcmRecord)
   }
 }
 

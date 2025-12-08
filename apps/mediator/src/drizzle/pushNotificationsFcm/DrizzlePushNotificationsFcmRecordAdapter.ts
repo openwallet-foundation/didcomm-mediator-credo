@@ -28,6 +28,7 @@ export class DrizzlePushNotificationsFcmRecordAdapter extends BaseDrizzleRecordA
       connectionId,
       deviceToken: record.deviceToken,
       devicePlatform: record.devicePlatform,
+      firebaseProjectId: record.firebaseProjectId,
       customTags,
     }
   }

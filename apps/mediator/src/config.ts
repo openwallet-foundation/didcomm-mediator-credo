@@ -7,6 +7,29 @@ import { envAdapter } from 'zod-config/env-adapter'
 import { jsonAdapter } from 'zod-config/json-adapter'
 import { Logger } from './logger/index.js'
 
+const zFirebaseProjects = z.array(
+  z.object({
+    projectId: z.string({
+      error:
+        "Firebase push notifications project id must be a string. Can be set as part of JSON-stringified array of objects ('projectId' key) provided to 'PUSH_NOTIFICATIONS__FIREBASE__PROJECTS' environment variable",
+    }),
+    clientEmail: z.email({
+      error:
+        "Firebase push notifications client email must be a string. Can be set as part of JSON-stringified array of objects ('clientEmail' key) provided to 'PUSH_NOTIFICATIONS__FIREBASE__PROJECTS' environment variable",
+    }),
+    privateKey: z
+      .string({
+        error:
+          "Firebase push notifications private key must be a string. Can be set as part of JSON-stringified array of objects ('privateKey' key) provided to 'PUSH_NOTIFICATIONS__FIREBASE__PROJECTS' environment variable",
+      })
+      .transform((key) => (key.includes('\\n') ? key.replace(/\\n/g, '\n') : key.trim())),
+  }),
+  {
+    error:
+      "Firebase push notifications projects must be an array. Can be set as part of JSON-stringified array of objects provided to 'PUSH_NOTIFICATIONS__FIREBASE__PROJECTS' environment variable",
+  }
+)
+
 const zConfig = z
   .object({
     logLevel: z
@@ -243,20 +266,27 @@ const zConfig = z
           .optional(),
         firebase: z
           .object({
-            projectId: z.string({
-              error:
-                "Firebase push notifications project id must be a string when firebase is configured. Can also be set using 'PUSH_NOTIFICATIONS__FIREBASE__PROJECT_ID' environment variable",
-            }),
-            clientEmail: z.email({
-              error:
-                "Firebase push notifications client email must be a string when firebase is configured. Can also be set using 'PUSH_NOTIFICATIONS__FIREBASE__CLIENT_EMAIL' environment variable",
-            }),
-            privateKey: z
-              .string({
-                error:
-                  "Firebase push notifications private key must be a string when firebase is configured. Can also be set using 'PUSH_NOTIFICATIONS__FIREBASE__PRIVATE_KEY' environment variable",
-              })
-              .transform((key) => (key.includes('\\n') ? key.replace(/\\n/g, '\n') : key.trim())),
+            projects: z
+              .union([
+                zFirebaseProjects,
+                z
+                  .string()
+                  .transform((s, ctx) => {
+                    try {
+                      return JSON.parse(s)
+                    } catch {
+                      ctx.addIssue({
+                        code: 'custom',
+                        message:
+                          'PUSH_NOTIFICATIONS__FIREBASE__PROJECTS must be a valid JSON string containing a JSON array',
+                      })
+                      return z.NEVER
+                    }
+                  })
+                  .pipe(zFirebaseProjects),
+              ])
+              .optional(),
+
             notificationTitle: z.string({
               error:
                 "Firebase push notifications title must be a string when firebase is configured. Can also be set using 'PUSH_NOTIFICATIONS__FIREBASE__NOTIFICATION_TITLE' environment variable",

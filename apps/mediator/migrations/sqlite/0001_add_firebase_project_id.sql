@@ -1,0 +1,1 @@
+ALTER TABLE `PushNotificationsFcm` ADD `firebase_project_id` text;

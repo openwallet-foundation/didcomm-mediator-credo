@@ -166,7 +166,7 @@ Below are the top-level configuration options. All can be set via ENV (with doub
 | `askar`             | `{ storeId, storeKey, keyDerivationMethod, database }`             |                                 | Askar config (see below) |
 | `cache`             | `{ type: 'in-memory' }` or `{ type: 'redis', redisUrl }`           | `{ type: 'in-memory'}`          | Cache backend            |
 | `messagePickup`     | `{ forwardingStrategy, storage, multiInstanceDelivery }`           | See below                       | Message pickup config    |
-| `pushNotifications` | `{ webhookUrl, firebase }`                                         | `{}`                            | Push notification config |
+| `pushNotifications`  | `{ webhookUrl, firebase }`                                          | `{}`                            | Push notification config |
 | `agentPort`         | Number                                                             | `3110`                          | Port for HTTP/WS         |
 | `agentEndpoints`    | Array of URLs                                                      | See below                       | Agent endpoints          |
 | `agentName`         | String                                                             | `Credo DIDComm Mediator`        | Agent name               |
@@ -246,7 +246,7 @@ When running the Askar to Drizzle storage delettion after successul migration fr
 #### Push Notifications
 
 - `webhookUrl`: URL for webhook notifications. If configured a webhook will be sent to the `webhookUrl` for all messages that are queued and could not be delivered directly (also taking into account multi-instance delivery). If an FCM device token is known for the connection, it will be included in the webhook body.
-- `firebase`: `{ projectId, clientEmail, privateKey, notificationTitle, notificationBody }`. Allows sending push notifications directly using Firebase Cloud Messaging.
+- `firebase`: `{ projects: [{ projectId, clientEmail, privateKey }], notificationTitle, notificationBody }`. Allows sending push notifications directly using Firebase Cloud Messaging.
 
 An example of a webhook sent to the `webhookUrl` is:
 

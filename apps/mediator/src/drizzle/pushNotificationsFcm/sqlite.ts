@@ -10,6 +10,8 @@ export const pushNotificationsFcm = sqliteTable(
     deviceToken: text('device_token'),
     devicePlatform: text('device_platform'),
 
+    firebaseProjectId: text('firebase_project_id'),
+
     connectionId: text('connection_id').notNull(),
   },
   (table) => [

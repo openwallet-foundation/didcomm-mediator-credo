@@ -1,0 +1,135 @@
+{
+  "version": "6",
+  "dialect": "sqlite",
+  "id": "caa9d909-5d2f-472f-a741-74840c19962c",
+  "prevId": "eb2a9486-a3f1-409c-a6b7-32dce9075359",
+  "tables": {
+    "PushNotificationsFcm": {
+      "name": "PushNotificationsFcm",
+      "columns": {
+        "context_correlation_id": {
+          "name": "context_correlation_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "metadata": {
+          "name": "metadata",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "custom_tags": {
+          "name": "custom_tags",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "device_token": {
+          "name": "device_token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "device_platform": {
+          "name": "device_platform",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "firebase_project_id": {
+          "name": "firebase_project_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "connection_id": {
+          "name": "connection_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "pushNotificationsFcm_fk_context": {
+          "name": "pushNotificationsFcm_fk_context",
+          "tableFrom": "PushNotificationsFcm",
+          "tableTo": "Context",
+          "columnsFrom": [
+            "context_correlation_id"
+          ],
+          "columnsTo": [
+            "context_correlation_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "PushNotificationsFcm_connection_id_context_correlation_id_DidcommConnection_id_context_correlation_id_fk": {
+          "name": "PushNotificationsFcm_connection_id_context_correlation_id_DidcommConnection_id_context_correlation_id_fk",
+          "tableFrom": "PushNotificationsFcm",
+          "tableTo": "DidcommConnection",
+          "columnsFrom": [
+            "connection_id",
+            "context_correlation_id"
+          ],
+          "columnsTo": [
+            "id",
+            "context_correlation_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "pushNotificationsFcm_pk": {
+          "columns": [
+            "context_correlation_id",
+            "id"
+          ],
+          "name": "pushNotificationsFcm_pk"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    }
+  },
+  "views": {},
+  "enums": {},
+  "_meta": {
+    "schemas": {},
+    "tables": {},
+    "columns": {}
+  },
+  "internal": {
+    "indexes": {}
+  }
+}
