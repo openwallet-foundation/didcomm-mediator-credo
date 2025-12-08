@@ -75,12 +75,8 @@
           "name": "pushNotificationsFcm_fk_context",
           "tableFrom": "PushNotificationsFcm",
           "tableTo": "Context",
-          "columnsFrom": [
-            "context_correlation_id"
-          ],
-          "columnsTo": [
-            "context_correlation_id"
-          ],
+          "columnsFrom": ["context_correlation_id"],
+          "columnsTo": ["context_correlation_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -88,14 +84,8 @@
           "name": "PushNotificationsFcm_context_correlation_id_connection_id_DidcommConnection_context_correlation_id_id_fk",
           "tableFrom": "PushNotificationsFcm",
           "tableTo": "DidcommConnection",
-          "columnsFrom": [
-            "context_correlation_id",
-            "connection_id"
-          ],
-          "columnsTo": [
-            "context_correlation_id",
-            "id"
-          ],
+          "columnsFrom": ["context_correlation_id", "connection_id"],
+          "columnsTo": ["context_correlation_id", "id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -103,10 +93,7 @@
       "compositePrimaryKeys": {
         "pushNotificationsFcm_pk": {
           "name": "pushNotificationsFcm_pk",
-          "columns": [
-            "context_correlation_id",
-            "id"
-          ]
+          "columns": ["context_correlation_id", "id"]
         }
       },
       "uniqueConstraints": {},
