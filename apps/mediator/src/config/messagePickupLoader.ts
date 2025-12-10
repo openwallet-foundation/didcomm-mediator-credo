@@ -1,7 +1,7 @@
 import { Agent } from '@credo-ts/core'
 import { DidCommQueueTransportRepository } from '@credo-ts/didcomm'
-import { DynamoDbMessagePickupRepository } from '@credo-ts/didcomm-message-pickup-dynamodb'
-import { PostgresMessagePickupRepository } from '@credo-ts/didcomm-message-pickup-postgres'
+import { DidCommTransportQueueDynamoDb } from '@credo-ts/didcomm-transport-queue-dynamodb'
+import { DidCommTransportQueuePostgres } from '@credo-ts/didcomm-transport-queue-postgres'
 import { config, logger } from '../config.js'
 import { StorageServiceMessageQueue } from '../storage/StorageMessageQueue.js'
 
@@ -14,7 +14,7 @@ export async function loadMessagePickupStorage(): Promise<ExtendedQueueTransport
 
   if (storage.type === 'dynamodb') {
     logger.info('Using dynamodb message pickup storage')
-    return await DynamoDbMessagePickupRepository.initialize({
+    return await DidCommTransportQueueDynamoDb.initialize({
       // Endpoint is not needed when deploying to AWS, but for local development it can be useful
       endpoint: storage.endpoint,
       logger,
@@ -29,7 +29,7 @@ export async function loadMessagePickupStorage(): Promise<ExtendedQueueTransport
 
   if (storage.type === 'postgres') {
     logger.info('Using postgres message pickup storage')
-    return new PostgresMessagePickupRepository({
+    return new DidCommTransportQueuePostgres({
       postgresHost: storage.host,
       postgresUser: storage.user,
       postgresPassword: storage.password,

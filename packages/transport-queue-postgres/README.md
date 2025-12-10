@@ -1,4 +1,4 @@
-# Postgres Message Pickup repository for Credo
+# DIDComm Transport Queue (Postgres) for Credo
 
 ## Overview
 
@@ -19,9 +19,9 @@ This package provides a simple but efficient Message Pickup Repository implement
 
 ## How does it work?
 
-`PostgresMessagePickupRepository` creates two tables in its PostgreSQL database: one to store the queued messages, and another one to keep track of Live sessions when clients connect and disconnect from it. It also registers to a [PG PubSub](https://github.com/voxpelli/node-pg-pubsub) channel to be notified when a message arrives (for any connection).
+`DidCommTransportQueuePostgres` creates two tables in its PostgreSQL database: one to store the queued messages, and another one to keep track of Live sessions when clients connect and disconnect from it. It also registers to a [PG PubSub](https://github.com/voxpelli/node-pg-pubsub) channel to be notified when a message arrives (for any connection).
 
-When a new message for a certain DIDComm connection is added to the queue, `PostgresMessagePickupRepository` looks if there is an existing session with it:
+When a new message for a certain DIDComm connection is added to the queue, `DidCommTransportQueuePostgres` looks if there is an existing session with it:
 
 - If there is a local Live mode session, it will pack and deliver the message directly, adding it to the persistent queue with a particular status flag (`sending`) to reflect that it is expected to be delivered and acknowledged soon
 - If there is not any local session, the client could be connected to another instance. Therefore, it adds the message to the persistent queue and looks into the shared message pickup session database:
@@ -43,25 +43,25 @@ This module is designed to work with Credo 0.5.X. Newer versions may include bre
 To use it, install package in your DIDComm Mediator application. For example:
 
 ```bash
-npm i @credo-ts/didcomm-message-pickup-postgres
+npm i @credo-ts/didcomm-transport-queue-postgres
 ```
 
 or
 
 ```bash
-yarn add @credo-ts/didcomm-message-pickup-postgres
+yarn add @credo-ts/didcomm-transport-queue-postgres
 ```
 
 ## Usage
 
-Setting up PostgresMessagePickupRepository is quite simple if you have some prior experience with Credo. We can summarize it in three steps: create, initialize and inject into a Credo instance.
+Setting up DidCommTransportQueuePostgres is quite simple if you have some prior experience with Credo. We can summarize it in three steps: create, initialize and inject into a Credo instance.
 
 ### Constructing the Repository
 
-You need to instance `PostgresMessagePickupRepository` with explicit database configuration (remember: it could be the same used for Credo wallet). If `postgresDatabaseName` is not specified, default `messagepickuprepository` will be used (if it does not exist, it will try to automatically create it using the provided credentials).
+You need to instance `DidCommTransportQueuePostgres` with explicit database configuration (remember: it could be the same used for Credo wallet). If `postgresDatabaseName` is not specified, default `messagepickuprepository` will be used (if it does not exist, it will try to automatically create it using the provided credentials).
 
 ```ts
-const messageRepository = new PostgresMessagePickupRepository({
+const messageRepository = new DidCommTransportQueuePostgres({
   logger: yourLoggerInstance,
   postgresUser: "your_postgres_user",
   postgresPassword: "your_postgres_password",
@@ -72,9 +72,9 @@ const messageRepository = new PostgresMessagePickupRepository({
 
 ### Initializing the Repository
 
-To start using the `PostgresMessagePickupRepository`, initialize it with an agent and a callback function for retrieving connection information.
+To start using the `DidCommTransportQueuePostgres`, initialize it with an agent and a callback function for retrieving connection information.
 
-This callback must return another callback function that will be called by `PostgresMessagePickupRepository` when it determines that a Push Notification must be sent. It is a generic approach that makes you free to implement the Push notification service you want.
+This callback must return another callback function that will be called by `DidCommTransportQueuePostgres` when it determines that a Push Notification must be sent. It is a generic approach that makes you free to implement the Push notification service you want.
 
 Note that in this example, notification token is stored as a tag in connection records, so it is used to determine whether to create a Push notification callback or not for a given DIDComm connection.
 
@@ -97,15 +97,15 @@ agent.events.on(MessageQueuedEventType, async ({ payload }) => {
 
 ### Injecting into an Agent instance
 
-This full example shows how `PostgresMessagePickupRepository` is created an initialized alongside an `Agent` instance:
+This full example shows how `DidCommTransportQueuePostgres` is created an initialized alongside an `Agent` instance:
 
 ```javascript
 import { Agent, MediatorModule, MessagePickupModule } from "@credo-ts/core";
 import { agentDependencies } from "@credo-ts/node";
 import { MessageForwardingStrategy } from "@credo-ts/core/build/modules/routing/MessageForwardingStrategy";
-import { PostgresMessagePickupRepository } from "./PostgresMessagePickupRepository";
+import { DidCommTransportQueuePostgres } from "@credo-ts/didcomm-transport-queue-postgres";
 
-const messagePickupRepository = new PostgresMessagePickupRepository({
+const messagePickupRepository = new DidCommTransportQueuePostgres({
   postgresHost: "postgres",
   postgresUser: "user",
   postgresPassword: "pass",
@@ -133,4 +133,4 @@ agent.events.on("MessagePickupRepositoryMessageQueued", async ({ payload }) => {
 });
 ```
 
-As you can see, all you have to do is to set up your Credo agent's `ForwardingStrategy` to to `QueueOnly` and provide a `PostgresMessagePickupRepository` instance (with the appropriate callbacks) to `MessagePickupModuleConfig`. Then, initialize both your agent and PostgresMessagePickupRepository` and have fun!
+As you can see, all you have to do is to set up your Credo agent's `ForwardingStrategy` to to `QueueOnly` and provide a `DidCommTransportQueuePostgres` instance (with the appropriate callbacks) to `MessagePickupModuleConfig`. Then, initialize both your agent and DidCommTransportQueuePostgres` and have fun!

@@ -4,7 +4,7 @@ title Message arrived for an offline client
 participant CA1 as "Mediator App"
 participant CC1 as "Credo Core"
 participant CC2 as "Agent Event Listener"
-participant CP1 as "PostgresMessagePickupRepository"
+participant CP1 as "DidCommTransportQueuePostgres"
 participant DB as "PostgreSQL DB"
 
 CC1 -> CP1: addMessage(connectionId, payload)

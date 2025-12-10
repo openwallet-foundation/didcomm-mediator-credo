@@ -10,17 +10,22 @@
     "style:check": "biome check --unsafe",
     "style:fix": "biome check --write --unsafe",
     "build": "pnpm -r build",
-    "test": "vitest"
+    "test": "vitest",
+    "changeset": "changeset",
+    "version:packages": "pnpm changeset version",
+    "release": "pnpm build && pnpm changeset publish --access public"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.3.8",
+    "@changesets/changelog-github": "^0.5.1",
+    "@changesets/cli": "^2.29.7",
     "@types/http-proxy": "^1.17.16",
     "@types/node": "catalog:",
     "http-proxy": "^1.18.1",
     "typescript": "catalog:",
     "vite": "npm:rolldown-vite@^7.2.10",
-    "vitest": "^4.0.15",
-    "vite-node": "^5.2.0"
+    "vite-node": "^5.2.0",
+    "vitest": "^4.0.15"
   },
   "pnpm": {
     "overrides": {

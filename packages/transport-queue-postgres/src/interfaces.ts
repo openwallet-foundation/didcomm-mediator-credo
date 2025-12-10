@@ -1,7 +1,7 @@
 import { BaseEvent, Logger } from '@credo-ts/core'
 import { DidCommEncryptedMessage, DidCommMessagePickupSession } from '@credo-ts/didcomm'
 
-export interface PostgresMessagePickupRepositoryConfig {
+export interface PostgresTransportQueuePostgresConfig {
   logger?: Logger
   postgresUser: string
   postgresPassword: string
@@ -9,10 +9,10 @@ export interface PostgresMessagePickupRepositoryConfig {
   postgresDatabaseName?: string
 }
 
-export const PostgresMessagePickupMessageQueuedEventType = 'PostgresMessagePickupRepositoryMessageQueued' as const
+export const PostgresMessageQueuedEventType = 'TransportQueuePostgresMessageQueued' as const
 
-export interface PostgresMessagePickupMessageQueuedEvent extends BaseEvent {
-  type: typeof PostgresMessagePickupMessageQueuedEventType
+export interface PostgresMessageQueuedEvent extends BaseEvent {
+  type: typeof PostgresMessageQueuedEventType
   payload: {
     message: {
       id: string

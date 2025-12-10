@@ -3,11 +3,11 @@ title Message arrived for an online client
 
 box "Credo Instance 1"
 participant CC2 as "Credo Core" 
-participant CP2 as "PostgresMessagePickupRepository"
+participant CP2 as "DidCommTransportQueuePostgres"
 end box
 box "Credo Instance 2"
 participant CC1 as "Credo Core"
-participant CP1 as "PostgresMessagePickupRepository" 
+participant CP1 as "DidCommTransportQueuePostgres" 
 end box
 database PG as "Postgres DB"
 
