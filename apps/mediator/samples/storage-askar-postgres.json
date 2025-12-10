@@ -1,0 +1,17 @@
+{
+  "storage": {
+    "type": "askar"
+  },
+  "askar": {
+    "storeId": "test",
+    "storeKey": "test",
+    "database": {
+      "type": "postgres",
+      "host": "localhost:5432",
+      "user": "postgres",
+      "password": "postgres",
+      "adminUser": "postgres",
+      "adminPassword": "postgres"
+    }
+  }
+}

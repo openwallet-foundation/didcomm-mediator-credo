@@ -1,5 +1,3 @@
-version: "3.9"
-
 networks:
   local_credo_mediator_network:
     name: local_credo_mediator_network

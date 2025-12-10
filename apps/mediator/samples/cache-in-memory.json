@@ -1,0 +1,9 @@
+{
+  "cache": {
+    "type": "in-memory"
+  },
+  "askar": {
+    "storeId": "test",
+    "storeKey": "test"
+  }
+}

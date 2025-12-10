@@ -1,0 +1,10 @@
+{
+  "cache": {
+    "type": "redis",
+    "redisUrl": "redis://127.0.0.1:6379"
+  },
+  "askar": {
+    "storeId": "test",
+    "storeKey": "test"
+  }
+}

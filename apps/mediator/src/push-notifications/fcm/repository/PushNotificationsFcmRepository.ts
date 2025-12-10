@@ -1,6 +1,6 @@
-import { EventEmitter, InjectionSymbols, Repository, type StorageService, inject, injectable } from '@credo-ts/core'
+import { EventEmitter, InjectionSymbols, inject, injectable, Repository, type StorageService } from '@credo-ts/core'
 
-import { PushNotificationsFcmRecord } from './PushNotificationsFcmRecord'
+import { PushNotificationsFcmRecord } from './PushNotificationsFcmRecord.js'
 
 @injectable()
 export class PushNotificationsFcmRepository extends Repository<PushNotificationsFcmRecord> {

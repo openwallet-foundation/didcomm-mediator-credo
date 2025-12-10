@@ -1,63 +1,68 @@
 import type { Socket } from 'node:net'
-import { AskarModule, AskarMultiWalletDatabaseScheme } from '@credo-ts/askar'
+import { AskarModule, AskarStoreDuplicateError } from '@credo-ts/askar'
+import { Agent } from '@credo-ts/core'
 import {
-  Agent,
-  ConnectionsModule,
+  DidCommHttpOutboundTransport,
   DidCommMimeType,
-  HttpOutboundTransport,
-  MediatorModule,
-  MessagePickupModule,
-  MessagePickupRepository,
-  OutOfBandRole,
-  OutOfBandState,
-  type WalletConfig,
-  WsOutboundTransport,
-} from '@credo-ts/core'
-import { HttpInboundTransport, WsInboundTransport, agentDependencies } from '@credo-ts/node'
-import { askar } from '@openwallet-foundation/askar-nodejs'
+  DidCommModule,
+  DidCommOutOfBandRole,
+  DidCommOutOfBandState,
+  DidCommWsOutboundTransport,
+} from '@credo-ts/didcomm'
 
-import express from 'express'
-import { Server } from 'ws'
+import { agentDependencies, DidCommHttpInboundTransport, DidCommWsInboundTransport } from '@credo-ts/node'
 
-import config from './config'
-import { askarPostgresConfig } from './database'
-import { Logger } from './logger'
-import { loadPickup } from './pickup/loader'
-import { PushNotificationsFcmModule } from './push-notifications/fcm'
-import { initializeFirebase } from './push-notifications/fcm/firebase'
-import { StorageMessageQueueModule } from './storage/StorageMessageQueueModule'
+import express, { type Express } from 'express'
+import Redis from 'ioredis'
+import { WebSocketServer } from 'ws'
+import { loadAskar } from './config/askarLoader.js'
+import { loadCacheStorage } from './config/cacheLoader.js'
+import { ExtendedQueueTransportRepository, loadMessagePickupStorage } from './config/messagePickupLoader.js'
+import { loadPushNotificationSender } from './config/pushNotificationLoader.js'
+import { loadRedisMessageDelivery } from './config/redisMessageDeliveryLoader.js'
+import { loadStorage } from './config/storageLoader.js'
+import { config, logger } from './config.js'
+import { PushNotificationsFcmModule } from './push-notifications/fcm/PushNotificationsFcmModule.js'
 
-function createModules(messagePickupRepository?: MessagePickupRepository) {
-  type Modules = {
-    storageModule: StorageMessageQueueModule
-    connections: ConnectionsModule
-    mediator: MediatorModule
-    askar: AskarModule
-    pushNotificationsFcm: PushNotificationsFcmModule
-    messagePickup?: MessagePickupModule
-  }
+async function createModules({
+  queueTransportRepository,
+  app,
+  socketServer,
+}: {
+  queueTransportRepository: ExtendedQueueTransportRepository
+  app: Express
+  socketServer: WebSocketServer
+}) {
+  const modules = {
+    didcomm: new DidCommModule({
+      endpoints: config.agentEndpoints,
+      useDidSovPrefixWhereAllowed: true,
+      didCommMimeType: DidCommMimeType.V0,
+      queueTransportRepository,
 
-  const modules: Modules = {
-    storageModule: new StorageMessageQueueModule(),
-    connections: new ConnectionsModule({
-      autoAcceptConnections: true,
-    }),
-    mediator: new MediatorModule({
-      autoAcceptMediationRequests: true,
-      messageForwardingStrategy: config.get('agent:pickup').strategy,
-    }),
-    askar: new AskarModule({
-      ariesAskar: askar,
-      multiWalletDatabaseScheme: AskarMultiWalletDatabaseScheme.ProfilePerWallet,
+      transports: {
+        inbound: [
+          new DidCommHttpInboundTransport({ app, port: config.agentPort }),
+          new DidCommWsInboundTransport({ server: socketServer }),
+        ],
+        outbound: [new DidCommHttpOutboundTransport(), new DidCommWsOutboundTransport()],
+      },
+
+      connections: {
+        autoAcceptConnections: true,
+      },
+      mediator: {
+        autoAcceptMediationRequests: true,
+        messageForwardingStrategy: config.messagePickup.forwardingStrategy,
+      },
+
+      // Protocols not needed for mediator
+      basicMessages: false,
+      credentials: false,
+      proofs: false,
     }),
     pushNotificationsFcm: new PushNotificationsFcmModule(),
-  }
-
-  if (messagePickupRepository) {
-    modules.messagePickup = new MessagePickupModule({
-      messagePickupRepository,
-    })
-  }
+  } as const
 
   return modules
 }
@@ -66,82 +71,52 @@ export async function createAgent() {
   // We create our own instance of express here. This is not required
   // but allows use to use the same server (and port) for both WebSockets and HTTP
   const app = express()
-  const socketServer = new Server({ noServer: true })
+  const socketServer = new WebSocketServer({ noServer: true })
+  const redisClient = config.cache.type === 'redis' ? new Redis.default(config.cache.redisUrl) : undefined
 
-  const logger = new Logger(config.get('agent:logLevel'))
-
-  // Only load postgres database in production
-  const storageConfig = config.get('db:host') ? askarPostgresConfig : undefined
-
-  const walletConfig: WalletConfig = {
-    id: config.get('wallet:name'),
-    key: config.get('wallet:key'),
-    storage: storageConfig,
-  }
-
-  if (storageConfig) {
-    logger.info('Using postgres storage', {
-      walletId: walletConfig.id,
-      host: storageConfig.config.host,
-    })
-  } else {
-    logger.info('Using SQlite storage', {
-      walletId: walletConfig.id,
-    })
-  }
-
-  // Load the message pickup repository if configured
-  let messagePickupRepository = undefined
-  if (config.get('agent:pickup').type) {
-    logger.info(`Loading ${config.get('agent:pickup').type} pickup protocol`)
-    messagePickupRepository = await loadPickup(config.get('agent:pickup').type, config.get('agent:pickup').strategy)
-  }
-
-  const agent = new Agent({
-    config: {
-      label: config.get('agent:name'),
-      endpoints: config.get('agent:endpoints'),
-      walletConfig: walletConfig,
-      useDidSovPrefixWhereAllowed: true,
-      logger: logger,
-      autoUpdateStorageOnStartup: true,
-      backupBeforeStorageUpdate: false,
-      didCommMimeType: DidCommMimeType.V0,
-    },
-    dependencies: agentDependencies,
-    modules: {
-      ...createModules(messagePickupRepository),
-    },
+  const queueTransportRepository = await loadMessagePickupStorage()
+  const storageModules = loadStorage()
+  const askarModules = await loadAskar()
+  const cacheModules = loadCacheStorage({
+    redisClient,
   })
 
-  // Create all transports
-  const httpInboundTransport = new HttpInboundTransport({ app, port: config.get('agent:port') })
-  const httpOutboundTransport = new HttpOutboundTransport()
-  const wsInboundTransport = new WsInboundTransport({ server: socketServer })
-  const wsOutboundTransport = new WsOutboundTransport()
+  const modules = {
+    ...storageModules,
+    ...askarModules,
+    ...cacheModules,
+    ...(await createModules({
+      queueTransportRepository,
+      app,
+      socketServer,
+    })),
+  } as const
 
-  // Register all Transports
-  agent.registerInboundTransport(httpInboundTransport)
-  agent.registerOutboundTransport(httpOutboundTransport)
-  agent.registerInboundTransport(wsInboundTransport)
-  agent.registerOutboundTransport(wsOutboundTransport)
+  const agent = new Agent<typeof modules & { askar: AskarModule }>({
+    config: {
+      logger,
+      autoUpdateStorageOnStartup: true,
+    },
+    dependencies: agentDependencies,
+    modules: modules as typeof modules & { askar: AskarModule },
+  })
 
   // Added health check endpoint
-  httpInboundTransport.app.get('/health', async (_req, res) => {
+  app.get('/health', async (_req, res) => {
     res.sendStatus(202)
   })
 
-  httpInboundTransport.app.get('/invite', async (req, res) => {
+  app.get('/invite', async (req, res) => {
     if (!req.query._oobid || typeof req.query._oobid !== 'string') {
       return res.status(400).send('Missing or invalid _oobid')
     }
 
-    const outOfBandRecord = await agent.oob.findById(req.query._oobid)
+    const outOfBandRecord = await agent.didcomm.oob.findById(req.query._oobid)
 
     if (
       !outOfBandRecord ||
-      outOfBandRecord.role !== OutOfBandRole.Sender ||
-      outOfBandRecord.state !== OutOfBandState.AwaitResponse
+      outOfBandRecord.role !== DidCommOutOfBandRole.Sender ||
+      outOfBandRecord.state !== DidCommOutOfBandState.AwaitResponse
     ) {
       return res.status(400).send(`No invitation found for _oobid ${req.query._oobid}`)
     }
@@ -149,35 +124,57 @@ export async function createAgent() {
     return res.send(outOfBandRecord.outOfBandInvitation.toJSON())
   })
 
-  if (messagePickupRepository) {
-    await messagePickupRepository.initialize({ agent })
+  try {
+    await agent.modules.askar.provisionStore()
+    agent.config.logger.info('Provisioned store')
+  } catch (error) {
+    if (error instanceof AskarStoreDuplicateError) {
+      agent.config.logger.info('Store already exists')
+    } else {
+      agent.config.logger.error('Error provisioning store', {
+        error,
+      })
+    }
   }
+
+  // Optionally initialize queue transport repository
+  // TODO: We should refactor this so it's handled by the agent.initialize (using a module?)
+  await queueTransportRepository.initialize?.(agent)
 
   await agent.initialize()
 
-  httpInboundTransport.server?.on('listening', () => {
-    logger.info(`Agent listening on port ${config.get('agent:port')}`)
+  const inboundTransport = agent.didcomm.config.inboundTransports.find(
+    (transport) => transport instanceof DidCommHttpInboundTransport
+  )
+
+  inboundTransport?.server?.on('listening', () => {
+    logger.info(`Agent listening on port ${config.agentPort}`)
   })
 
-  httpInboundTransport.server?.on('error', (err) => {
-    logger.error(`Agent failed to start on port ${config.get('agent:port')}`, err)
+  inboundTransport?.server?.on('error', (err) => {
+    logger.error(`Agent failed to start on port ${config.agentPort}`, err)
   })
 
-  httpInboundTransport.server?.on('close', () => {
-    logger.info(`Agent stopped listening on port ${config.get('agent:port')}`)
+  inboundTransport?.server?.on('close', () => {
+    logger.info(`Agent stopped listening on port ${config.agentPort}`)
   })
 
   // When an 'upgrade' to WS is made on our http server, we forward the
   // request to the WS server
-  httpInboundTransport.server?.on('upgrade', (request, socket, head) => {
+  inboundTransport?.server?.on('upgrade', (request, socket, head) => {
     socketServer.handleUpgrade(request, socket as Socket, head, (socket) => {
       socketServer.emit('connection', socket, request)
     })
   })
 
-  await initializeFirebase(agent)
+  await loadPushNotificationSender(agent)
+  await loadRedisMessageDelivery({
+    agent,
+    // FIXME: somehow reusing the same Redis client makes everything fail
+    /* redisClient */
+  })
 
   return agent
 }
 
-export type MediatorAgent = Agent<ReturnType<typeof createModules>>
+export type MediatorAgent = Agent<Awaited<ReturnType<typeof createModules>>>

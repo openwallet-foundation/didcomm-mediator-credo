@@ -1,21 +1,19 @@
-import type { ProblemReportErrorOptions } from '@credo-ts/core'
-import type { PushNotificationsFcmProblemReportReason } from './PushNotificationsFcmProblemReportReason'
-
-import { ProblemReportError } from '@credo-ts/core'
-
-import { PushNotificationsFcmProblemReportMessage } from '../messages'
+import type { DidCommProblemReportErrorOptions } from '@credo-ts/didcomm'
+import { DidCommProblemReportError } from '@credo-ts/didcomm'
+import { PushNotificationsFcmProblemReportMessage } from '../messages/index.js'
+import type { PushNotificationsFcmProblemReportReason } from './PushNotificationsFcmProblemReportReason.js'
 
 /**
  * @internal
  */
-interface PushNotificationsFcmProblemReportErrorOptions extends ProblemReportErrorOptions {
+interface PushNotificationsFcmProblemReportErrorOptions extends DidCommProblemReportErrorOptions {
   problemCode: PushNotificationsFcmProblemReportReason
 }
 
 /**
  * @internal
  */
-export class PushNotificationsFcmProblemReportError extends ProblemReportError {
+export class PushNotificationsFcmProblemReportError extends DidCommProblemReportError {
   public problemReport: PushNotificationsFcmProblemReportMessage
 
   public constructor(

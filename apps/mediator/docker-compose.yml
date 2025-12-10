@@ -1,20 +1,80 @@
-version: "3.5"
+networks:
+  mediator-net:
+    driver: bridge
 
 services:
-  # TODO: add postgres service as example
   mediator:
-    image: ghcr.io/openwallet-foundation/didcomm-mediator-credo:latest
+    # image: ghcr.io/openwallet-foundation/didcomm-mediator-credo/mediator:latest
+    image: mediator
     environment:
+      # Basic configuration
       AGENT_PORT: 3000
-      AGENT_NAME: Mediator
-      WALLET_NAME: mediator
-      WALLET_KEY: ${WALLET_KEY}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_HOST: ${POSTGRES_HOST}
-      POSTGRES_ADMIN_USER: ${POSTGRES_ADMIN_USER}
-      POSTGRES_ADMIN_PASSWORD: ${POSTGRES_ADMIN_PASSWORD}
-      AGENT_ENDPOINTS: "https://my-mediator.com,wss://my-mediator.com"
-      LOG_LEVEL: 2
+      AGENT_NAME: Credo
+      AGENT_ENDPOINTS: http://localhost:3000
+      LOG_LEVEL: debug
+
+      STORAGE__TYPE: drizzle
+      STORAGE__DIALECT: postgres
+      STORAGE__DATABASE_URL: postgresql://postgres:postgres@postgres:5432/drizzle
+
+      # Database configuration - Postgres
+      ASKAR__STORE_ID: credo
+      ASKAR__STORE_KEY: credo
+      ASKAR__DATABASE__TYPE: postgres
+      ASKAR__DATABASE__USER: postgres
+      ASKAR__DATABASE__PASSWORD: postgres
+      ASKAR__DATABASE__HOST: postgres:5432
+      ASKAR__DATABASE__ADMIN_USER: postgres
+      ASKAR__DATABASE__ADMIN_PASSWORD: postgres
+
+      # Message Pickup configuration - DynamoDB
+      MESSAGE_PICKUP__STORAGE__TYPE: dynamodb
+      MESSAGE_PICKUP__STORAGE__REGION: local
+      MESSAGE_PICKUP__STORAGE__ACCESS_KEY_ID: local
+      MESSAGE_PICKUP__STORAGE__TABLE_NAME: queued_messages
+      MESSAGE_PICKUP__STORAGE__SECRET_ACCESS_KEY: local
+
+      # Cache configuration - Redis
+      CACHE__TYPE: redis
+      CACHE__REDIS_URL: redis://redis:6379
     ports:
-      - "3000"
+      - "3000:3000"
+    depends_on:
+      - postgres
+      - redis
+      - dynamodb
+      - mediator-migration
+    networks:
+      - mediator-net
+
+  mediator-migration:
+    image: ghcr.io/openwallet-foundation/didcomm-mediator-credo/mediator:latest
+    environment:
+      DRIZZLE_DATABASE_URL: postgresql://postgres:postgres@postgres:5432/drizzle
+    entrypoint: "sh -c"
+    command: '"apps/mediator/node_modules/.bin/drizzle-storage --bundle core --bundle didcomm --bundle /app/apps/mediator/build/drizzle/bundle.js migrate --dialect postgres"'
+    depends_on:
+      - postgres
+    networks:
+      - mediator-net
+
+  dynamodb:
+    image: amazon/dynamodb-local:latest
+    networks:
+      - mediator-net
+    command: -jar DynamoDBLocal.jar -port 8000
+
+  redis:
+    image: valkey/valkey
+    networks:
+      - mediator-net
+
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - ../../development/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - mediator-net

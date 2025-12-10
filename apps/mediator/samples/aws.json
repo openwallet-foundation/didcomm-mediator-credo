@@ -1,0 +1,32 @@
+{
+  "agentPort": 5566,
+  "agentName": "Credo AWS Mediator",
+  "agentEndpoints": ["http://localhost:5566", "ws://localhost:5566"],
+  "cache": {
+    "type": "redis",
+    "redisUrl": "redis://mediator:97ad4d78-28a8-427d-a952-85f7476002b6@clustercfg.mediator.something.memorydb.eu-central-1.amazonaws.com:6379"
+  },
+  "askar": {
+    "storeId": "mediator",
+    "storeKey": "3f8fee7cb3d421123082c50d3bbba364204b8fd182fbadf0b088e902332f1595",
+    "database": {
+      "type": "postgres",
+      "host": "mediator.cluster-something.eu-central-1.rds.amazonaws.com",
+      "user": "postgres",
+      "password": "275987b5-e1f0-4f6f-a331-ed9fb66b0bde"
+    }
+  },
+  "storage": {
+    "type": "drizzle",
+    "dialect": "postgres",
+    "databaseUrl": "postgresql://postgres:45b07cf5-e38b-41b9-b281-6275f6c5b3b9@mediator.cluster-something.eu-central-1.rds.amazonaws.com/drizzle"
+  },
+  "messagePickup": {
+    "storage": {
+      "type": "dynamodb",
+      "region": "eu-central-1",
+      "accessKeyId": "09f2bab2-7c60-42dc-82b7-61299ec678e9",
+      "secretAccessKey": "4487e488-9f17-4f0f-89fd-7f63e4feab7f"
+    }
+  }
+}

@@ -1,24 +1,22 @@
-import type { AgentContext, InboundMessageContext, Logger } from '@credo-ts/core'
-import { CredoError, InjectionSymbols, RecordNotFoundError, TransportService, inject, injectable } from '@credo-ts/core'
-import { PushNotificationsFcmProblemReportError, PushNotificationsFcmProblemReportReason } from '../errors'
-import { PushNotificationsFcmDeviceInfoMessage, PushNotificationsFcmSetDeviceInfoMessage } from '../messages'
-import type { FcmDeviceInfo } from '../models/FcmDeviceInfo'
-import { PushNotificationsFcmRecord, PushNotificationsFcmRepository } from '../repository'
+import type { AgentContext, Logger } from '@credo-ts/core'
+import { CredoError, InjectionSymbols, inject, injectable } from '@credo-ts/core'
+import { DidCommInboundMessageContext } from '@credo-ts/didcomm'
+import { PushNotificationsFcmProblemReportError, PushNotificationsFcmProblemReportReason } from '../errors/index.js'
+import { PushNotificationsFcmDeviceInfoMessage, PushNotificationsFcmSetDeviceInfoMessage } from '../messages/index.js'
+import type { FcmDeviceInfo } from '../models/FcmDeviceInfo.js'
+import { PushNotificationsFcmRecord, PushNotificationsFcmRepository } from '../repository/index.js'
 
 @injectable()
 export class PushNotificationsFcmService {
   private pushNotificationsFcmRepository: PushNotificationsFcmRepository
   private logger: Logger
-  private transportService: TransportService
 
   public constructor(
     pushNotificationsFcmRepository: PushNotificationsFcmRepository,
-    transportService: TransportService,
     @inject(InjectionSymbols.Logger) logger: Logger
   ) {
     this.pushNotificationsFcmRepository = pushNotificationsFcmRepository
     this.logger = logger
-    this.transportService = transportService
   }
 
   public createDeviceInfo(options: { threadId: string; deviceInfo: FcmDeviceInfo }) {
@@ -36,7 +34,9 @@ export class PushNotificationsFcmService {
     })
   }
 
-  public async processSetDeviceInfo(messageContext: InboundMessageContext<PushNotificationsFcmSetDeviceInfoMessage>) {
+  public async processSetDeviceInfo(
+    messageContext: DidCommInboundMessageContext<PushNotificationsFcmSetDeviceInfoMessage>
+  ) {
     const { message, agentContext } = messageContext
     if (
       (message.deviceToken === null && message.devicePlatform !== null) ||
@@ -82,17 +82,15 @@ export class PushNotificationsFcmService {
   public async getPushNotificationRecordByConnectionId(
     agentContext: AgentContext,
     connectionId: string
-  ): Promise<PushNotificationsFcmRecord | undefined> {
-    try {
-      return await this.pushNotificationsFcmRepository.getSingleByQuery(agentContext, {
-        connectionId,
-      })
-    } catch (error) {
-      if (error instanceof RecordNotFoundError) {
-        this.logger.debug(`No push notification record found for connection id ${connectionId}`)
-        return undefined
-      }
-      throw error
-    }
+  ): Promise<PushNotificationsFcmRecord> {
+    return await this.pushNotificationsFcmRepository.getSingleByQuery(agentContext, {
+      connectionId,
+    })
+  }
+
+  public async findPushNotificationRecordByConnectionId(agentContext: AgentContext, connectionId: string) {
+    return await this.pushNotificationsFcmRepository.findSingleByQuery(agentContext, {
+      connectionId,
+    })
   }
 }

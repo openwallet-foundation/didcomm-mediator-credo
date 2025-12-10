@@ -1,8 +1,7 @@
-import type { FcmDeviceInfo } from '../models'
-
-import { AgentMessage, IsValidMessageType, parseMessageType } from '@credo-ts/core'
+import { DidCommMessage, IsValidMessageType, parseMessageType } from '@credo-ts/didcomm'
 import { Expose } from 'class-transformer'
 import { IsString, ValidateIf } from 'class-validator'
+import type { FcmDeviceInfo } from '../models/index.js'
 
 interface PushNotificationsFcmSetDeviceInfoOptions extends FcmDeviceInfo {
   id?: string
@@ -13,7 +12,7 @@ interface PushNotificationsFcmSetDeviceInfoOptions extends FcmDeviceInfo {
  *
  * @see https://github.com/hyperledger/aries-rfcs/tree/main/features/0734-push-notifications-fcm#set-device-info
  */
-export class PushNotificationsFcmSetDeviceInfoMessage extends AgentMessage {
+export class PushNotificationsFcmSetDeviceInfoMessage extends DidCommMessage {
   public constructor(options: PushNotificationsFcmSetDeviceInfoOptions) {
     super()
 

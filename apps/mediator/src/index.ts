@@ -1,26 +1,30 @@
-import { Agent, OutOfBandRecord, OutOfBandRepository, OutOfBandRole, OutOfBandState } from '@credo-ts/core'
+import '@openwallet-foundation/askar-nodejs'
+import {
+  DidCommOutOfBandRecord,
+  DidCommOutOfBandRepository,
+  DidCommOutOfBandRole,
+  DidCommOutOfBandState,
+} from '@credo-ts/didcomm'
+import { createAgent, MediatorAgent } from './agent.js'
+import { config } from './config.js'
 
-import { createAgent } from './agent'
-import config from './config'
-
-function logInvitationUrl(agent: Agent, outOfBandRecord: OutOfBandRecord) {
-  const httpEndpoint = agent.config.endpoints.find((e) => e.startsWith('http'))
+function logInvitationUrl(agent: MediatorAgent, outOfBandRecord: DidCommOutOfBandRecord) {
+  const httpEndpoint = config.agentEndpoints.find((e) => e.startsWith('http'))
   if (!httpEndpoint) {
     throw new Error('No HTTP endpoint configured for invitation generation')
   }
 
-  const invitationEndpoint = config.get('agent:invitationUrl') ?? `${httpEndpoint}/invite`
   const mediatorInvitationUrlLong = outOfBandRecord.outOfBandInvitation.toUrl({
-    domain: invitationEndpoint,
+    domain: config.invitationUrl,
   })
 
   agent.config.logger.info(`Out of band invitation url:\n\n\t${mediatorInvitationUrlLong}`)
 }
 
-async function createMediatorInvitation(agent: Agent) {
-  return agent.oob.createInvitation({
+async function createMediatorInvitation(agent: MediatorAgent) {
+  return agent.didcomm.oob.createInvitation({
     multiUseInvitation: true,
-    goalCode: config.get('agent:goalCode'),
+    goalCode: config.invitationGoalCode,
     goal: 'Mediator Invitation',
   })
 }
@@ -28,16 +32,16 @@ async function createMediatorInvitation(agent: Agent) {
 void createAgent().then(async (agent) => {
   agent.config.logger.info('Agent started')
 
-  if (config.get('agent:recreateInvitation')) {
+  if (config.createNewInvitation) {
     agent.config.logger.info('Recreating out of band invitation')
     const outOfBandRecord = await createMediatorInvitation(agent)
     return logInvitationUrl(agent, outOfBandRecord)
   }
 
-  const oobRepo = agent.dependencyManager.resolve(OutOfBandRepository)
+  const oobRepo = agent.dependencyManager.resolve(DidCommOutOfBandRepository)
   const outOfBandRecords = await oobRepo.findByQuery(agent.context, {
-    state: OutOfBandState.AwaitResponse,
-    role: OutOfBandRole.Sender,
+    state: DidCommOutOfBandState.AwaitResponse,
+    role: DidCommOutOfBandRole.Sender,
   })
 
   let outOfBandRecord = outOfBandRecords

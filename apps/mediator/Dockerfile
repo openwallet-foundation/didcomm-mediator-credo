@@ -7,19 +7,12 @@ RUN apt-get update && \
   apt-get clean && \
   rm -rf /var/lib/apt/lists/*
 
-FROM base AS build
-
-WORKDIR /build
-
-COPY . /build
-
-RUN pnpm install --node-linker=hoisted --frozen-lockfile && \
-  pnpm --filter didcomm-mediator-service build && \
-  pnpm prune --prod
-
-FROM base AS final
-
 WORKDIR /app
+
+COPY . /app
+
+RUN pnpm install --frozen-lockfile
+RUN pnpm --filter didcomm-mediator-service... build
 
 # Install jemalloc, allows loading a different memory allocator
 # to help with memory fragmentation issues in long running node processes
@@ -27,11 +20,6 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libjemalloc2 \
  && rm -rf /var/lib/apt/lists/*
-
-# Copy build artifacts
-COPY --from=build /build/node_modules /app/node_modules
-COPY --from=build /build/apps/mediator/build /app/build
-COPY --from=build /build/apps/mediator/package.json /app
 
 # Don't run production as root
 RUN addgroup --system --gid 1001 agent && \
@@ -41,4 +29,4 @@ RUN addgroup --system --gid 1001 agent && \
 
 USER agent
 
-ENTRYPOINT [ "node", "./build/apps/mediator/src/index.js" ]
+ENTRYPOINT [ "node", "apps/mediator/build/index.js" ]

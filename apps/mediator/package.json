@@ -3,46 +3,71 @@
   "version": "0.0.0",
   "description": "Credo mediator agent",
   "private": true,
-  "main": "build/index",
-  "types": "build/index",
-  "files": ["build"],
+  "main": "build/index.js",
+  "types": "build/index.d.ts",
+  "type": "module",
+  "files": [
+    "build"
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/openwallet-foundation/didcomm-mediator-credo"
   },
-  "packageManager": "pnpm@9.15.3+sha256.c1da43727ccbc1ed42aff4fd6bdb4b1e91e65a818e6efff5b240fbf070ba4eaf",
+  "packageManager": "pnpm@10.7.0+sha512.6b865ad4b62a1d9842b61d674a393903b871d9244954f652b8842c2b553c72176b278f64c463e52d40fff8aba385c235c8c9ecf5cc7de4fd78b8bb6d49633ab6",
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "prepublishOnly": "pnpm build",
-    "dev": "ts-node dev.ts",
-    "start": "NODE_ENV=production node build/index.js"
+    "dev": "vite-node dev.ts",
+    "start": "node build/index.js",
+    "migrate-askar-to-drizzle": "node build/askarToDrizzleMigration.js",
+    "migrate-askar-to-drizzle:dev": "vite-node src/askarToDrizzleMigration.ts",
+    "migrate-askar-to-drizzle-delete-storage-records": "node build/askarToDrizzleDeleteAskarStorageRecords.js",
+    "migrate-askar-to-drizzle-delete-storage-records:dev": "vite-node src/askarToDrizzleDeleteAskarStorageRecords.ts",
+    "drizzle": "drizzle-storage --bundle core --bundle didcomm --bundle ./build/drizzle/bundle.js",
+    "drizzle:generate": "drizzle-storage --bundle ./build/drizzle/bundle.js generate",
+    "drizzle:migrate:sqlite": "pnpm drizzle migrate --dialect sqlite",
+    "drizzle:migrate:sqlite:dev": "pnpm drizzle:migrate:sqlite --database-url 'file:./database.db'",
+    "drizzle:studio:sqlite:dev": "pnpm drizzle studio --dialect sqlite --database-url 'file:./database.db'",
+    "drizzle:migrate:postgres": "pnpm drizzle migrate --dialect postgres",
+    "drizzle:migrate:postgres:dev": "pnpm drizzle:migrate:postgres --database-url 'postgresql://postgres:postgres@0.0.0.0:5432/drizzle'",
+    "drizzle:studio:postgres:dev": "pnpm drizzle studio --dialect postgres --database-url 'postgresql://postgres:postgres@0.0.0.0:5432/drizzle'"
   },
   "dependencies": {
-    "@credo-ts/askar": "v0.5.18",
-    "@credo-ts/core": "v0.5.18",
-    "@credo-ts/node": "v0.5.18",
+    "@credo-ts/askar": "catalog:",
+    "@credo-ts/askar-to-drizzle-storage-migration": "catalog:",
+    "@credo-ts/core": "catalog:",
+    "@credo-ts/didcomm": "catalog:",
+    "@credo-ts/didcomm-message-pickup-dynamodb": "workspace:*",
+    "@credo-ts/didcomm-message-pickup-postgres": "workspace:*",
+    "@credo-ts/drizzle-storage": "catalog:",
+    "@credo-ts/node": "catalog:",
+    "@credo-ts/redis-cache": "catalog:",
+    "@libsql/client": "^0.15.15",
     "@openwallet-foundation/askar-nodejs": "^0.4.3",
     "class-transformer": "^0.5.1",
-    "class-validator": "^0.14.1",
-    "dotenv": "^16.4.7",
-    "express": "^4.21.2",
-    "firebase-admin": "^13.0.2",
-    "nconf": "^0.12.1",
-    "tslog": "^3.3.3",
-    "tsyringe": "^4.8.0",
-    "ws": "^8.17.1"
+    "class-validator": "^0.14.2",
+    "drizzle-orm": "^0.44.7",
+    "express": "^5.1.0",
+    "firebase-admin": "^13.5.0",
+    "ioredis": "catalog:",
+    "pg": "catalog:",
+    "tslog": "^4.10.2",
+    "tsyringe": "^4.10.0",
+    "ws": "^8.18.3",
+    "zod": "^4.1.13",
+    "zod-config": "^1.4.0"
   },
   "devDependencies": {
-    "@biomejs/biome": "^1.9.4",
-    "@ngrok/ngrok": "^1.2.0",
-    "@types/express": "^4.17.13",
-    "@types/nconf": "^0.10.7",
-    "@types/node": "^20.17.12",
-    "@types/ws": "^8.5.13",
-    "ts-node": "^10.9.1",
-    "typescript": "^5.6.3"
+    "@ngrok/ngrok": "^1.6.0",
+    "@types/express": "^5.0.3",
+    "@types/node": "catalog:",
+    "@types/pg": "catalog:",
+    "@types/ws": "^8.18.1",
+    "dotenv": "^17.2.3",
+    "tsconfig-paths": "^4.2.0",
+    "typescript": "catalog:"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   }
 }

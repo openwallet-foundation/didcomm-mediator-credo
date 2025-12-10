@@ -1,81 +1,45 @@
-import { Agent } from '@credo-ts/core'
-import { MessageForwardingStrategy } from '@credo-ts/core/build/modules/routing/MessageForwardingStrategy'
 import admin from 'firebase-admin'
-import config from '../../config'
-import { Logger } from '../../logger'
-import { PickupType } from '../../pickup/type'
-import { sendFcmPushNotification } from './events/PushNotificationEvent'
-import { PushNotificationsFcmRepository } from './repository'
+import { config } from '../../config.js'
 
 export const firebaseApps: Map<string, admin.app.App> = new Map()
+for (const firebaseProject of config.pushNotifications.firebase?.projects ?? []) {
+  if (firebaseApps.has(firebaseProject.projectId)) continue
 
-const setupFirebaseSender = async (agent: Agent) => {
-  if (!config.get('agent:usePushNotifications')) return
+  const app = admin.initializeApp(
+    {
+      credential: admin.credential.cert({
+        projectId: firebaseProject.projectId,
+        clientEmail: firebaseProject.clientEmail,
+        privateKey: firebaseProject.privateKey?.includes('\\n')
+          ? firebaseProject.privateKey.replace(/\\n/g, '\n')
+          : firebaseProject.privateKey?.trim(),
+      }),
+    },
+    // Use projectId as the app name
+    firebaseProject.projectId
+  )
 
-  // For live mode and postgres pickup type, listen for queued messages and send push notifications
-  if (
-    config.get('agent:pickup:strategy') === MessageForwardingStrategy.QueueAndLiveModeDelivery &&
-    config.get('agent:pickup:type') === PickupType.Postgres.toLowerCase()
-  ) {
-    const { MessageQueuedEventType } = await import(
-      '../../../../../packages/message-pickup-repository-pg/src/interfaces'
-    )
-    type MessageQueuedEvent = import(
-      '../../../../../packages/message-pickup-repository-pg/src/interfaces'
-    ).MessageQueuedEvent
+  firebaseApps.set(firebaseProject.projectId, app)
+}
 
-    agent.config.logger.info(
-      'Initializing push notification sender on queued messages for postgres pickup type and queue and live mode delivery strategy'
-    )
-    agent.events.on(MessageQueuedEventType, async (data) => {
-      const { message } = data.payload as unknown as MessageQueuedEvent
-      const pushNotificationRecord = await agent.modules.pushNotificationsFcm.getPushNotificationRecordByConnectionId(
-        message.connectionId
-      )
-      if (pushNotificationRecord.deviceToken) {
-        const repository = agent.dependencyManager.resolve(PushNotificationsFcmRepository)
-        sendFcmPushNotification(agent.context, repository, pushNotificationRecord, agent.config.logger as Logger)
-      }
-    })
+export const filterAppsByProjectId = (projectId: string | undefined) => {
+  if (!projectId) {
+    return firebaseApps
+  }
+
+  const app = firebaseApps.get(projectId)
+  if (app) {
+    return new Map([[projectId, app]])
   }
 }
 
-export const initializeFirebase = async (agent: Agent) => {
-  if (!config.get('agent:usePushNotifications')) {
-    return
-  }
-
-  const firebaseConfigs = config.get('agent:firebase') as {
-    projectId: string
-    clientEmail: string
-    privateKey: string
-  }[]
-
-  if (!Array.isArray(firebaseConfigs) || firebaseConfigs.length === 0) {
-    throw new Error('Firebase configuration is missing or invalid.')
-  }
-
-  for (const firebaseConfig of firebaseConfigs) {
-    if (!firebaseConfig.projectId || !firebaseConfig.clientEmail || !firebaseConfig.privateKey) {
-      throw new Error('Firebase configuration is incomplete. Please provide projectId, clientEmail, and privateKey.')
-    }
-
-    if (!firebaseApps.has(firebaseConfig.projectId)) {
-      const app = admin.initializeApp(
-        {
-          credential: admin.credential.cert({
-            projectId: firebaseConfig.projectId,
-            clientEmail: firebaseConfig.clientEmail,
-            privateKey: firebaseConfig.privateKey?.includes('\\n')
-              ? firebaseConfig.privateKey.replace(/\\n/g, '\n')
-              : firebaseConfig.privateKey?.trim(),
-          }),
-        },
-        firebaseConfig.projectId
-      ) // Use projectId as the app name
-      firebaseApps.set(firebaseConfig.projectId, app)
-    }
-  }
-
-  await setupFirebaseSender(agent)
+type FirebaseLikeError = {
+  code: string
 }
+
+export const isFirebaseLikeError = (error: unknown) =>
+  error &&
+  typeof error === 'object' &&
+  error !== null &&
+  typeof (error as FirebaseLikeError).code === 'string' &&
+  /(app|auth|messaging|storage|firestore|database)\//.test((error as FirebaseLikeError).code)

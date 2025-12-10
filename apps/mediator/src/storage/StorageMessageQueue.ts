@@ -1,60 +1,39 @@
+import { AgentContext, EventEmitter, utils } from '@credo-ts/core'
 import type {
   AddMessageOptions,
+  DidCommQueueTransportRepository,
   GetAvailableMessageCountOptions,
-  MessagePickupRepository,
-  QueuedMessage,
+  QueuedDidCommMessage,
   RemoveMessagesOptions,
   TakeFromQueueOptions,
-} from '@credo-ts/core'
+} from '@credo-ts/didcomm'
+import { DidcommMessageQueuedEvent, MediatorEventTypes } from '../events.js'
+import { MessageRecord } from './MessageRecord.js'
+import { MessageRepository } from './MessageRepository.js'
 
-import { AgentContext, injectable, utils } from '@credo-ts/core'
-
-import { PushNotificationsFcmRecord, PushNotificationsFcmRepository } from '../push-notifications/fcm/repository'
-import { MessageRecord } from './MessageRecord'
-import { MessageRepository } from './MessageRepository'
-
-import config from '../config'
-import { Logger } from '../logger'
-import { sendFcmPushNotification } from '../push-notifications/fcm/events/PushNotificationEvent'
-
-export interface NotificationMessage {
-  messageType: string
-  token: string
-}
-
-@injectable()
-export class StorageServiceMessageQueue implements MessagePickupRepository {
-  private messageRepository: MessageRepository
-  private agentContext: AgentContext
-  private pushNotificationsFcmRepository: PushNotificationsFcmRepository
-
-  public constructor(
-    messageRepository: MessageRepository,
-    agentContext: AgentContext,
-    pushNotificationsFcmRepository: PushNotificationsFcmRepository
-  ) {
-    this.messageRepository = messageRepository
-    this.agentContext = agentContext
-    this.pushNotificationsFcmRepository = pushNotificationsFcmRepository
-  }
-
-  public async getAvailableMessageCount(options: GetAvailableMessageCountOptions) {
+export class StorageServiceMessageQueue implements DidCommQueueTransportRepository {
+  public async getAvailableMessageCount(agentContext: AgentContext, options: GetAvailableMessageCountOptions) {
     const { connectionId } = options
 
-    const messageRecords = await this.messageRepository.findByConnectionId(this.agentContext, connectionId)
+    const messageRepository = agentContext.resolve(MessageRepository)
+    const messageRecords = await messageRepository.findByConnectionId(agentContext, connectionId)
 
-    this.agentContext.config.logger.debug(`Found ${messageRecords.length} messages for connection ${connectionId}`)
+    agentContext.config.logger.debug(`Found ${messageRecords.length} messages for connection ${connectionId}`)
 
     return messageRecords.length
   }
 
-  public async takeFromQueue(options: TakeFromQueueOptions): Promise<QueuedMessage[]> {
+  public async takeFromQueue(
+    agentContext: AgentContext,
+    options: TakeFromQueueOptions
+  ): Promise<QueuedDidCommMessage[]> {
     const { connectionId, limit, deleteMessages } = options
 
-    const messageRecords = await this.messageRepository.findByConnectionId(this.agentContext, connectionId)
+    const messageRepository = agentContext.resolve(MessageRepository)
+    const messageRecords = await messageRepository.findByConnectionId(agentContext, connectionId)
 
     const messagesToTake = limit ?? messageRecords.length
-    this.agentContext.config.logger.debug(
+    agentContext.config.logger.debug(
       `Taking ${messagesToTake} messages from queue for connection ${connectionId} (of total ${
         messageRecords.length
       }) with deleteMessages=${String(deleteMessages)}`
@@ -63,7 +42,7 @@ export class StorageServiceMessageQueue implements MessagePickupRepository {
     const messageRecordsToReturn = messageRecords.splice(0, messagesToTake)
 
     if (deleteMessages) {
-      this.removeMessages({ connectionId, messageIds: messageRecordsToReturn.map((msg) => msg.id) })
+      this.removeMessages(agentContext, { connectionId, messageIds: messageRecordsToReturn.map((msg) => msg.id) })
     }
 
     const queuedMessages = messageRecordsToReturn.map((messageRecord) => ({
@@ -75,17 +54,18 @@ export class StorageServiceMessageQueue implements MessagePickupRepository {
     return queuedMessages
   }
 
-  public async addMessage(options: AddMessageOptions) {
+  public async addMessage(agentContext: AgentContext, options: AddMessageOptions) {
     const { connectionId, payload } = options
 
-    this.agentContext.config.logger.debug(
+    agentContext.config.logger.debug(
       `Adding message to queue for connection ${connectionId} with payload ${JSON.stringify(payload)}`
     )
 
-    const id = utils.uuid()
+    const messageRepository = agentContext.resolve(MessageRepository)
 
-    await this.messageRepository.save(
-      this.agentContext,
+    const id = utils.uuid()
+    await messageRepository.save(
+      agentContext,
       new MessageRecord({
         id,
         connectionId,
@@ -93,109 +73,29 @@ export class StorageServiceMessageQueue implements MessagePickupRepository {
       })
     )
 
-    // Check for push notification configuration
-    if (config.get('agent:usePushNotifications')) {
-      await this.sendNotification(this.agentContext, connectionId, 'messageType')
-    }
+    this.emitMessageQueuedEvent(agentContext, connectionId)
 
     return id
   }
 
-  public async removeMessages(options: RemoveMessagesOptions) {
+  public async removeMessages(agentContext: AgentContext, options: RemoveMessagesOptions) {
     const { messageIds } = options
 
-    this.agentContext.config.logger.debug(`Removing message ids ${messageIds}`)
+    agentContext.config.logger.debug(`Removing message ids ${messageIds}`)
+    const messageRepository = agentContext.resolve(MessageRepository)
 
-    const deletePromises = messageIds.map((messageId) =>
-      this.messageRepository.deleteById(this.agentContext, messageId)
-    )
+    const deletePromises = messageIds.map((messageId) => messageRepository.deleteById(agentContext, messageId))
 
     await Promise.all(deletePromises)
   }
 
-  private async sendNotification(agentContext: AgentContext, connectionId: string, messageType?: string) {
-    // Get the device token for the connection
-    const pushNotificationFcmRecord = await this.pushNotificationsFcmRepository.findSingleByQuery(agentContext, {
-      connectionId,
+  private emitMessageQueuedEvent(agentContext: AgentContext, connectionId: string) {
+    const eventEmitter = agentContext.resolve(EventEmitter)
+    eventEmitter.emit<DidcommMessageQueuedEvent>(agentContext, {
+      type: MediatorEventTypes.DidCommMessageQueued,
+      payload: {
+        connectionId,
+      },
     })
-
-    if (!pushNotificationFcmRecord?.deviceToken) {
-      this.agentContext.config.logger.info('No device token found for connectionId so skip sending notification')
-      return
-    }
-    // Check for firebase configuration
-    if (config.get('agent:firebase:projectId')) {
-      // Send a Firebase Cloud Message notification to the device found for a given connection
-      await this.sendFcmNotification(pushNotificationFcmRecord)
-    }
-
-    // Check for webhook Url
-    if (config.get('agent:notificationWebhookUrl')) {
-      // Send a notification to the device
-      await this.sendWebhookNotification(connectionId, pushNotificationFcmRecord.deviceToken, messageType)
-    }
-  }
-
-  private async sendFcmNotification(pushNotificationFcmRecord: PushNotificationsFcmRecord) {
-    try {
-      await sendFcmPushNotification(
-        this.agentContext,
-        this.pushNotificationsFcmRepository,
-        pushNotificationFcmRecord,
-        this.agentContext.config.logger as Logger
-      )
-    } catch (error) {
-      this.agentContext.config.logger.error('Error sending FCM notification', {
-        cause: error,
-      })
-    }
-  }
-
-  private async sendWebhookNotification(connectionId: string, deviceToken: string, messageType?: string) {
-    try {
-      // Prepare a message to be sent to the device
-      const message: NotificationMessage = {
-        messageType: messageType ?? 'default',
-        token: deviceToken,
-      }
-
-      this.agentContext.config.logger.info(`Sending notification to ${connectionId}`)
-      await this.processNotification(message)
-      this.agentContext.config.logger.info(`Notification sent successfully to ${connectionId}`)
-    } catch (error) {
-      this.agentContext.config.logger.error('Error sending notification', {
-        cause: error,
-      })
-    }
-  }
-
-  private async processNotification(message: NotificationMessage) {
-    try {
-      const body = {
-        fcmToken: message.token,
-        messageType: message.messageType,
-      }
-      const requestOptions = {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(body),
-      }
-
-      const response = await fetch(config.get('agent:notificationWebhookUrl'), requestOptions)
-
-      if (response.ok) {
-        this.agentContext.config.logger.info('Notification sent successfully')
-      } else {
-        this.agentContext.config.logger.error('Error sending notification', {
-          cause: response.statusText,
-        })
-      }
-    } catch (error) {
-      this.agentContext.config.logger.error('Error sending notification', {
-        cause: error,
-      })
-    }
   }
 }

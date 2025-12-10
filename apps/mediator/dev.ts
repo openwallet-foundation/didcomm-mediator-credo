@@ -1,23 +1,18 @@
-import { connect } from '@ngrok/ngrok'
+import path from 'node:path'
+import { argv } from 'node:process'
+import dotenv from 'dotenv'
 
-if (!process.env.NGROK_AUTH_TOKEN) {
-  require('./src/index')
+const sample = argv[3]
+
+if (sample) {
+  console.log(`loading sample samples/${sample}.json`)
+  process.env.CONFIG = path.join(import.meta.dirname, 'samples', `${sample}.json`)
 } else {
-  const port = process.env.AGENT_PORT ? Number(process.env.AGENT_PORT) : 3110
-  /**
-   * Connect to ngrok and then set the port and url on the environment before importing
-   * the index file.
-   */
-  connect({
-    port,
-    authtoken: process.env.NGROK_AUTH_TOKEN,
-  }).then((app) => {
-    console.log('Got ngrok url:', app.url())
-    const url = app.url()
-
-    process.env.AGENT_ENDPOINTS = `${url},${url?.replace('http', 'ws')}`
-    process.env.SHORTENER_BASE_URL = `${url}/s`
-
-    require('./src/index')
+  console.log('loading .env.development and .env.local')
+  dotenv.config({
+    path: ['../../.env.development', '../../.env.local'],
+    quiet: true,
   })
 }
+
+await import('./src/index.js')
