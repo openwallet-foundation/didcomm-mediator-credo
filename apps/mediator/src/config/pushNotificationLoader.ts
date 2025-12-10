@@ -1,8 +1,5 @@
 import { DidCommMessageForwardingStrategy } from '@credo-ts/didcomm'
-import {
-  PostgresMessageQueuedEvent,
-  PostgresMessageQueuedEventType,
-} from '@credo-ts/didcomm-transport-queue-postgres'
+import { PostgresMessageQueuedEvent, PostgresMessageQueuedEventType } from '@credo-ts/didcomm-transport-queue-postgres'
 import { MediatorAgent } from '../agent.js'
 import { config } from '../config.js'
 import { DidcommMessageQueuedEvent, MediatorEventTypes } from '../events.js'
@@ -26,13 +23,10 @@ export async function loadPushNotificationSender(agent: MediatorAgent) {
 
     // TODO: we should only send a push notification when a message couldn't be delivered directly
     // Currently it will send a push notification for every message added to the queue
-    agent.events.on<PostgresMessageQueuedEvent>(
-      PostgresMessageQueuedEventType,
-      async (event) => {
-        const connectionId = event.payload.message.connectionId
-        await sendNotification(agent.context, connectionId)
-      }
-    )
+    agent.events.on<PostgresMessageQueuedEvent>(PostgresMessageQueuedEventType, async (event) => {
+      const connectionId = event.payload.message.connectionId
+      await sendNotification(agent.context, connectionId)
+    })
   }
 
   if (

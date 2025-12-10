@@ -17,7 +17,12 @@ import {
 } from '@credo-ts/didcomm'
 import { Pool } from 'pg'
 import PGPubsub from 'pg-pubsub'
-import { ExtendedMessagePickupSession, PostgresMessageQueuedEvent, PostgresMessageQueuedEventType, PostgresTransportQueuePostgresConfig } from './interfaces.js'
+import {
+  ExtendedMessagePickupSession,
+  PostgresMessageQueuedEvent,
+  PostgresMessageQueuedEventType,
+  PostgresTransportQueuePostgresConfig,
+} from './interfaces.js'
 import { buildPgDatabaseWithMigrations } from './utils/buildPgDatabaseWithMigrations.js'
 
 export class DidCommTransportQueuePostgres implements DidCommQueueTransportRepository {
