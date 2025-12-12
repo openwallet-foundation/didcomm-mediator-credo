@@ -9,7 +9,7 @@ import {
 } from '@credo-ts/didcomm'
 import { DynamoDbClientRepository, DynamoDbClientRepositoryOptions } from './client.js'
 
-export class DynamoDbMessagePickupRepository implements DidCommQueueTransportRepository {
+export class DidCommTransportQueueDynamoDb implements DidCommQueueTransportRepository {
   private client: DynamoDbClientRepository
 
   private constructor(client: DynamoDbClientRepository) {
@@ -17,7 +17,7 @@ export class DynamoDbMessagePickupRepository implements DidCommQueueTransportRep
   }
 
   public static async initialize(options: DynamoDbClientRepositoryOptions) {
-    return new DynamoDbMessagePickupRepository(await DynamoDbClientRepository.initialize(options))
+    return new DidCommTransportQueueDynamoDb(await DynamoDbClientRepository.initialize(options))
   }
 
   public async getAvailableMessageCount(

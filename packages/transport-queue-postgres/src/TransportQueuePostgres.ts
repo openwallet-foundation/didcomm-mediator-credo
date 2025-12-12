@@ -19,13 +19,13 @@ import { Pool } from 'pg'
 import PGPubsub from 'pg-pubsub'
 import {
   ExtendedMessagePickupSession,
-  PostgresMessagePickupMessageQueuedEvent,
-  PostgresMessagePickupMessageQueuedEventType,
-  PostgresMessagePickupRepositoryConfig,
+  PostgresMessageQueuedEvent,
+  PostgresMessageQueuedEventType,
+  PostgresTransportQueuePostgresConfig,
 } from './interfaces.js'
 import { buildPgDatabaseWithMigrations } from './utils/buildPgDatabaseWithMigrations.js'
 
-export class PostgresMessagePickupRepository implements DidCommQueueTransportRepository {
+export class DidCommTransportQueuePostgres implements DidCommQueueTransportRepository {
   private logger?: Logger
   private messagesCollection?: Pool
   private pubSubInstance: PGPubsub
@@ -35,7 +35,7 @@ export class PostgresMessagePickupRepository implements DidCommQueueTransportRep
   private postgresHost: string
   private postgresDatabaseName: string
 
-  public constructor(options: PostgresMessagePickupRepositoryConfig) {
+  public constructor(options: PostgresTransportQueuePostgresConfig) {
     const { logger, postgresUser, postgresPassword, postgresHost, postgresDatabaseName } = options
 
     this.logger = logger
@@ -575,10 +575,7 @@ export class PostgresMessagePickupRepository implements DidCommQueueTransportRep
    * @param {any} [options.*] - Additional optional properties for the event payload.
    * @throws {Error} Throws if the agent is not initialized.
    */
-  private async emitMessageQueuedEvent(
-    agentContext: AgentContext,
-    options: PostgresMessagePickupMessageQueuedEvent['payload']
-  ) {
+  private async emitMessageQueuedEvent(agentContext: AgentContext, options: PostgresMessageQueuedEvent['payload']) {
     const { message, session } = options
 
     agentContext.config.logger.debug(
@@ -586,8 +583,8 @@ export class PostgresMessagePickupRepository implements DidCommQueueTransportRep
     )
 
     const eventEmitter = agentContext.resolve(EventEmitter)
-    eventEmitter.emit<PostgresMessagePickupMessageQueuedEvent>(agentContext, {
-      type: PostgresMessagePickupMessageQueuedEventType,
+    eventEmitter.emit<PostgresMessageQueuedEvent>(agentContext, {
+      type: PostgresMessageQueuedEventType,
       payload: {
         message,
         session,

@@ -1,8 +1,8 @@
-import { PostgresMessagePickupRepository } from '@credo-ts/didcomm-message-pickup-postgres'
+import { DidCommTransportQueuePostgres } from '@credo-ts/didcomm-transport-queue-postgres'
 import { describe, expect, it } from 'vitest'
 
 describe('loadMessagePickupStorage', () => {
-  it('returns PostgresMessagePickupRepository for postgres message pickup storage', async () => {
+  it('returns DidCommTransportQueuePostgres for postgres message pickup storage', async () => {
     process.env = {
       LOG_LEVEL: 'off',
       ASKAR__STORE_ID: 'test',
@@ -16,6 +16,6 @@ describe('loadMessagePickupStorage', () => {
     const { loadMessagePickupStorage } = await import('../config/messagePickupLoader.js')
     const messagePickupStorage = await loadMessagePickupStorage()
 
-    expect(messagePickupStorage).toBeInstanceOf(PostgresMessagePickupRepository)
+    expect(messagePickupStorage).toBeInstanceOf(DidCommTransportQueuePostgres)
   })
 })
