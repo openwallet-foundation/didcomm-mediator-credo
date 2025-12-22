@@ -1,4 +1,5 @@
 export * from './messages/index.js'
 export * from './models/index.js'
+export * from './repository/index.js'
 export { PushNotificationsFcmApi } from './PushNotificationsFcmApi.js'
 export { PushNotificationsFcmModule } from './PushNotificationsFcmModule.js'

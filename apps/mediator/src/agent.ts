@@ -22,7 +22,7 @@ import { loadPushNotificationSender } from './config/pushNotificationLoader.js'
 import { loadRedisMessageDelivery } from './config/redisMessageDeliveryLoader.js'
 import { loadStorage } from './config/storageLoader.js'
 import { config, logger } from './config.js'
-import { PushNotificationsFcmModule } from './push-notifications/fcm/PushNotificationsFcmModule.js'
+import { PushNotificationsFcmModule } from '@credo-ts/didcomm-push-notifications'
 
 async function createModules({
   queueTransportRepository,

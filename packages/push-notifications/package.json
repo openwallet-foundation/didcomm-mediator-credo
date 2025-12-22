@@ -1,0 +1,41 @@
+{
+  "name": "@credo-ts/didcomm-push-notifications",
+  "main": "build/index.js",
+  "types": "build/index.d.ts",
+  "version": "0.0.1",
+  "files": [
+    "build"
+  ],
+  "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
+  "description": "Credo DIDComm Push Notifications module",
+  "license": "Apache-2.0",
+  "homepage": "https://github.com/openwallet-foundation/didcomm-mediator-credo/tree/main/packages/push-notifications",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/openwallet-foundation/didcomm-mediator-credo",
+    "directory": "packages/push-notifications"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "prepublishOnly": "pnpm run build"
+  },
+  "dependencies": {
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.2"
+  },
+  "devDependencies": {
+    "@credo-ts/askar": "catalog:",
+    "@credo-ts/core": "catalog:",
+    "@credo-ts/didcomm": "catalog:",
+    "@openwallet-foundation/askar-nodejs": "0.4.3",
+    "@types/node": "catalog:",
+    "typescript": "catalog:"
+  },
+  "peerDependencies": {
+    "@credo-ts/core": "catalog:",
+    "@credo-ts/didcomm": "catalog:"
+  }
+}

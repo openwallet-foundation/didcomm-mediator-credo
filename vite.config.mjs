@@ -12,6 +12,10 @@ export default defineConfig({
         import.meta.dirname,
         './packages/transport-queue-postgres/src/index.ts'
       ),
+      '@credo-ts/didcomm-push-notifications': path.resolve(
+        import.meta.dirname,
+        './packages/push-notifications/src/index.ts'
+      ),
     },
   },
   test: {

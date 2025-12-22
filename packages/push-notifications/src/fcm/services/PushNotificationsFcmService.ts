@@ -2,7 +2,7 @@ import type { AgentContext, Logger } from '@credo-ts/core'
 import { CredoError, InjectionSymbols, inject, injectable } from '@credo-ts/core'
 import { DidCommInboundMessageContext } from '@credo-ts/didcomm'
 import { PushNotificationsFcmProblemReportError, PushNotificationsFcmProblemReportReason } from '../errors/index.js'
-import { PushNotificationsFcmDeviceInfoMessage, PushNotificationsFcmSetDeviceInfoMessage } from '../messages/index.js'
+import { PushNotificationsFcmDeviceInfoMessage, PushNotificationsFcmGetDeviceInfoMessage, PushNotificationsFcmSetDeviceInfoMessage } from '../messages/index.js'
 import type { FcmDeviceInfo } from '../models/FcmDeviceInfo.js'
 import { PushNotificationsFcmRecord, PushNotificationsFcmRepository } from '../repository/index.js'
 
@@ -17,6 +17,20 @@ export class PushNotificationsFcmService {
   ) {
     this.pushNotificationsFcmRepository = pushNotificationsFcmRepository
     this.logger = logger
+  }
+
+  public createSetDeviceInfo(deviceInfo: FcmDeviceInfo) {
+    if (
+      (deviceInfo.deviceToken === null && deviceInfo.devicePlatform !== null) ||
+      (deviceInfo.deviceToken !== null && deviceInfo.devicePlatform === null)
+    )
+      throw new CredoError('Both or none of deviceToken and devicePlatform must be null')
+
+    return new PushNotificationsFcmSetDeviceInfoMessage(deviceInfo)
+  }
+
+  public createGetDeviceInfo() {
+    return new PushNotificationsFcmGetDeviceInfoMessage({})
   }
 
   public createDeviceInfo(options: { threadId: string; deviceInfo: FcmDeviceInfo }) {

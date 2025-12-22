@@ -95,6 +95,9 @@ importers:
       '@credo-ts/didcomm':
         specifier: 'catalog:'
         version: 0.6.0(typescript@5.9.3)
+      '@credo-ts/didcomm-push-notifications':
+        specifier: workspace:*
+        version: link:../../packages/push-notifications
       '@credo-ts/didcomm-transport-queue-dynamodb':
         specifier: workspace:*
         version: link:../../packages/transport-queue-dynamodb
@@ -174,6 +177,34 @@ importers:
       tsconfig-paths:
         specifier: ^4.2.0
         version: 4.2.0
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
+
+  packages/push-notifications:
+    dependencies:
+      class-transformer:
+        specifier: ^0.5.1
+        version: 0.5.1
+      class-validator:
+        specifier: ^0.14.2
+        version: 0.14.3
+    devDependencies:
+      '@credo-ts/askar':
+        specifier: 'catalog:'
+        version: 0.6.0(@openwallet-foundation/askar-shared@0.4.3)(typescript@5.9.3)
+      '@credo-ts/core':
+        specifier: 'catalog:'
+        version: 0.6.0(typescript@5.9.3)
+      '@credo-ts/didcomm':
+        specifier: 'catalog:'
+        version: 0.6.0(typescript@5.9.3)
+      '@openwallet-foundation/askar-nodejs':
+        specifier: 0.4.3
+        version: 0.4.3
+      '@types/node':
+        specifier: 'catalog:'
+        version: 22.19.1
       typescript:
         specifier: 'catalog:'
         version: 5.9.3
@@ -1580,6 +1611,7 @@ packages:
 
   '@sphereon/kmp-mdoc-core@0.2.0-SNAPSHOT.26':
     resolution: {integrity: sha512-QXJ6R8ENiZV2rPMbn06cw5JKwqUYN1kzVRbYfONqE1PEXx1noQ4md7uxr2zSczi0ubKkNcbyYDNtIMTZIhGzmQ==}
+    bundledDependencies: []
 
   '@sphereon/pex-models@2.3.2':
     resolution: {integrity: sha512-foFxfLkRwcn/MOp/eht46Q7wsvpQGlO7aowowIIb5Tz9u97kYZ2kz6K2h2ODxWuv5CRA7Q0MY8XUBGE2lfOhOQ==}

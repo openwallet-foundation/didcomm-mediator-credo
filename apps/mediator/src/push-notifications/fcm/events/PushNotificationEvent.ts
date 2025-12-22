@@ -1,8 +1,7 @@
 import { AgentContext } from '@credo-ts/core'
 import { config } from '../../../config.js'
 import { filterAppsByProjectId, firebaseApps, isFirebaseLikeError } from '../firebase.js'
-import { PushNotificationsFcmRecord } from '../repository/PushNotificationsFcmRecord.js'
-import { PushNotificationsFcmRepository } from '../repository/PushNotificationsFcmRepository.js'
+import { PushNotificationsFcmRecord, PushNotificationsFcmRepository } from '@credo-ts/didcomm-push-notifications'
 
 export const sendFcmPushNotification = async (
   agentContext: AgentContext,

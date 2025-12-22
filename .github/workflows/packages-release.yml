@@ -90,6 +90,7 @@ jobs:
           ---
           '@credo-ts/didcomm-transport-queue-postgres': patch
           '@credo-ts/didcomm-transport-queue-dynamodb': patch
+          '@credo-ts/didcomm-push-notifications': patch
           ---
 
           snapshot release
