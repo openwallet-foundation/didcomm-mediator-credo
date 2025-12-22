@@ -1,8 +1,10 @@
-# DIDComm Transport Queue (DynamoDB) for Credo
+# DIDComm Push Notifications for Credo
 
 ## Overview
 
-This package provides a simple but efficient Transport Queue implementation to use with a [Credo](https://github.com/openwallet-foundation/credo-ts) mediator that wishes to persist queued messages for offline users in a shared database that will allow using multiple Credo instances.
+Push Notifications extension module for [Credo](https://github.com/openwallet-foundation/credo-ts.git). It currently implements [Aries RFC 0734](https://github.com/hyperledger/aries-rfcs/tree/main/features/0734-push-notifications-fcm) (Firebase Cloud Messaging).
+
+For documentation on installation and usage of the Push Notifications package, refer to the [Docs](https://credo.js.org/guides/extensions/push-notifications).
 
 ## Installation
 
@@ -11,11 +13,11 @@ This module is designed to work with Credo 0.6.x. Newer versions may include bre
 To use it, install package in your DIDComm Mediator application. For example:
 
 ```bash
-npm i @credo-ts/didcomm-transport-queue-dynamodb
+npm i @credo-ts/didcomm-push-notifications
 ```
 
 or
 
 ```bash
-yarn add @credo-ts/didcomm-transport-queue-dynamodb
+yarn add @credo-ts/didcomm-push-notifications
 ```
