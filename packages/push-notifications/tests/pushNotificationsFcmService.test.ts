@@ -1,14 +1,20 @@
-import { AgentContext, ConsoleLogger, DependencyManager, EventEmitter, InjectionSymbols, JsonTransformer, LogLevel } from '@credo-ts/core'
-
-import { PushNotificationsFcmService } from '../src/fcm/services/PushNotificationsFcmService.js'
-import { PushNotificationsFcmProblemReportError } from '../src/fcm/errors/index.js'
-
-import { afterAll, beforeAll, describe, vi, expect, test } from 'vitest'
-import { PushNotificationsFcmModule } from '../src/fcm/PushNotificationsFcmModule.js'
+import {
+  AgentContext,
+  ConsoleLogger,
+  DependencyManager,
+  EventEmitter,
+  InjectionSymbols,
+  JsonTransformer,
+  LogLevel,
+} from '@credo-ts/core'
 import { DidCommInboundMessageContext, DidCommMessage } from '@credo-ts/didcomm'
-import { PushNotificationsFcmRepository } from '../src/fcm/repository/PushNotificationsFcmRepository.js'
-
 import type { MockedClass } from 'vitest'
+
+import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest'
+import { DidCommPushNotificationsFcmModule } from '../src/fcm/DidCommPushNotificationsFcmModule.js'
+import { PushNotificationsFcmProblemReportError } from '../src/fcm/errors/index.js'
+import { DidCommPushNotificationsFcmRepository } from '../src/fcm/repository/DidCommPushNotificationsFcmRepository.js'
+import { DidCommPushNotificationsFcmService } from '../src/fcm/services/DidCommPushNotificationsFcmService.js'
 
 // biome-ignore lint/suspicious/noExplicitAny: no explanation
 export type MockedClassConstructor<T extends { new (...args: any[]): any }> = MockedClass<
@@ -16,7 +22,9 @@ export type MockedClassConstructor<T extends { new (...args: any[]): any }> = Mo
 >
 
 vi.mock('../src/fcm/repository/PushNotificationsFcmRepository')
-const PushNotificationsFcmRepositoryMock = PushNotificationsFcmRepository as MockedClassConstructor<typeof PushNotificationsFcmRepository>
+const PushNotificationsFcmRepositoryMock = DidCommPushNotificationsFcmRepository as MockedClassConstructor<
+  typeof DidCommPushNotificationsFcmRepository
+>
 
 const agentContext = new AgentContext({
   contextCorrelationId: 'test',
@@ -24,22 +32,23 @@ const agentContext = new AgentContext({
 })
 
 agentContext.dependencyManager.registerInstance(EventEmitter, { emit: () => {} } as unknown as EventEmitter)
-agentContext.dependencyManager.registerInstance(PushNotificationsFcmRepository, new PushNotificationsFcmRepositoryMock())
+agentContext.dependencyManager.registerInstance(
+  DidCommPushNotificationsFcmRepository,
+  new PushNotificationsFcmRepositoryMock()
+)
 agentContext.dependencyManager.registerInstance(InjectionSymbols.Logger, new ConsoleLogger(LogLevel.off))
 
-
 describe('Push Notifications Fcm ', () => {
-  let pushNotificationsService: PushNotificationsFcmService
+  let pushNotificationsService: DidCommPushNotificationsFcmService
 
   beforeAll(async () => {
-    const module = new PushNotificationsFcmModule()
+    const module = new DidCommPushNotificationsFcmModule()
     await module.initialize(agentContext)
     //pushNotificationsService = new PushNotificationsFcmService()
-    pushNotificationsService = agentContext.dependencyManager.resolve(PushNotificationsFcmService)
+    pushNotificationsService = agentContext.dependencyManager.resolve(DidCommPushNotificationsFcmService)
   })
 
-  afterAll(async () => {
-  })
+  afterAll(async () => {})
 
   describe('Create fcm set-device-info message', () => {
     test('Should create a valid message with both token and platform', async () => {
@@ -79,14 +88,14 @@ describe('Push Notifications Fcm ', () => {
         pushNotificationsService.createSetDeviceInfo({
           deviceToken: 'something',
           devicePlatform: null,
-        }),
+        })
       ).toThrow('Both or none of deviceToken and devicePlatform must be null')
 
       expect(() =>
         pushNotificationsService.createSetDeviceInfo({
           deviceToken: null,
           devicePlatform: 'something',
-        }),
+        })
       ).toThrow('Both or none of deviceToken and devicePlatform must be null')
     })
   })
@@ -123,7 +132,7 @@ describe('Push Notifications Fcm ', () => {
           device_token: '1234-1234-1234-1234',
           device_platform: 'android',
           '~thread': expect.objectContaining({ thid: '5678-5678-5678-5678' }),
-        }),
+        })
       )
     })
 
@@ -145,7 +154,7 @@ describe('Push Notifications Fcm ', () => {
           device_token: null,
           device_platform: null,
           '~thread': expect.objectContaining({ thid: '5678-5678-5678-5678' }),
-        }),
+        })
       )
     })
 
@@ -157,7 +166,7 @@ describe('Push Notifications Fcm ', () => {
             deviceToken: 'something',
             devicePlatform: null,
           },
-        }),
+        })
       ).toThrow('Both or none of deviceToken and devicePlatform must be null')
 
       expect(() =>
@@ -167,7 +176,7 @@ describe('Push Notifications Fcm ', () => {
             deviceToken: null,
             devicePlatform: 'something',
           },
-        }),
+        })
       ).toThrow('Both or none of deviceToken and devicePlatform must be null')
     })
   })
@@ -182,17 +191,17 @@ describe('Push Notifications Fcm ', () => {
       const inboundMessageContext = createInboundMessageContext(message)
       message.devicePlatform = null
       await expect(pushNotificationsService.processSetDeviceInfo(inboundMessageContext)).rejects.toThrow(
-        PushNotificationsFcmProblemReportError,
+        PushNotificationsFcmProblemReportError
       )
 
       message.deviceToken = null
       await expect(pushNotificationsService.processSetDeviceInfo(inboundMessageContext)).rejects.not.toThrow(
-        PushNotificationsFcmProblemReportError,
+        PushNotificationsFcmProblemReportError
       )
 
       message.devicePlatform = 'something'
       await expect(pushNotificationsService.processSetDeviceInfo(inboundMessageContext)).rejects.toThrow(
-        PushNotificationsFcmProblemReportError,
+        PushNotificationsFcmProblemReportError
       )
     })
   })

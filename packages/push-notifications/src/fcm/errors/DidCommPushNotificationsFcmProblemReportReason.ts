@@ -5,7 +5,7 @@
  * @see https://github.com/hyperledger/aries-rfcs/tree/main/features/0734-push-notifications-fcm#device-info
  * @internal
  */
-export enum PushNotificationsFcmProblemReportReason {
+export enum DidCommPushNotificationsFcmProblemReportReason {
   MissingValue = 'missing-value',
   NotRegistered = 'not-registered-for-push-notifications',
 }

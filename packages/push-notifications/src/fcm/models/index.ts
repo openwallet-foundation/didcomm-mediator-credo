@@ -1,2 +1,2 @@
-export * from './FcmDeviceInfo.js'
-export * from './PushNotificationsFcmRole.js'
+export * from './DidCommFcmDeviceInfo.js'
+export * from './DidCommPushNotificationsFcmRole.js'

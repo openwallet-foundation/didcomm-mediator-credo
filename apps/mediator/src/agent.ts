@@ -9,9 +9,8 @@ import {
   DidCommOutOfBandState,
   DidCommWsOutboundTransport,
 } from '@credo-ts/didcomm'
-
+import { PushNotificationsFcmModule } from '@credo-ts/didcomm-push-notifications'
 import { agentDependencies, DidCommHttpInboundTransport, DidCommWsInboundTransport } from '@credo-ts/node'
-
 import express, { type Express } from 'express'
 import Redis from 'ioredis'
 import { WebSocketServer } from 'ws'
@@ -22,7 +21,6 @@ import { loadPushNotificationSender } from './config/pushNotificationLoader.js'
 import { loadRedisMessageDelivery } from './config/redisMessageDeliveryLoader.js'
 import { loadStorage } from './config/storageLoader.js'
 import { config, logger } from './config.js'
-import { PushNotificationsFcmModule } from '@credo-ts/didcomm-push-notifications'
 
 async function createModules({
   queueTransportRepository,

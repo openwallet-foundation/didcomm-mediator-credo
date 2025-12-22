@@ -1,11 +1,14 @@
 import { AgentContext } from '@credo-ts/core'
+import {
+  DidCommPushNotificationsFcmRecord,
+  DidCommPushNotificationsFcmRepository,
+} from '@credo-ts/didcomm-push-notifications'
 import { config } from '../../../config.js'
 import { filterAppsByProjectId, firebaseApps, isFirebaseLikeError } from '../firebase.js'
-import { PushNotificationsFcmRecord, PushNotificationsFcmRepository } from '@credo-ts/didcomm-push-notifications'
 
 export const sendFcmPushNotification = async (
   agentContext: AgentContext,
-  pushNotificationFcmRecord: PushNotificationsFcmRecord
+  pushNotificationFcmRecord: DidCommPushNotificationsFcmRecord
 ) => {
   if (!pushNotificationFcmRecord.deviceToken) {
     agentContext.config.logger.warn(
@@ -44,7 +47,7 @@ export const sendFcmPushNotification = async (
 
         // Update record with working projectId
         if (!pushNotificationFcmRecord.firebaseProjectId) {
-          const pushNotificationsFcmRepository = agentContext.resolve(PushNotificationsFcmRepository)
+          const pushNotificationsFcmRepository = agentContext.resolve(DidCommPushNotificationsFcmRepository)
 
           pushNotificationFcmRecord.firebaseProjectId = projectId
           await pushNotificationsFcmRepository.update(agentContext, pushNotificationFcmRecord)

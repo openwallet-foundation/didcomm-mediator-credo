@@ -4,7 +4,7 @@
  * @see https://github.com/hyperledger/aries-rfcs/tree/main/features/0734-push-notifications-fcm#roles
  * @public
  */
-export enum PushNotificationsFcmRole {
+export enum DidCommPushNotificationsFcmRole {
   Sender = 'notification-sender',
   Receiver = 'notification-receiver',
 }

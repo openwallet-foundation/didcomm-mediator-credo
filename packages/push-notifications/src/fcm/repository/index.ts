@@ -1,2 +1,2 @@
-export * from './PushNotificationsFcmRecord.js'
-export * from './PushNotificationsFcmRepository.js'
+export * from './DidCommPushNotificationsFcmRecord.js'
+export * from './DidCommPushNotificationsFcmRepository.js'

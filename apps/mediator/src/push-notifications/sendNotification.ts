@@ -1,13 +1,13 @@
 import { AgentContext } from '@credo-ts/core'
+import { DidCommPushNotificationsFcmRepository } from '@credo-ts/didcomm-push-notifications'
 import { config } from '../config.js'
 import { sendFcmPushNotification } from './fcm/events/PushNotificationEvent.js'
-import { PushNotificationsFcmRepository } from '@credo-ts/didcomm-push-notifications'
 
 export async function sendNotification(agentContext: AgentContext, connectionId: string) {
   if (!config.pushNotifications) return
 
   // Get the device token for the connection
-  const pushNotificationsFcmRepository = agentContext.resolve(PushNotificationsFcmRepository)
+  const pushNotificationsFcmRepository = agentContext.resolve(DidCommPushNotificationsFcmRepository)
   const pushNotificationFcmRecord = await pushNotificationsFcmRepository.findSingleByQuery(agentContext, {
     connectionId,
   })

@@ -8,7 +8,7 @@ export type DefaultPushNotificationsFcmTags = {
 
 export type CustomPushNotificationsFcmTags = TagsBase
 
-export interface PushNotificationsFcmStorageProps {
+export interface DidCommPushNotificationsFcmStorageProps {
   id?: string
   deviceToken: string | null
   devicePlatform: string | null
@@ -17,7 +17,7 @@ export interface PushNotificationsFcmStorageProps {
   firebaseProjectId?: string
 }
 
-export class PushNotificationsFcmRecord extends BaseRecord<
+export class DidCommPushNotificationsFcmRecord extends BaseRecord<
   DefaultPushNotificationsFcmTags,
   CustomPushNotificationsFcmTags
 > {
@@ -26,9 +26,9 @@ export class PushNotificationsFcmRecord extends BaseRecord<
   public connectionId!: string
   public firebaseProjectId?: string
   public static readonly type = 'PushNotificationsFcmRecord'
-  public readonly type = PushNotificationsFcmRecord.type
+  public readonly type = DidCommPushNotificationsFcmRecord.type
 
-  public constructor(props: PushNotificationsFcmStorageProps) {
+  public constructor(props: DidCommPushNotificationsFcmStorageProps) {
     super()
 
     if (props) {

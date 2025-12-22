@@ -6,24 +6,24 @@ import {
   DidCommOutboundMessageContext,
 } from '@credo-ts/didcomm'
 import {
-  PushNotificationsFcmDeviceInfoHandler,
-  PushNotificationsFcmProblemReportHandler,
-  PushNotificationsFcmSetDeviceInfoHandler,
+  DidCommPushNotificationsFcmDeviceInfoHandler,
+  DidCommPushNotificationsFcmProblemReportHandler,
+  DidCommPushNotificationsFcmSetDeviceInfoHandler,
 } from './handlers/index.js'
-import type { FcmDeviceInfo } from './models/index.js'
-import { PushNotificationsFcmRecord } from './repository/PushNotificationsFcmRecord.js'
-import { PushNotificationsFcmService } from './services/PushNotificationsFcmService.js'
+import type { DidCommFcmDeviceInfo } from './models/index.js'
+import { DidCommPushNotificationsFcmRecord } from './repository/DidCommPushNotificationsFcmRecord.js'
+import { DidCommPushNotificationsFcmService } from './services/DidCommPushNotificationsFcmService.js'
 
 @injectable()
-export class PushNotificationsFcmApi {
+export class DidCommPushNotificationsFcmApi {
   private messageSender: DidCommMessageSender
-  private pushNotificationsService: PushNotificationsFcmService
+  private pushNotificationsService: DidCommPushNotificationsFcmService
   private connectionService: DidCommConnectionService
   private agentContext: AgentContext
 
   public constructor(
     messageSender: DidCommMessageSender,
-    pushNotificationsService: PushNotificationsFcmService,
+    pushNotificationsService: DidCommPushNotificationsFcmService,
     connectionService: DidCommConnectionService,
     agentContext: AgentContext
   ) {
@@ -35,9 +35,9 @@ export class PushNotificationsFcmApi {
     this.agentContext
       .resolve(DidCommMessageHandlerRegistry)
       .registerMessageHandlers([
-        new PushNotificationsFcmSetDeviceInfoHandler(this.pushNotificationsService),
-        new PushNotificationsFcmDeviceInfoHandler(),
-        new PushNotificationsFcmProblemReportHandler(),
+        new DidCommPushNotificationsFcmSetDeviceInfoHandler(this.pushNotificationsService),
+        new DidCommPushNotificationsFcmDeviceInfoHandler(),
+        new DidCommPushNotificationsFcmProblemReportHandler(),
       ])
   }
 
@@ -50,7 +50,7 @@ export class PushNotificationsFcmApi {
    * @param deviceInfo The FCM device info
    * @returns Promise<void>
    */
-  public async deviceInfo(options: { connectionId: string; threadId: string; deviceInfo: FcmDeviceInfo }) {
+  public async deviceInfo(options: { connectionId: string; threadId: string; deviceInfo: DidCommFcmDeviceInfo }) {
     const { connectionId, threadId, deviceInfo } = options
     const connection = await this.connectionService.getById(this.agentContext, connectionId)
     connection.assertReady()
@@ -70,7 +70,9 @@ export class PushNotificationsFcmApi {
    * @param connectionId The connection ID string
    * @returns Promise<PushNotificationsFcmRecord>
    */
-  public async getPushNotificationRecordByConnectionId(connectionId: string): Promise<PushNotificationsFcmRecord> {
+  public async getPushNotificationRecordByConnectionId(
+    connectionId: string
+  ): Promise<DidCommPushNotificationsFcmRecord> {
     return this.pushNotificationsService.getPushNotificationRecordByConnectionId(this.agentContext, connectionId)
   }
 

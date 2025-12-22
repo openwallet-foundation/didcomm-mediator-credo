@@ -1,9 +1,9 @@
 import { DidCommMessage, IsValidMessageType, parseMessageType } from '@credo-ts/didcomm'
 import { Expose } from 'class-transformer'
 import { IsString, ValidateIf } from 'class-validator'
-import type { FcmDeviceInfo } from '../models/index.js'
+import type { DidCommFcmDeviceInfo } from '../models/index.js'
 
-interface PushNotificationsFcmDeviceInfoOptions extends FcmDeviceInfo {
+interface DidCommPushNotificationsFcmDeviceInfoOptions extends DidCommFcmDeviceInfo {
   id?: string
   threadId: string
 }
@@ -14,8 +14,8 @@ interface PushNotificationsFcmDeviceInfoOptions extends FcmDeviceInfo {
  *
  * @see https://github.com/hyperledger/aries-rfcs/tree/main/features/0734-push-notifications-fcm#device-info
  */
-export class PushNotificationsFcmDeviceInfoMessage extends DidCommMessage {
-  public constructor(options: PushNotificationsFcmDeviceInfoOptions) {
+export class DidCommPushNotificationsFcmDeviceInfoMessage extends DidCommMessage {
+  public constructor(options: DidCommPushNotificationsFcmDeviceInfoOptions) {
     super()
 
     if (options) {
@@ -38,6 +38,6 @@ export class PushNotificationsFcmDeviceInfoMessage extends DidCommMessage {
 
   public static readonly type = parseMessageType('https://didcomm.org/push-notifications-fcm/1.0/device-info')
 
-  @IsValidMessageType(PushNotificationsFcmDeviceInfoMessage.type)
-  public readonly type = PushNotificationsFcmDeviceInfoMessage.type.messageTypeUri
+  @IsValidMessageType(DidCommPushNotificationsFcmDeviceInfoMessage.type)
+  public readonly type = DidCommPushNotificationsFcmDeviceInfoMessage.type.messageTypeUri
 }

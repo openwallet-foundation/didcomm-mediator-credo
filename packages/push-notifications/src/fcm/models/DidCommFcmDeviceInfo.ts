@@ -1,4 +1,4 @@
-export type FcmDeviceInfo = {
+export type DidCommFcmDeviceInfo = {
   deviceToken: string | null
   devicePlatform: string | null
 }
