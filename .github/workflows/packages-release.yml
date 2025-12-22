@@ -8,6 +8,7 @@ on:
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
 permissions:
+  id-token: write # required for npm trusted publishing
   contents: write
   pull-requests: write
 
@@ -73,6 +74,12 @@ jobs:
           node-version: 22
           cache: "pnpm"
           registry-url: "https://registry.npmjs.org"
+
+      - name: Corepack pnpm
+        # OIDC publishing requires npm >= 11.5.1
+        run: |
+          npm install -g npm@11.7.0
+          corepack enable
 
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile
