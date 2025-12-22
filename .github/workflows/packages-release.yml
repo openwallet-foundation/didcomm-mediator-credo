@@ -113,7 +113,7 @@ jobs:
         run: pnpm changeset publish --tag alpha
 
       - name: Compute alpha tag version (from primary package)
-        run: echo "CURRENT_PACKAGE_VERSION=$(node -p \"require('./packages/transport-queue-postgres/package.json').version\")" >> $GITHUB_ENV
+        run: echo "CURRENT_PACKAGE_VERSION=$(node -p "require('./packages/transport-queue-postgres/package.json').version")" >> $GITHUB_ENV
 
       - name: Push alpha git tag
         run: |
