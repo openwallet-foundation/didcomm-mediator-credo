@@ -78,7 +78,7 @@ jobs:
       - name: Corepack pnpm
         # OIDC publishing requires npm >= 11.5.1
         run: |
-          npm install -g npm@11.7.0
+          npm install -g npm@^11
           corepack enable
 
       - name: Install Dependencies
