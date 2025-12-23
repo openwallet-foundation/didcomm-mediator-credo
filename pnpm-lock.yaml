@@ -199,9 +199,6 @@ importers:
       '@credo-ts/didcomm':
         specifier: 'catalog:'
         version: 0.6.0(typescript@5.9.3)
-      '@openwallet-foundation/askar-nodejs':
-        specifier: 0.4.3
-        version: 0.4.3
       '@types/node':
         specifier: 'catalog:'
         version: 22.19.1

@@ -30,7 +30,6 @@
     "@credo-ts/askar": "catalog:",
     "@credo-ts/core": "catalog:",
     "@credo-ts/didcomm": "catalog:",
-    "@openwallet-foundation/askar-nodejs": "0.4.3",
     "@types/node": "catalog:",
     "typescript": "catalog:"
   },
