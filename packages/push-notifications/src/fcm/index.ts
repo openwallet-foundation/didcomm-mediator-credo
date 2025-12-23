@@ -1,5 +1,5 @@
-export { DidCommPushNotificationsFcmApi as PushNotificationsFcmApi } from './DidCommPushNotificationsFcmApi.js'
-export { DidCommPushNotificationsFcmModule as PushNotificationsFcmModule } from './DidCommPushNotificationsFcmModule.js'
+export { DidCommPushNotificationsFcmApi } from './DidCommPushNotificationsFcmApi.js'
+export { DidCommPushNotificationsFcmModule } from './DidCommPushNotificationsFcmModule.js'
 export * from './messages/index.js'
 export * from './models/index.js'
 export * from './repository/index.js'
