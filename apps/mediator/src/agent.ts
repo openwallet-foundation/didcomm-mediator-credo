@@ -9,7 +9,7 @@ import {
   DidCommOutOfBandState,
   DidCommWsOutboundTransport,
 } from '@credo-ts/didcomm'
-import { PushNotificationsFcmModule } from '@credo-ts/didcomm-push-notifications'
+import { DidCommPushNotificationsFcmModule } from '@credo-ts/didcomm-push-notifications'
 import { agentDependencies, DidCommHttpInboundTransport, DidCommWsInboundTransport } from '@credo-ts/node'
 import express, { type Express } from 'express'
 import Redis from 'ioredis'
@@ -59,7 +59,7 @@ async function createModules({
       credentials: false,
       proofs: false,
     }),
-    pushNotificationsFcm: new PushNotificationsFcmModule(),
+    pushNotificationsFcm: new DidCommPushNotificationsFcmModule(),
   } as const
 
   return modules
