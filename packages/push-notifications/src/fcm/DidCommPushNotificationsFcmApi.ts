@@ -41,14 +41,14 @@ export class DidCommPushNotificationsFcmApi {
       ])
   }
 
- /**
+  /**
    * Sends a set request with the fcm device info (token) to another agent via a `connectionId`
    *
    * @param connectionId The connection ID string
    * @param deviceInfo The FCM device info
    * @returns Promise<void>
    */
-  public async setDeviceInfo(options: { connectionId: string, deviceInfo: DidCommFcmDeviceInfo }) {
+  public async setDeviceInfo(options: { connectionId: string; deviceInfo: DidCommFcmDeviceInfo }) {
     const { connectionId, deviceInfo } = options
     const connection = await this.connectionService.getById(this.agentContext, connectionId)
     connection.assertReady()
@@ -104,7 +104,6 @@ export class DidCommPushNotificationsFcmApi {
     })
     await this.messageSender.sendMessage(outbound)
   }
-
 
   /**
    * Get push notification record by `connectionId`
