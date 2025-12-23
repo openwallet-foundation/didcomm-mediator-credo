@@ -7,6 +7,7 @@ import {
 } from '@credo-ts/didcomm'
 import {
   DidCommPushNotificationsFcmDeviceInfoHandler,
+  DidCommPushNotificationsFcmGetDeviceInfoHandler,
   DidCommPushNotificationsFcmProblemReportHandler,
   DidCommPushNotificationsFcmSetDeviceInfoHandler,
 } from './handlers/index.js'
@@ -36,6 +37,7 @@ export class DidCommPushNotificationsFcmApi {
       .resolve(DidCommMessageHandlerRegistry)
       .registerMessageHandlers([
         new DidCommPushNotificationsFcmSetDeviceInfoHandler(this.pushNotificationsService),
+        new DidCommPushNotificationsFcmGetDeviceInfoHandler(),
         new DidCommPushNotificationsFcmDeviceInfoHandler(),
         new DidCommPushNotificationsFcmProblemReportHandler(),
       ])
