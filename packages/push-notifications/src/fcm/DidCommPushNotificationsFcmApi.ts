@@ -41,6 +41,27 @@ export class DidCommPushNotificationsFcmApi {
       ])
   }
 
+ /**
+   * Sends a set request with the fcm device info (token) to another agent via a `connectionId`
+   *
+   * @param connectionId The connection ID string
+   * @param deviceInfo The FCM device info
+   * @returns Promise<void>
+   */
+  public async setDeviceInfo(options: { connectionId: string, deviceInfo: DidCommFcmDeviceInfo }) {
+    const { connectionId, deviceInfo } = options
+    const connection = await this.connectionService.getById(this.agentContext, connectionId)
+    connection.assertReady()
+
+    const message = this.pushNotificationsService.createSetDeviceInfo(deviceInfo)
+
+    const outbound = new DidCommOutboundMessageContext(message, {
+      agentContext: this.agentContext,
+      connection: connection,
+    })
+    await this.messageSender.sendMessage(outbound)
+  }
+
   /**
    * Sends the requested fcm device info (token) to another agent via a `connectionId`
    * Response for `push-notifications-fcm/get-device-info`
@@ -63,6 +84,27 @@ export class DidCommPushNotificationsFcmApi {
     })
     await this.messageSender.sendMessage(outbound)
   }
+
+  /**
+   * Gets the fcm device info (token) from another agent via the `connectionId`
+   *
+   * @param connectionId The connection ID string
+   * @returns Promise<void>
+   */
+  public async getDeviceInfo(options: { connectionId: string }) {
+    const { connectionId } = options
+    const connection = await this.connectionService.getById(this.agentContext, connectionId)
+    connection.assertReady()
+
+    const message = this.pushNotificationsService.createGetDeviceInfo()
+
+    const outbound = new DidCommOutboundMessageContext(message, {
+      agentContext: this.agentContext,
+      connection: connection,
+    })
+    await this.messageSender.sendMessage(outbound)
+  }
+
 
   /**
    * Get push notification record by `connectionId`
