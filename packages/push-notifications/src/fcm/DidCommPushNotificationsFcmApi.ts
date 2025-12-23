@@ -59,7 +59,7 @@ export class DidCommPushNotificationsFcmApi {
 
     const outbound = new DidCommOutboundMessageContext(message, {
       agentContext: this.agentContext,
-      connection: connection,
+      connection,
     })
     await this.messageSender.sendMessage(outbound)
   }
@@ -82,7 +82,7 @@ export class DidCommPushNotificationsFcmApi {
 
     const outbound = new DidCommOutboundMessageContext(message, {
       agentContext: this.agentContext,
-      connection: connection,
+      connection,
     })
     await this.messageSender.sendMessage(outbound)
   }
@@ -102,7 +102,7 @@ export class DidCommPushNotificationsFcmApi {
 
     const outbound = new DidCommOutboundMessageContext(message, {
       agentContext: this.agentContext,
-      connection: connection,
+      connection,
     })
     await this.messageSender.sendMessage(outbound)
   }
