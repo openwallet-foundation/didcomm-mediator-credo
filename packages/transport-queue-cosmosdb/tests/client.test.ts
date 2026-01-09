@@ -44,12 +44,12 @@ suite('cosmosdb client', () => {
   })
 
   test('initialize', async (ctx) => {
-    if (skipTests) ctx.skip()
+    if (skipTests) return ctx.skip()
     expect(client).toBeDefined()
   })
 
   test('add a message', async (ctx) => {
-    if (skipTests || !client) ctx.skip()
+    if (skipTests || !client) return ctx.skip()
 
     const timestamp = new Date()
     const id = await client.addMessage({
@@ -63,14 +63,14 @@ suite('cosmosdb client', () => {
   })
 
   test('get count', async (ctx) => {
-    if (skipTests || !client) ctx.skip()
+    if (skipTests || !client) return ctx.skip()
 
     const count = await client.getMessageCount(connectionId)
     expect(count).toBeGreaterThanOrEqual(1)
   })
 
   test('get a message', async (ctx) => {
-    if (skipTests || !client) ctx.skip()
+    if (skipTests || !client) return ctx.skip()
 
     const messages = await client.getMessages({
       connectionId: connectionId,
@@ -88,7 +88,7 @@ suite('cosmosdb client', () => {
   })
 
   test('get a message and filter on recipient did', async (ctx) => {
-    if (skipTests || !client) ctx.skip()
+    if (skipTests || !client) return ctx.skip()
 
     const messages = await client.getMessages({
       connectionId: connectionId,
@@ -107,7 +107,7 @@ suite('cosmosdb client', () => {
   })
 
   test('get message and remove a message', async (ctx) => {
-    if (skipTests || !client) ctx.skip()
+    if (skipTests || !client) return ctx.skip()
 
     const count = await client.getMessageCount(connectionId)
 
@@ -122,7 +122,7 @@ suite('cosmosdb client', () => {
   })
 
   test('add and explicit delete', async (ctx) => {
-    if (skipTests || !client) ctx.skip()
+    if (skipTests || !client) return ctx.skip()
 
     const id = await client.addMessage({
       connectionId,

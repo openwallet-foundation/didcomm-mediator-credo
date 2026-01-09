@@ -43,12 +43,12 @@ suite('cosmosDbMessagePickupRepository', () => {
   })
 
   test('instantiate', async (ctx) => {
-    if (skipTests) ctx.skip()
+    if (skipTests) return ctx.skip()
     expect(repository).toBeDefined()
   })
 
   test('add message', async (ctx) => {
-    if (skipTests || !repository) ctx.skip()
+    if (skipTests || !repository) return ctx.skip()
 
     messageId = await repository.addMessage(agentContext, {
       connectionId,
@@ -58,7 +58,7 @@ suite('cosmosDbMessagePickupRepository', () => {
   })
 
   test('count available messages', async (ctx) => {
-    if (skipTests || !repository) ctx.skip()
+    if (skipTests || !repository) return ctx.skip()
 
     const count = await repository.getAvailableMessageCount(agentContext, { connectionId })
 
@@ -66,7 +66,7 @@ suite('cosmosDbMessagePickupRepository', () => {
   })
 
   test('get all messages', async (ctx) => {
-    if (skipTests || !repository) ctx.skip()
+    if (skipTests || !repository) return ctx.skip()
 
     const messages = await repository.takeFromQueue(agentContext, { connectionId })
     const count = await repository.getAvailableMessageCount(agentContext, { connectionId })
@@ -76,7 +76,7 @@ suite('cosmosDbMessagePickupRepository', () => {
   })
 
   test('delete message', async (ctx) => {
-    if (skipTests || !repository) ctx.skip()
+    if (skipTests || !repository) return ctx.skip()
 
     await repository.removeMessages(agentContext, { connectionId, messageIds: [messageId] })
 
