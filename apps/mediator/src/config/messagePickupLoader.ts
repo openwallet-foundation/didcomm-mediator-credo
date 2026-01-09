@@ -1,5 +1,6 @@
 import { Agent } from '@credo-ts/core'
 import { DidCommQueueTransportRepository } from '@credo-ts/didcomm'
+import { DidCommTransportQueueCosmosDb } from '@credo-ts/didcomm-transport-queue-cosmosdb'
 import { DidCommTransportQueueDynamoDb } from '@credo-ts/didcomm-transport-queue-dynamodb'
 import { DidCommTransportQueuePostgres } from '@credo-ts/didcomm-transport-queue-postgres'
 import { config, logger } from '../config.js'
@@ -34,6 +35,17 @@ export async function loadMessagePickupStorage(): Promise<ExtendedQueueTransport
       postgresUser: storage.user,
       postgresPassword: storage.password,
       postgresDatabaseName: storage.database,
+      logger,
+    })
+  }
+
+  if (storage.type === 'cosmosdb') {
+    logger.info('Using cosmosdb message pickup storage')
+    return await DidCommTransportQueueCosmosDb.initialize({
+      endpoint: storage.endpoint,
+      key: storage.key,
+      databaseName: storage.databaseName,
+      containerName: storage.containerName,
       logger,
     })
   }

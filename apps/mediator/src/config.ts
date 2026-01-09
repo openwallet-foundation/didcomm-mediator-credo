@@ -220,8 +220,31 @@ const zConfig = z
                     "Message pickup storage secret access key must be a string when message pickup storage type is 'dynamodb'. Can also be set using 'MESSAGE_PICKUP__STORAGE__SECRET_ACCESS_KEY' environment variable",
                 }),
               }),
+              z.object({
+                type: z.literal('cosmosdb'),
+                endpoint: z.url({
+                  error:
+                    "Message pickup storage endpoint must be a valid url when message pickup storage type is 'cosmosdb'. Can also be set using 'MESSAGE_PICKUP__STORAGE__ENDPOINT' environment variable",
+                }),
+                key: z.string({
+                  error:
+                    "Message pickup storage key must be a string when message pickup storage type is 'cosmosdb'. Can also be set using 'MESSAGE_PICKUP__STORAGE__KEY' environment variable",
+                }),
+                databaseName: z
+                  .string({
+                    error:
+                      "Message pickup storage database name must be a string when message pickup storage type is 'cosmosdb'. Can also be set using 'MESSAGE_PICKUP__STORAGE__DATABASE_NAME' environment variable",
+                  })
+                  .optional(),
+                containerName: z
+                  .string({
+                    error:
+                      "Message pickup storage container name must be a string when message pickup storage type is 'cosmosdb'. Can also be set using 'MESSAGE_PICKUP__STORAGE__CONTAINER_NAME' environment variable",
+                  })
+                  .optional(),
+              }),
             ],
-            { error: "Message pickup storage type must be one of 'credo' (default) | 'postgres' | 'dynamodb'" }
+            { error: "Message pickup storage type must be one of 'credo' (default) | 'postgres' | 'dynamodb' | 'cosmosdb'" }
           )
           .default({
             type: 'credo',

@@ -151,8 +151,10 @@ You can also provide the following environment variables, these CANNOT be provid
   - `simple-defaults.json`: Minimal config with all defaults
   - `full.json`: All options enabled (Postgres, Redis, DynamoDB, etc.)
   - `cache-in-memory.json`, `cache-redis.json`: Cache backend examples
-  - `message-pickup-credo.json`, `message-pickup-dynamodb.json`, `message-pickup-postgres.json`: Message pickup storage examples
+  - `message-pickup-credo.json`, `message-pickup-dynamodb.json`, `message-pickup-postgres.json`, `message-pickup-cosmosdb.json`: Message pickup storage examples
   - `storage-askar-sqlite.json`, `storage-askar-postgres.json`, `storage-drizzle-sqlite.json`, `storage-drizzle-postgres.json`: Storage backend examples
+  - `aws.json`: Full AWS deployment example with DynamoDB
+  - `azure.json`: Full Azure deployment example with Cosmos DB
 
 ### Configuration Reference
 
@@ -236,9 +238,10 @@ When running the Askar to Drizzle storage delettion after successul migration fr
 #### Message Pickup
 
 - `forwardingStrategy`: `DirectDelivery`, `QueueOnly`, `QueueAndLiveModeDelivery`. The `DirectDelivery` strategy will deliver messages directly to the recipient, while the `QueueOnly` strategy will only queue the messages for the recipient. The `QueueAndLiveModeDelivery` strategy will queue the messages for the recipient and deliver them directly if possible. The default is `DirectDelivery`.
-- `storage.type`: `credo`, `postgres`, or `dynamodb`
+- `storage.type`: `credo`, `postgres`, `dynamodb`, or `cosmosdb`
   - For `postgres`: `host`, `user`, `password`, `database`
-  - For `dynamodb`: `region`, `accessKeyId`, `secretAccessKey`, `tableName`
+  - For `dynamodb`: `region`, `accessKeyId`, `secretAccessKey`, `tableName` (AWS)
+  - For `cosmosdb`: `endpoint`, `key`, `databaseName`, `containerName` (Azure)
 - `multiInstanceDelivery.type`: `none` or `redis`.
   - `none`. In this case multi instance delivery is not enabled. Use this if you're using `postgres` for `messagePickup.storage.type`, or if only deploying a single instance.
   - For `redis`: You MUST also use `redis` for `cache.type` in this case. The redis URL will be extracted from the cache configuration. The `redis` multi instance delivery uses Redis streams, ensuring consistent delivery and handling of underliverd messages.
