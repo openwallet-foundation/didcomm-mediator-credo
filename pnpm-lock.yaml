@@ -98,6 +98,9 @@ importers:
       '@credo-ts/didcomm-push-notifications':
         specifier: workspace:*
         version: link:../../packages/push-notifications
+      '@credo-ts/didcomm-transport-queue-cosmosdb':
+        specifier: workspace:*
+        version: link:../../packages/transport-queue-cosmosdb
       '@credo-ts/didcomm-transport-queue-dynamodb':
         specifier: workspace:*
         version: link:../../packages/transport-queue-dynamodb
