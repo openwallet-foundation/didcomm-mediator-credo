@@ -22,7 +22,8 @@ const encryptedMessage: DidCommEncryptedMessage = {
  * - Key: C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==
  */
 suite('cosmosdb client', () => {
-  let client: CosmosDbClientRepository
+  let client: CosmosDbClientRepository | undefined
+  let skipTests = false
 
   beforeAll(async () => {
     // Skip tests if Cosmos DB emulator is not running
@@ -38,16 +39,17 @@ suite('cosmosdb client', () => {
       })
     } catch {
       console.log('Skipping Cosmos DB tests - emulator not running')
-      return
+      skipTests = true
     }
   })
 
-  test('initialize', async () => {
+  test('initialize', async (ctx) => {
+    if (skipTests) ctx.skip()
     expect(client).toBeDefined()
   })
 
-  test('add a message', async () => {
-    if (!client) return
+  test('add a message', async (ctx) => {
+    if (skipTests || !client) ctx.skip()
 
     const timestamp = new Date()
     const id = await client.addMessage({
@@ -60,15 +62,15 @@ suite('cosmosdb client', () => {
     expect(id.startsWith(timestamp.getTime().toString())).toBeTruthy()
   })
 
-  test('get count', async () => {
-    if (!client) return
+  test('get count', async (ctx) => {
+    if (skipTests || !client) ctx.skip()
 
     const count = await client.getMessageCount(connectionId)
     expect(count).toBeGreaterThanOrEqual(1)
   })
 
-  test('get a message', async () => {
-    if (!client) return
+  test('get a message', async (ctx) => {
+    if (skipTests || !client) ctx.skip()
 
     const messages = await client.getMessages({
       connectionId: connectionId,
@@ -85,8 +87,8 @@ suite('cosmosdb client', () => {
     expect(message.recipientDids).toEqual(recipientDids)
   })
 
-  test('get a message and filter on recipient did', async () => {
-    if (!client) return
+  test('get a message and filter on recipient did', async (ctx) => {
+    if (skipTests || !client) ctx.skip()
 
     const messages = await client.getMessages({
       connectionId: connectionId,
@@ -104,8 +106,8 @@ suite('cosmosdb client', () => {
     expect(message.recipientDids).toEqual(recipientDids)
   })
 
-  test('get message and remove a message', async () => {
-    if (!client) return
+  test('get message and remove a message', async (ctx) => {
+    if (skipTests || !client) ctx.skip()
 
     const count = await client.getMessageCount(connectionId)
 
@@ -119,8 +121,8 @@ suite('cosmosdb client', () => {
     expect(count).toBeGreaterThan(countAfterDelete)
   })
 
-  test('add and explicit delete', async () => {
-    if (!client) return
+  test('add and explicit delete', async (ctx) => {
+    if (skipTests || !client) ctx.skip()
 
     const id = await client.addMessage({
       connectionId,

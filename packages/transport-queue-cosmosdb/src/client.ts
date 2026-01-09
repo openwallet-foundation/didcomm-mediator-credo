@@ -94,12 +94,7 @@ export class CosmosDbClientRepository {
         indexingPolicy: {
           indexingMode: 'consistent',
           automatic: true,
-          includedPaths: [
-            { path: '/connectionId/?' },
-            { path: '/messageId/?' },
-            { path: '/recipientDids/[]' },
-            { path: '/receivedAt/?' },
-          ],
+          includedPaths: [{ path: '/*' }],
           excludedPaths: [{ path: '/encryptedMessage/*' }, { path: '/"_etag"/?' }],
         },
       })

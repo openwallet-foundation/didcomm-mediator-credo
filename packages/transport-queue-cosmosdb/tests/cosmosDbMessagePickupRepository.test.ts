@@ -20,9 +20,10 @@ agentContext.dependencyManager.registerInstance(EventEmitter, { emit: () => {} }
  * - Key: C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==
  */
 suite('cosmosDbMessagePickupRepository', () => {
-  let repository: DidCommTransportQueueCosmosDb
+  let repository: DidCommTransportQueueCosmosDb | undefined
   const connectionId = randomUUID()
   let messageId: string
+  let skipTests = false
 
   beforeAll(async () => {
     try {
@@ -37,16 +38,17 @@ suite('cosmosDbMessagePickupRepository', () => {
       })
     } catch {
       console.log('Skipping Cosmos DB tests - emulator not running')
-      return
+      skipTests = true
     }
   })
 
-  test('instantiate', async () => {
+  test('instantiate', async (ctx) => {
+    if (skipTests) ctx.skip()
     expect(repository).toBeDefined()
   })
 
-  test('add message', async () => {
-    if (!repository) return
+  test('add message', async (ctx) => {
+    if (skipTests || !repository) ctx.skip()
 
     messageId = await repository.addMessage(agentContext, {
       connectionId,
@@ -55,16 +57,16 @@ suite('cosmosDbMessagePickupRepository', () => {
     })
   })
 
-  test('count available messages', async () => {
-    if (!repository) return
+  test('count available messages', async (ctx) => {
+    if (skipTests || !repository) ctx.skip()
 
     const count = await repository.getAvailableMessageCount(agentContext, { connectionId })
 
     expect(count).toStrictEqual(1)
   })
 
-  test('get all messages', async () => {
-    if (!repository) return
+  test('get all messages', async (ctx) => {
+    if (skipTests || !repository) ctx.skip()
 
     const messages = await repository.takeFromQueue(agentContext, { connectionId })
     const count = await repository.getAvailableMessageCount(agentContext, { connectionId })
@@ -73,8 +75,8 @@ suite('cosmosDbMessagePickupRepository', () => {
     expect(messages.length).toStrictEqual(count)
   })
 
-  test('delete message', async () => {
-    if (!repository) return
+  test('delete message', async (ctx) => {
+    if (skipTests || !repository) ctx.skip()
 
     await repository.removeMessages(agentContext, { connectionId, messageIds: [messageId] })
 
