@@ -244,7 +244,10 @@ const zConfig = z
                   .optional(),
               }),
             ],
-            { error: "Message pickup storage type must be one of 'credo' (default) | 'postgres' | 'dynamodb' | 'cosmosdb'" }
+            {
+              error:
+                "Message pickup storage type must be one of 'credo' (default) | 'postgres' | 'dynamodb' | 'cosmosdb'",
+            }
           )
           .default({
             type: 'credo',
