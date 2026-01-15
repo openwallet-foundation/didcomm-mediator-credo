@@ -1,0 +1,152 @@
+name: Build and Push to Azure ACR
+
+on:
+  push:
+    branches:
+      - feat/cosmos-support
+    paths:
+      - 'apps/**'
+      - 'packages/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+  pull_request:
+    branches:
+      - feat/cosmos-support
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        type: choice
+        options:
+          - dev
+          - prod
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+  AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+  AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+  IMAGE_NAME: didcomm-mediator
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.set-env.outputs.environment }}
+      acr_name: ${{ steps.set-env.outputs.acr_name }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Determine environment
+        id: set-env
+        run: |
+          # feat/cosmos-support branch deploys to both environments
+          # Use workflow_dispatch to select specific environment
+          # Default: push to feat/cosmos-support → dev
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            ENV="${{ github.event.inputs.environment }}"
+          else
+            ENV="dev"
+          fi
+          
+          if [ "$ENV" == "prod" ]; then
+            ACR="phenixprodacr"
+          else
+            ACR="phenixdevacr"
+          fi
+          
+          echo "environment=$ENV" >> $GITHUB_OUTPUT
+          echo "acr_name=$ACR" >> $GITHUB_OUTPUT
+          echo "Environment: $ENV, ACR: $ACR"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ env.AZURE_CLIENT_ID }}
+          tenant-id: ${{ env.AZURE_TENANT_ID }}
+          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Login to Azure Container Registry
+        run: az acr login --name ${{ steps.set-env.outputs.acr_name }}
+
+      - name: Set image tag
+        id: tag
+        run: |
+          SHORT_SHA=${GITHUB_SHA::8}
+          ENV="${{ steps.set-env.outputs.environment }}"
+          ACR="${{ steps.set-env.outputs.acr_name }}"
+          
+          if [ "$ENV" == "prod" ]; then
+            TAG="latest"
+          else
+            TAG="dev"
+          fi
+          
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "sha=$SHORT_SHA" >> $GITHUB_OUTPUT
+          echo "acr_server=${ACR}.azurecr.io" >> $GITHUB_OUTPUT
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: apps/mediator/Dockerfile
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: |
+            ${{ steps.tag.outputs.acr_server }}/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.tag }}
+            ${{ steps.tag.outputs.acr_server }}/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  update-manifests:
+    needs: build
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate GitHub App Token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.MANIFEST_APP_ID }}
+          private-key: ${{ secrets.MANIFEST_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: phenix-iac-manifests
+
+      - name: Checkout manifests repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/phenix-iac-manifests
+          token: ${{ steps.app-token.outputs.token }}
+          path: manifests
+
+      - name: Update image tags in kustomization
+        run: |
+          ENV="${{ needs.build.outputs.environment }}"
+          cd manifests/apps/$ENV
+          SHORT_SHA=${GITHUB_SHA::8}
+          
+          if grep -q "didcomm-mediator" kustomization.yaml; then
+            sed -i "/didcomm-mediator/,/newTag:/s/newTag: .*/newTag: $SHORT_SHA/" kustomization.yaml
+          fi
+
+      - name: Commit and push
+        run: |
+          cd manifests
+          ENV="${{ needs.build.outputs.environment }}"
+          git config user.name "phenix-ci[bot]"
+          git config user.email "phenix-ci[bot]@users.noreply.github.com"
+          git add -A
+          if ! git diff --staged --quiet; then
+            git commit -m "[$ENV] Update didcomm-mediator to ${GITHUB_SHA::8}"
+            git push
+          else
+            echo "No changes to commit"
+          fi
