@@ -19,45 +19,78 @@ on:
           - dev
           - prod
 
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
-  ACR_REGISTRY: phenixdevacr.azurecr.io
-  IMAGE_NAME: didcomm-mediator-credo
+  AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+  AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+  AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+  IMAGE_NAME: didcomm-mediator
 
 jobs:
   build:
     name: Build and Push
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write
+    outputs:
+      environment: ${{ steps.set-env.outputs.environment }}
+      acr_name: ${{ steps.set-env.outputs.acr_name }}
+      image_tag: ${{ steps.tag.outputs.sha }}
     
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Determine environment
+        id: set-env
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            ENV="${{ github.event.inputs.environment }}"
+          else
+            BRANCH=${GITHUB_REF#refs/heads/}
+            if [ "$BRANCH" == "main" ]; then
+              ENV="prod"
+            else
+              ENV="dev"
+            fi
+          fi
+          
+          if [ "$ENV" == "prod" ]; then
+            ACR="phenixprodacr"
+          else
+            ACR="phenixdevacr"
+          fi
+          
+          echo "environment=$ENV" >> $GITHUB_OUTPUT
+          echo "acr_name=$ACR" >> $GITHUB_OUTPUT
+          echo "Environment: $ENV, ACR: $ACR"
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Azure Login
-        uses: azure/login@v1
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          client-id: ${{ env.AZURE_CLIENT_ID }}
+          tenant-id: ${{ env.AZURE_TENANT_ID }}
+          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Login to ACR
-        run: az acr login --name phenixdevacr
+      - name: Login to Azure Container Registry
+        run: az acr login --name ${{ steps.set-env.outputs.acr_name }}
 
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.ACR_REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=ref,event=branch
-            type=ref,event=pr
-            type=sha,prefix=
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+      - name: Set image tag
+        id: tag
+        run: |
+          SHORT_SHA=${GITHUB_SHA::8}
+          ACR="${{ steps.set-env.outputs.acr_name }}"
+          
+          echo "sha=$SHORT_SHA" >> $GITHUB_OUTPUT
+          echo "acr_server=${ACR}.azurecr.io" >> $GITHUB_OUTPUT
 
       - name: Build and push
         uses: docker/build-push-action@v5
@@ -65,11 +98,61 @@ jobs:
           context: .
           file: ./apps/mediator/Dockerfile
           push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: |
+            ${{ steps.tag.outputs.acr_server }}/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.sha }}
+            ${{ steps.tag.outputs.acr_server }}/${{ env.IMAGE_NAME }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
       - name: Post image digest
         if: github.event_name != 'pull_request'
-        run: echo "Image pushed with digest ${{ steps.meta.outputs.digest }}"
+        run: |
+          echo "Image pushed to ${{ steps.tag.outputs.acr_server }}/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.sha }}"
+
+  update-manifests:
+    needs: build
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate GitHub App Token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.GH_APP_ID }}
+          private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: phenix-iac-manifests
+
+      - name: Checkout manifests repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/phenix-iac-manifests
+          token: ${{ steps.app-token.outputs.token }}
+          path: manifests
+
+      - name: Update image tag in kustomization
+        run: |
+          ENV="${{ needs.build.outputs.environment }}"
+          IMAGE_TAG="${{ needs.build.outputs.image_tag }}"
+          
+          cd manifests/apps/$ENV
+          
+          # Update didcomm-mediator image tag
+          if grep -q "didcomm-mediator" kustomization.yaml; then
+            sed -i "/didcomm-mediator/,/newTag:/s/newTag: .*/newTag: $IMAGE_TAG/" kustomization.yaml
+          fi
+
+      - name: Commit and push
+        run: |
+          cd manifests
+          ENV="${{ needs.build.outputs.environment }}"
+          IMAGE_TAG="${{ needs.build.outputs.image_tag }}"
+          
+          git config user.name "phenix-ci[bot]"
+          git config user.email "phenix-ci[bot]@users.noreply.github.com"
+          git add -A
+          
+          if ! git diff --staged --quiet; then
+            git commit -m "[$ENV] Update didcomm-mediator image to $IMAGE_TAG"
+            git push
+          fi
