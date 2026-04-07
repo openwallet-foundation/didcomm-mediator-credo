@@ -1,6 +1,6 @@
 import { ConsoleLogger, LogLevel } from '@credo-ts/core'
 import { DidCommEncryptedMessage } from '@credo-ts/didcomm'
-import { beforeAll, expect, suite, test } from 'vitest'
+import { afterEach, beforeAll, expect, suite, test } from 'vitest'
 import { CosmosDbClientRepository } from '../src/client.js'
 
 const connectionId = '4ffdd113-117b-4827-9af5-28aa73ec4bad'
@@ -13,6 +13,7 @@ const encryptedMessage: DidCommEncryptedMessage = {
 }
 
 /**
+ * NOTE:
  * These tests require a running Cosmos DB emulator or actual Cosmos DB instance.
  * For local development, use the Azure Cosmos DB Emulator:
  * https://docs.microsoft.com/en-us/azure/cosmos-db/local-emulator
@@ -20,6 +21,7 @@ const encryptedMessage: DidCommEncryptedMessage = {
  * Default emulator settings:
  * - Endpoint: https://localhost:8081
  * - Key: C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==
+ * IMPORTANT: the key is well-known and should not be used for production or shared environments.
  */
 suite('cosmosdb client', () => {
   let client: CosmosDbClientRepository | undefined
@@ -43,6 +45,12 @@ suite('cosmosdb client', () => {
     }
   })
 
+  afterEach(async () => {
+    if (skipTests || !client) return
+    // Purge all messages for connectionId so each test starts clean
+    await client.getMessages({ connectionId, deleteMessages: true })
+  })
+
   test('initialize', async (ctx) => {
     if (skipTests) return ctx.skip()
     expect(client).toBeDefined()
@@ -53,10 +61,10 @@ suite('cosmosdb client', () => {
 
     const timestamp = new Date()
     const id = await client.addMessage({
-      connectionId: connectionId,
+      connectionId,
       receivedAt: timestamp,
       encryptedMessage,
-      recipientDids: recipientDids,
+      recipientDids,
     })
 
     expect(id.startsWith(timestamp.getTime().toString())).toBeTruthy()
@@ -65,15 +73,20 @@ suite('cosmosdb client', () => {
   test('get count', async (ctx) => {
     if (skipTests || !client) return ctx.skip()
 
+    // Set up known state: add exactly one message
+    await client.addMessage({ connectionId, receivedAt: new Date(), encryptedMessage, recipientDids })
+
     const count = await client.getMessageCount(connectionId)
-    expect(count).toBeGreaterThanOrEqual(1)
+    expect(count).toBe(1)
   })
 
   test('get a message', async (ctx) => {
     if (skipTests || !client) return ctx.skip()
 
+    await client.addMessage({ connectionId, receivedAt: new Date(), encryptedMessage, recipientDids })
+
     const messages = await client.getMessages({
-      connectionId: connectionId,
+      connectionId,
       limit: 1,
     })
 
@@ -90,8 +103,10 @@ suite('cosmosdb client', () => {
   test('get a message and filter on recipient did', async (ctx) => {
     if (skipTests || !client) return ctx.skip()
 
+    await client.addMessage({ connectionId, receivedAt: new Date(), encryptedMessage, recipientDids })
+
     const messages = await client.getMessages({
-      connectionId: connectionId,
+      connectionId,
       limit: 1,
       recipientDid: recipientDids[0],
     })
@@ -109,10 +124,14 @@ suite('cosmosdb client', () => {
   test('get message and remove a message', async (ctx) => {
     if (skipTests || !client) return ctx.skip()
 
+    // Add two messages so deleting via getMessages (deleteMessages: true) produces a measurable change
+    await client.addMessage({ connectionId, receivedAt: new Date(), encryptedMessage, recipientDids })
+    await client.addMessage({ connectionId, receivedAt: new Date(), encryptedMessage, recipientDids })
+
     const count = await client.getMessageCount(connectionId)
 
     await client.getMessages({
-      connectionId: connectionId,
+      connectionId,
       deleteMessages: true,
     })
 
