@@ -88,7 +88,7 @@ importers:
         version: 0.6.0(@openwallet-foundation/askar-shared@0.4.3)(typescript@5.9.3)
       '@credo-ts/askar-to-drizzle-storage-migration':
         specifier: 'catalog:'
-        version: 0.6.0(@hyperledger/anoncreds-shared@0.3.4)(@openwallet-foundation/askar-shared@0.4.3)(drizzle-orm@0.44.7(@libsql/client@0.15.15)(@opentelemetry/api@1.9.0)(@types/pg@8.15.6)(pg@8.16.3))(typescript@5.9.3)
+        version: 0.6.0(@hyperledger/anoncreds-shared@0.3.4)(@openwallet-foundation/askar-shared@0.4.3)(drizzle-orm@0.45.2(@libsql/client@0.15.15)(@opentelemetry/api@1.9.0)(@types/pg@8.15.6)(pg@8.16.3))(typescript@5.9.3)
       '@credo-ts/core':
         specifier: 'catalog:'
         version: 0.6.0(typescript@5.9.3)
@@ -106,7 +106,7 @@ importers:
         version: link:../../packages/transport-queue-postgres
       '@credo-ts/drizzle-storage':
         specifier: 'catalog:'
-        version: 0.6.0(@hyperledger/anoncreds-shared@0.3.4)(drizzle-orm@0.44.7(@libsql/client@0.15.15)(@opentelemetry/api@1.9.0)(@types/pg@8.15.6)(pg@8.16.3))(typescript@5.9.3)
+        version: 0.6.0(@hyperledger/anoncreds-shared@0.3.4)(drizzle-orm@0.45.2(@libsql/client@0.15.15)(@opentelemetry/api@1.9.0)(@types/pg@8.15.6)(pg@8.16.3))(typescript@5.9.3)
       '@credo-ts/node':
         specifier: 'catalog:'
         version: 0.6.0(typescript@5.9.3)
@@ -126,8 +126,8 @@ importers:
         specifier: ^0.14.2
         version: 0.14.3
       drizzle-orm:
-        specifier: ^0.44.7
-        version: 0.44.7(@libsql/client@0.15.15)(@opentelemetry/api@1.9.0)(@types/pg@8.15.6)(pg@8.16.3)
+        specifier: ^0.45.2
+        version: 0.45.2(@libsql/client@0.15.15)(@opentelemetry/api@1.9.0)(@types/pg@8.15.6)(pg@8.16.3)
       express:
         specifier: ^5.1.0
         version: 5.2.1
@@ -1608,7 +1608,6 @@ packages:
 
   '@sphereon/kmp-mdoc-core@0.2.0-SNAPSHOT.26':
     resolution: {integrity: sha512-QXJ6R8ENiZV2rPMbn06cw5JKwqUYN1kzVRbYfONqE1PEXx1noQ4md7uxr2zSczi0ubKkNcbyYDNtIMTZIhGzmQ==}
-    bundledDependencies: []
 
   '@sphereon/pex-models@2.3.2':
     resolution: {integrity: sha512-foFxfLkRwcn/MOp/eht46Q7wsvpQGlO7aowowIIb5Tz9u97kYZ2kz6K2h2ODxWuv5CRA7Q0MY8XUBGE2lfOhOQ==}
@@ -2050,8 +2049,8 @@ packages:
     resolution: {integrity: sha512-hOzRGSdyKIU4FcTSFYGKdXEjFsncVwHZ43gY3WU5Bz9j5Iadp6Rh6hxLSQ1IWXpKLBKt/d5y1cpSPcV+FcoQ1A==}
     hasBin: true
 
-  drizzle-orm@0.44.7:
-    resolution: {integrity: sha512-quIpnYznjU9lHshEOAYLoZ9s3jweleHlZIAWR/jX9gAWNg/JhQ1wj0KGRf7/Zm+obRrYd9GjPVJg790QY9N5AQ==}
+  drizzle-orm@0.45.2:
+    resolution: {integrity: sha512-kY0BSaTNYWnoDMVoyY8uxmyHjpJW1geOmBMdSSicKo9CIIWkSxMIj2rkeSR51b8KAPB7m+qysjuHme5nKP+E5Q==}
     peerDependencies:
       '@aws-sdk/client-rds-data': '>=3'
       '@cloudflare/workers-types': '>=4'
@@ -2815,6 +2814,10 @@ packages:
     resolution: {integrity: sha512-qOOzS1cBTWYF4BH8fVePDBOO9iptMnGUEZwNc/cMWnTV2nVLZ7VoNWEPHkYczZA0pdoA7dl6e7FL659nX9S2aw==}
     engines: {node: '>=16 || 14 >=14.17'}
 
+  minipass@7.1.3:
+    resolution: {integrity: sha512-tEBHqDnIoM/1rXME1zgka9g6Q2lcoCkxHLuc7ODJ5BxbP5d4c2Z5cGgtXAku59200Cx7diuHTOYfSBD8n6mm8A==}
+    engines: {node: '>=16 || 14 >=14.17'}
+
   minizlib@3.1.0:
     resolution: {integrity: sha512-KZxYo1BUkWD2TVFLr0MQoM8vUUigWD3LlD83a/75BqC+4qE0Hb1Vo5v1FgcfaNXvfXzr+5EhQ6ing/CaBijTlw==}
     engines: {node: '>= 18'}
@@ -3175,6 +3178,7 @@ packages:
   rolldown-vite@7.2.10:
     resolution: {integrity: sha512-v2ekZjuVLfumjp1Cr7LSQM1n2oOo3+gMruhOgT0Q4/cQ2J3nkTDLTAWLQQ86UHMbFYyVIN1wGh8BEZbvjkyctg==}
     engines: {node: ^20.19.0 || >=22.12.0}
+    deprecated: Use 7.3.1 for migration purposes. For the most recent updates, migrate to Vite 8 once you're ready.
     hasBin: true
     peerDependencies:
       '@types/node': ^20.19.0 || >=22.12.0
@@ -3366,9 +3370,14 @@ packages:
   stubs@3.0.0:
     resolution: {integrity: sha512-PdHt7hHUJKxvTCgbKX9C1V/ftOcjJQgz8BZwNfV5c4B6dcGqlpelTbJ999jBGZ2jYiPAwcX5dP6oBwVlBlUbxw==}
 
+  tar@7.5.13:
+    resolution: {integrity: sha512-tOG/7GyXpFevhXVh8jOPJrmtRpOTsYqUIkVdVooZYJS/z8WhfQUX8RJILmeuJNinGAMSu1veBr4asSHFt5/hng==}
+    engines: {node: '>=18'}
+
   tar@7.5.2:
     resolution: {integrity: sha512-7NyxrTE4Anh8km8iEy7o0QYPs+0JKBTj5ZaqHg6B39erLg0qYXN3BijtShwbsNSvQ+LN75+KV+C4QR/f6Gwnpg==}
     engines: {node: '>=18'}
+    deprecated: Old versions of tar are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
 
   teeny-request@9.0.0:
     resolution: {integrity: sha512-resvxdc6Mgb7YEThw6G6bExlXKkv6+YbuzGg9xuXxSgxJF7Ozs+o8Y9+2R3sArdWdW8nOokoQb1yrpFB0pQK2g==}
@@ -4318,11 +4327,11 @@ snapshots:
       - supports-color
       - typescript
 
-  '@credo-ts/askar-to-drizzle-storage-migration@0.6.0(@hyperledger/anoncreds-shared@0.3.4)(@openwallet-foundation/askar-shared@0.4.3)(drizzle-orm@0.44.7(@libsql/client@0.15.15)(@opentelemetry/api@1.9.0)(@types/pg@8.15.6)(pg@8.16.3))(typescript@5.9.3)':
+  '@credo-ts/askar-to-drizzle-storage-migration@0.6.0(@hyperledger/anoncreds-shared@0.3.4)(@openwallet-foundation/askar-shared@0.4.3)(drizzle-orm@0.45.2(@libsql/client@0.15.15)(@opentelemetry/api@1.9.0)(@types/pg@8.15.6)(pg@8.16.3))(typescript@5.9.3)':
     dependencies:
       '@credo-ts/askar': 0.6.0(@openwallet-foundation/askar-shared@0.4.3)(typescript@5.9.3)
       '@credo-ts/core': 0.6.0(typescript@5.9.3)
-      '@credo-ts/drizzle-storage': 0.6.0(@hyperledger/anoncreds-shared@0.3.4)(drizzle-orm@0.44.7(@libsql/client@0.15.15)(@opentelemetry/api@1.9.0)(@types/pg@8.15.6)(pg@8.16.3))(typescript@5.9.3)
+      '@credo-ts/drizzle-storage': 0.6.0(@hyperledger/anoncreds-shared@0.3.4)(drizzle-orm@0.45.2(@libsql/client@0.15.15)(@opentelemetry/api@1.9.0)(@types/pg@8.15.6)(pg@8.16.3))(typescript@5.9.3)
       '@credo-ts/tenants': 0.6.0(typescript@5.9.3)
       '@openwallet-foundation/askar-shared': 0.4.3
     transitivePeerDependencies:
@@ -4407,7 +4416,7 @@ snapshots:
       - supports-color
       - typescript
 
-  '@credo-ts/drizzle-storage@0.6.0(@hyperledger/anoncreds-shared@0.3.4)(drizzle-orm@0.44.7(@libsql/client@0.15.15)(@opentelemetry/api@1.9.0)(@types/pg@8.15.6)(pg@8.16.3))(typescript@5.9.3)':
+  '@credo-ts/drizzle-storage@0.6.0(@hyperledger/anoncreds-shared@0.3.4)(drizzle-orm@0.45.2(@libsql/client@0.15.15)(@opentelemetry/api@1.9.0)(@types/pg@8.15.6)(pg@8.16.3))(typescript@5.9.3)':
     dependencies:
       '@credo-ts/action-menu': 0.6.0(typescript@5.9.3)
       '@credo-ts/anoncreds': 0.6.0(@hyperledger/anoncreds-shared@0.3.4)(typescript@5.9.3)
@@ -4420,7 +4429,7 @@ snapshots:
       class-transformer: 0.5.1
       class-validator: 0.14.3
       drizzle-kit: 0.31.7
-      drizzle-orm: 0.44.7(@libsql/client@0.15.15)(@opentelemetry/api@1.9.0)(@types/pg@8.15.6)(pg@8.16.3)
+      drizzle-orm: 0.45.2(@libsql/client@0.15.15)(@opentelemetry/api@1.9.0)(@types/pg@8.15.6)(pg@8.16.3)
       shell: 0.12.0
       tsyringe: 4.10.0
       zod: 4.1.13
@@ -4827,7 +4836,7 @@ snapshots:
 
   '@hyperledger/anoncreds-shared@0.3.4':
     dependencies:
-      tar: 7.5.2
+      tar: 7.5.13
 
   '@inquirer/external-editor@1.0.3(@types/node@22.19.1)':
     dependencies:
@@ -6057,7 +6066,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  drizzle-orm@0.44.7(@libsql/client@0.15.15)(@opentelemetry/api@1.9.0)(@types/pg@8.15.6)(pg@8.16.3):
+  drizzle-orm@0.45.2(@libsql/client@0.15.15)(@opentelemetry/api@1.9.0)(@types/pg@8.15.6)(pg@8.16.3):
     optionalDependencies:
       '@libsql/client': 0.15.15
       '@opentelemetry/api': 1.9.0
@@ -6867,6 +6876,8 @@ snapshots:
 
   minipass@7.1.2: {}
 
+  minipass@7.1.3: {}
+
   minizlib@3.1.0:
     dependencies:
       minipass: 7.1.2
@@ -7394,6 +7405,14 @@ snapshots:
 
   stubs@3.0.0:
     optional: true
+
+  tar@7.5.13:
+    dependencies:
+      '@isaacs/fs-minipass': 4.0.1
+      chownr: 3.0.0
+      minipass: 7.1.3
+      minizlib: 3.1.0
+      yallist: 5.0.0
 
   tar@7.5.2:
     dependencies:
