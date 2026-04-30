@@ -1,7 +1,7 @@
 import { BaseLogger, LogLevel } from '@credo-ts/core'
 import { ILogObj, Logger as TSLogger } from 'tslog'
 
-import { replaceError } from './replaceError.js'
+import { createSafeJsonReplacer } from './replaceError.js'
 
 export class Logger extends BaseLogger {
   private logger: TSLogger<ILogObj>
@@ -33,7 +33,7 @@ export class Logger extends BaseLogger {
     if (this.logLevel === LogLevel.off) return
 
     if (data) {
-      this.logger[tsLogLevel](message, JSON.parse(JSON.stringify(data, replaceError, 2)))
+      this.logger[tsLogLevel](message, JSON.parse(JSON.stringify(data, createSafeJsonReplacer(), 2)))
     } else {
       this.logger[tsLogLevel](message)
     }
