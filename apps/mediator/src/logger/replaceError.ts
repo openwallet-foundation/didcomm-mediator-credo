@@ -15,3 +15,17 @@ export function replaceError(_: unknown, value: unknown) {
 
   return value
 }
+
+export function createSafeJsonReplacer() {
+  const seen = new WeakSet<object>()
+
+  return (key: unknown, value: unknown) => {
+    if (value && typeof value === 'object') {
+      if (seen.has(value)) return '[Circular]'
+
+      seen.add(value)
+    }
+
+    return replaceError(key, value)
+  }
+}
