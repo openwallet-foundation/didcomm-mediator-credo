@@ -341,6 +341,24 @@ const zConfig = z
       })
       .optional(),
     invitationGoalCode: z.string().optional(),
+    // Bearer token guarding the debug-instrumentation /admin/log-level endpoint.
+    // If unset, the endpoint is disabled (returns 503). Set via ADMIN_TOKEN.
+    adminToken: z
+      .string({
+        error:
+          "Admin token must be a string. Guards the /admin/log-level debug endpoint. Can also be set using 'ADMIN_TOKEN' environment variable",
+      })
+      .optional(),
+    // Server-side WebSocket keepalive interval (seconds). Pings idle live-mode
+    // sockets so an intermediary idle timeout does not silently drop them and
+    // tear down the live pickup session. Set to 0 to disable. Env:
+    // WS_HEARTBEAT_INTERVAL_SECONDS.
+    wsHeartbeatIntervalSeconds: z.coerce
+      .number({
+        error:
+          "WS heartbeat interval must be a number of seconds (0 disables). Can also be set using 'WS_HEARTBEAT_INTERVAL_SECONDS' environment variable",
+      })
+      .default(30),
     createNewInvitation: z
       .enum(['true', 'false'])
       .transform((v) => v === 'true')
