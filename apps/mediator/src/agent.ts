@@ -1,7 +1,14 @@
 import type { Socket } from 'node:net'
 import { AskarModule, AskarStoreDuplicateError } from '@credo-ts/askar'
 import { Agent, LogLevel } from '@credo-ts/core'
-import { DidCommMimeType, DidCommModule, DidCommOutOfBandRole, DidCommOutOfBandState } from '@credo-ts/didcomm'
+import {
+  DidCommHttpOutboundTransport,
+  DidCommMimeType,
+  DidCommModule,
+  DidCommOutOfBandRole,
+  DidCommOutOfBandState,
+  DidCommWsOutboundTransport,
+} from '@credo-ts/didcomm'
 import { DidCommPushNotificationsFcmModule } from '@credo-ts/didcomm-push-notifications'
 import { agentDependencies, DidCommHttpInboundTransport, DidCommWsInboundTransport } from '@credo-ts/node'
 import express, { type Express } from 'express'
@@ -47,7 +54,10 @@ async function createModules({
           new DidCommHttpInboundTransport({ app, port: config.agentPort }),
           new DidCommWsInboundTransport({ server: socketServer }),
         ],
-        outbound: [new InstrumentedHttpOutboundTransport(), new InstrumentedWsOutboundTransport()],
+        // Instrumented outbound transports only when enabled; otherwise stock.
+        outbound: config.instrumentationEnabled
+          ? [new InstrumentedHttpOutboundTransport(), new InstrumentedWsOutboundTransport()]
+          : [new DidCommHttpOutboundTransport(), new DidCommWsOutboundTransport()],
       },
 
       connections: {
@@ -123,20 +133,30 @@ export async function createAgent() {
   const socketServer = new WebSocketServer({ noServer: true })
   const redisClient = config.cache.type === 'redis' ? new Redis.default(config.cache.redisUrl) : undefined
 
-  // Debug-instrumentation: runtime log-level toggle endpoint (no-op unless ADMIN_TOKEN is set).
-  registerAdminEndpoints(app, config.adminToken)
+  // Master switch — when off, none of the instrumentation below is wired and the
+  // mediator runs the stock components (see config.instrumentationEnabled).
+  const instrumentationEnabled = config.instrumentationEnabled
 
-  // Debug-instrumentation: WS session lifecycle + inbound fingerprint logging.
-  instrumentSocketServer(socketServer)
+  if (instrumentationEnabled) {
+    // Runtime log-level toggle endpoint (no-op unless ADMIN_TOKEN is set).
+    registerAdminEndpoints(app, config.adminToken)
+    // WS session lifecycle + inbound fingerprint logging.
+    instrumentSocketServer(socketServer)
+  }
 
-  // Flow fix: keep idle live-mode WebSocket connections alive so an intermediary
-  // idle timeout doesn't silently drop them and tear down the live pickup session.
+  // Flow fix (independent of instrumentation): keep idle live-mode WebSocket
+  // connections alive so an intermediary idle timeout doesn't silently drop them
+  // and tear down the live pickup session. Set WS_HEARTBEAT_INTERVAL_SECONDS=0 to
+  // disable for fully-stock WS behaviour.
   startWsHeartbeat(socketServer, config.wsHeartbeatIntervalSeconds * 1000)
 
   // Wrap whichever pickup-queue backend is configured (credo | postgres | dynamodb)
   // so the queue-write / dispatch / forward-strategy hops are emitted uniformly.
+  // When instrumentation is off the raw backend is used unchanged.
   const baseQueueTransportRepository = await loadMessagePickupStorage()
-  const queueTransportRepository = new InstrumentedQueueTransportRepository(baseQueueTransportRepository)
+  const queueTransportRepository = instrumentationEnabled
+    ? new InstrumentedQueueTransportRepository(baseQueueTransportRepository)
+    : baseQueueTransportRepository
   const storageModules = loadStorage()
   const askarModules = await loadAskar()
   const cacheModules = loadCacheStorage({
@@ -160,18 +180,20 @@ export async function createAgent() {
   // agent.initialize() (which registers the POST handler in start()), so this
   // runs first. The outer iv logged here (jwe_fp) is correlated to the inner iv
   // by the DidCommMessageProcessed bridge — no context propagation needed.
-  app.use((req, _res, next) => {
-    if (req.method !== 'POST') return next()
-    const rawBody = typeof req.body === 'string' ? req.body : ''
-    emitStructured(LogLevel.debug, {
-      hop: 'mediator.http.inbound.received',
-      span_id: makeSpanId(),
-      jwe_fp: rawBody ? tryExtractJweFp(rawBody) : '',
-      recipient_key_short: rawBody ? tryExtractRecipientKeyShort(rawBody) : '',
-      content_length: req.headers['content-length'] ? Number(req.headers['content-length']) : undefined,
+  if (instrumentationEnabled) {
+    app.use((req, _res, next) => {
+      if (req.method !== 'POST') return next()
+      const rawBody = typeof req.body === 'string' ? req.body : ''
+      emitStructured(LogLevel.debug, {
+        hop: 'mediator.http.inbound.received',
+        span_id: makeSpanId(),
+        jwe_fp: rawBody ? tryExtractJweFp(rawBody) : '',
+        recipient_key_short: rawBody ? tryExtractRecipientKeyShort(rawBody) : '',
+        content_length: req.headers['content-length'] ? Number(req.headers['content-length']) : undefined,
+      })
+      return next()
     })
-    return next()
-  })
+  }
 
   const agent = new Agent<typeof modules & { askar: AskarModule }>({
     config: {
@@ -248,36 +270,39 @@ export async function createAgent() {
     })
   })
 
-  // Debug-instrumentation: aggregate queue-depth gauge accessor. Only the
-  // in-tree `credo` backend can report total depth from this process; for the
-  // external `postgres` / `dynamodb` backends the gauge omits queue_depth_*
-  // (use per-write mediator.queue.depth.sample + queue.write duration instead).
-  if (baseQueueTransportRepository instanceof StorageServiceMessageQueue) {
-    const credoQueue = baseQueueTransportRepository
-    registerQueueAccessor(() => credoQueue.getQueueStats(agent.context))
+  if (instrumentationEnabled) {
+    // Aggregate queue-depth gauge accessor. Only the in-tree `credo` backend can
+    // report total depth from this process; for the external `postgres` /
+    // `dynamodb` backends the gauge omits queue_depth_* (use per-write
+    // mediator.queue.depth.sample + queue.write duration instead).
+    if (baseQueueTransportRepository instanceof StorageServiceMessageQueue) {
+      const credoQueue = baseQueueTransportRepository
+      registerQueueAccessor(() => credoQueue.getQueueStats(agent.context))
+    }
+
+    // Event-driven correlation bridge + live-session churn diagnostics.
+    wireEventInstrumentation(agent)
+
+    startGauges()
+
+    emitStructured(LogLevel.info, {
+      hop: 'mediator.config.dump',
+      flow: 'lifecycle',
+      notes: 'effective config at startup',
+      instrumentation_enabled: true,
+      log_level: config.logLevel,
+      message_forwarding_strategy: config.messagePickup.forwardingStrategy,
+      message_pickup_storage: config.messagePickup.storage.type,
+      multi_instance_delivery: config.messagePickup.multiInstanceDelivery.type,
+      cache_type: config.cache.type,
+      storage_type: config.storage.type,
+      askar_database_type: config.askar.database.type,
+      push_notifications_enabled: Boolean(config.pushNotifications.firebase || config.pushNotifications.webhookUrl),
+      admin_endpoint_enabled: Boolean(config.adminToken),
+      ws_heartbeat_interval_seconds: config.wsHeartbeatIntervalSeconds,
+      agent_endpoints: config.agentEndpoints,
+    })
   }
-
-  // Event-driven correlation bridge + live-session churn diagnostics.
-  wireEventInstrumentation(agent)
-
-  startGauges()
-
-  emitStructured(LogLevel.info, {
-    hop: 'mediator.config.dump',
-    flow: 'lifecycle',
-    notes: 'effective config at startup',
-    log_level: config.logLevel,
-    message_forwarding_strategy: config.messagePickup.forwardingStrategy,
-    message_pickup_storage: config.messagePickup.storage.type,
-    multi_instance_delivery: config.messagePickup.multiInstanceDelivery.type,
-    cache_type: config.cache.type,
-    storage_type: config.storage.type,
-    askar_database_type: config.askar.database.type,
-    push_notifications_enabled: Boolean(config.pushNotifications.firebase || config.pushNotifications.webhookUrl),
-    admin_endpoint_enabled: Boolean(config.adminToken),
-    ws_heartbeat_interval_seconds: config.wsHeartbeatIntervalSeconds,
-    agent_endpoints: config.agentEndpoints,
-  })
 
   await loadPushNotificationSender(agent)
   await loadRedisMessageDelivery({
