@@ -20,6 +20,7 @@
     "dev": "vite-node dev.ts",
     "start": "node build/index.js",
     "migrate-askar-to-drizzle": "node build/askarToDrizzleMigration.js",
+    "migrate-askar-to-drizzle:skip-missing-adapters": "node build/askarToDrizzleMigrationSkipMissingAdapters.js",
     "migrate-askar-to-drizzle:dev": "vite-node src/askarToDrizzleMigration.ts",
     "migrate-askar-to-drizzle-delete-storage-records": "node build/askarToDrizzleDeleteAskarStorageRecords.js",
     "migrate-askar-to-drizzle-delete-storage-records:dev": "vite-node src/askarToDrizzleDeleteAskarStorageRecords.ts",
