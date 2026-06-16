@@ -34,14 +34,22 @@ import { emitStructured, truncateKey, tryExtractJweFp } from '../logger/Structur
 
 // Instrumentation-owned receive timestamps. Credo 0.6.0 does not populate
 // `receivedAt` on DidCommMessageReceived / DidCommMessageProcessed for HTTP or
-// WS inbound traffic, so we record it ourselves here. Keyed by the deserialized
-// message object, which is the same reference in both events. WeakMap ensures
-// entries are GC'd with the message object — no manual cleanup needed.
+// WS inbound traffic, so we record it ourselves here.
+//
+// Keyed by the OUTER encrypted-message object, NOT the decrypted message: the
+// two events carry different objects. DidCommMessageReceived.payload.message is
+// the raw encrypted JWE that the inbound transport handed to the receiver, and
+// that exact reference flows through (receiveMessage → InboundMessageContext →
+// dispatcher) to DidCommMessageProcessed.payload.encryptedMessage. The decoded
+// `message` on the processed event is a freshly-constructed DidCommMessage and
+// would never match. WeakMap ensures entries are GC'd with the JWE object — no
+// manual cleanup needed.
 const receiveTimestamps = new WeakMap<object, number>()
 
 export function wireEventInstrumentation(agent: MediatorAgent): void {
-  // Capture receive time before the message handler chain runs. The message
-  // object is the same reference that DidCommMessageProcessed will carry.
+  // Capture receive time before the message handler chain runs. `payload.message`
+  // here is the outer encrypted JWE — the same reference that surfaces as
+  // `encryptedMessage` on DidCommMessageProcessed below.
   agent.events.on<DidCommMessageReceivedEvent>(DidCommEventTypes.DidCommMessageReceived, (event) => {
     try {
       if (event.payload.message && typeof event.payload.message === 'object') {
@@ -65,7 +73,9 @@ export function wireEventInstrumentation(agent: MediatorAgent): void {
       const { message, encryptedMessage, connection } = event.payload
       if (!(message instanceof DidCommForwardMessage)) return
 
-      const receiveTs = receiveTimestamps.get(message)
+      // Look up by the outer encrypted message — the same object reference that
+      // DidCommMessageReceived carried as `payload.message` (see WeakMap note).
+      const receiveTs = encryptedMessage ? receiveTimestamps.get(encryptedMessage) : undefined
 
       emitStructured(LogLevel.info, {
         hop: 'mediator.forward.bridge',
@@ -80,13 +90,20 @@ export function wireEventInstrumentation(agent: MediatorAgent): void {
     }
   })
 
-  // Outbound delivery outcome. `status` is one of SentToSession |
-  // SentToTransport | QueuedForPickup | Undeliverable. This is the direct signal
-  // for the "DirectDelivery new connection fails on first try, works on second"
-  // observation: with DirectDelivery there is no queue fallback, so a message
-  // sent before the recipient's inbound (WS) transport session exists comes back
-  // `Undeliverable`. A sustained share of Undeliverable / a live:queue ratio
-  // shifting toward QueuedForPickup over time both surface here.
+  // Outbound delivery outcome for messages the mediator sends via
+  // DidCommMessageSender.sendMessage(outboundMessageContext) — i.e. the
+  // mediator's OWN coordination traffic (mediation grants, keylist responses,
+  // pickup status/delivery). `status` is SentToSession | SentToTransport |
+  // QueuedForPickup | Undeliverable.
+  //
+  // NOTE: this does NOT cover forwarded user messages. The mediator forward
+  // path routes via DidCommMessageSender.sendPackage() (DirectDelivery) or the
+  // pickup queue, neither of which emits DidCommMessageSent. The forward
+  // delivery outcome is instrumented directly instead:
+  //   - strategy decision + undeliverable → InstrumentedMediatorService
+  //   - live session delivery (SentToSession) → InstrumentedTransportService
+  //   - queue write (QueuedForPickup)        → InstrumentedQueueTransportRepository
+  //   - service-endpoint send (SentToTransport) → Instrumented*OutboundTransport
   agent.events.on<DidCommMessageSentEvent>(DidCommEventTypes.DidCommMessageSent, (event) => {
     try {
       const ctx = event.payload.message

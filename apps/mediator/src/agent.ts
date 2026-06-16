@@ -3,10 +3,12 @@ import { AskarModule, AskarStoreDuplicateError } from '@credo-ts/askar'
 import { Agent, LogLevel } from '@credo-ts/core'
 import {
   DidCommHttpOutboundTransport,
+  DidCommMediatorService,
   DidCommMimeType,
   DidCommModule,
   DidCommOutOfBandRole,
   DidCommOutOfBandState,
+  DidCommTransportService,
   DidCommWsOutboundTransport,
 } from '@credo-ts/didcomm'
 import { DidCommPushNotificationsFcmModule } from '@credo-ts/didcomm-push-notifications'
@@ -25,6 +27,7 @@ import { config, logger } from './config.js'
 import { registerAdminEndpoints } from './instrumentation/adminEndpoint.js'
 import { wireEventInstrumentation } from './instrumentation/eventInstrumentation.js'
 import { startGauges } from './instrumentation/gauges.js'
+import { InstrumentedMediatorService } from './instrumentation/InstrumentedMediatorService.js'
 import { InstrumentedQueueTransportRepository } from './instrumentation/InstrumentedQueueTransportRepository.js'
 import { registerQueueAccessor, wsSessionClosed, wsSessionOpened } from './instrumentation/metrics.js'
 import {
@@ -36,6 +39,7 @@ import {
 } from './logger/StructuredLogger.js'
 import { StorageServiceMessageQueue } from './storage/StorageMessageQueue.js'
 import { InstrumentedHttpOutboundTransport } from './transports/InstrumentedHttpOutboundTransport.js'
+import { InstrumentedTransportService } from './transports/InstrumentedTransportService.js'
 import { InstrumentedWsOutboundTransport } from './transports/InstrumentedWsOutboundTransport.js'
 import { startWsHeartbeat } from './transports/wsHeartbeat.js'
 
@@ -211,6 +215,22 @@ export async function createAgent() {
     dependencies: agentDependencies,
     modules: modules as typeof modules & { askar: AskarModule },
   })
+
+  if (instrumentationEnabled) {
+    // Override two Credo singletons with instrumented subclasses, to capture the
+    // forward-delivery signals that no event/outbound-transport hook can see:
+    //   - DidCommTransportService → wraps session.send for the LIVE delivery path
+    //     (DirectDelivery's sendPackage uses session.send directly, bypassing
+    //     outbound transports).
+    //   - DidCommMediatorService → wraps processForwardMessage for the per-forward
+    //     strategy decision + Undeliverable outcome (sendPackage / the queue never
+    //     emit DidCommMessageSent).
+    // Done before agent.initialize() so the override is in place before either
+    // service is first resolved (during module init / message handling). The
+    // subclasses delegate to super for all behaviour — instrumentation only.
+    agent.dependencyManager.registerSingleton(DidCommTransportService, InstrumentedTransportService)
+    agent.dependencyManager.registerSingleton(DidCommMediatorService, InstrumentedMediatorService)
+  }
 
   // Added health check endpoint
   app.get('/health', async (_req, res) => {
