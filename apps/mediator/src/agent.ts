@@ -27,7 +27,13 @@ import { wireEventInstrumentation } from './instrumentation/eventInstrumentation
 import { startGauges } from './instrumentation/gauges.js'
 import { InstrumentedQueueTransportRepository } from './instrumentation/InstrumentedQueueTransportRepository.js'
 import { registerQueueAccessor, wsSessionClosed, wsSessionOpened } from './instrumentation/metrics.js'
-import { emitStructured, makeSpanId, tryExtractJweFp, tryExtractRecipientKeyShort } from './logger/StructuredLogger.js'
+import {
+  emitStructured,
+  isStructuredEnabled,
+  makeSpanId,
+  tryExtractJweFp,
+  tryExtractRecipientKeyShort,
+} from './logger/StructuredLogger.js'
 import { StorageServiceMessageQueue } from './storage/StorageMessageQueue.js'
 import { InstrumentedHttpOutboundTransport } from './transports/InstrumentedHttpOutboundTransport.js'
 import { InstrumentedWsOutboundTransport } from './transports/InstrumentedWsOutboundTransport.js'
@@ -103,6 +109,7 @@ function instrumentSocketServer(socketServer: WebSocketServer): void {
     })
 
     socket.on('message', (data) => {
+      if (!isStructuredEnabled(LogLevel.debug)) return
       const raw = wsDataToString(data)
       emitStructured(LogLevel.debug, {
         hop: 'mediator.ws.inbound.received',
@@ -183,6 +190,7 @@ export async function createAgent() {
   if (instrumentationEnabled) {
     app.use((req, _res, next) => {
       if (req.method !== 'POST') return next()
+      if (!isStructuredEnabled(LogLevel.debug)) return next()
       const rawBody = typeof req.body === 'string' ? req.body : ''
       emitStructured(LogLevel.debug, {
         hop: 'mediator.http.inbound.received',

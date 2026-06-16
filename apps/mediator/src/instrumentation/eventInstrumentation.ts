@@ -5,6 +5,7 @@ import {
   DidCommMessagePickupEventTypes,
   type DidCommMessagePickupLiveSessionSavedEvent,
   type DidCommMessageProcessedEvent,
+  type DidCommMessageReceivedEvent,
   type DidCommMessageSentEvent,
   type MessagePickupCompletedEvent,
   type MessagePickupLiveSessionRemovedEvent,
@@ -30,7 +31,27 @@ import { emitStructured, truncateKey, tryExtractJweFp } from '../logger/Structur
 //
 // The bridge line is the join: match X against the sender side, Y against the
 // recipient side. No iv needs to be carried across async boundaries.
+
+// Instrumentation-owned receive timestamps. Credo 0.6.0 does not populate
+// `receivedAt` on DidCommMessageReceived / DidCommMessageProcessed for HTTP or
+// WS inbound traffic, so we record it ourselves here. Keyed by the deserialized
+// message object, which is the same reference in both events. WeakMap ensures
+// entries are GC'd with the message object — no manual cleanup needed.
+const receiveTimestamps = new WeakMap<object, number>()
+
 export function wireEventInstrumentation(agent: MediatorAgent): void {
+  // Capture receive time before the message handler chain runs. The message
+  // object is the same reference that DidCommMessageProcessed will carry.
+  agent.events.on<DidCommMessageReceivedEvent>(DidCommEventTypes.DidCommMessageReceived, (event) => {
+    try {
+      if (event.payload.message && typeof event.payload.message === 'object') {
+        receiveTimestamps.set(event.payload.message as object, Date.now())
+      }
+    } catch {
+      // best-effort
+    }
+  })
+
   // Outer↔inner bridge: emitted once per forwarded message.
   //
   // `processing_ms` (inbound receivedAt → fully processed) is the in-mediator
@@ -41,8 +62,10 @@ export function wireEventInstrumentation(agent: MediatorAgent): void {
   // as this value climbing while inbound→outbound network time stays flat.
   agent.events.on<DidCommMessageProcessedEvent>(DidCommEventTypes.DidCommMessageProcessed, (event) => {
     try {
-      const { message, encryptedMessage, connection, receivedAt } = event.payload
+      const { message, encryptedMessage, connection } = event.payload
       if (!(message instanceof DidCommForwardMessage)) return
+
+      const receiveTs = receiveTimestamps.get(message)
 
       emitStructured(LogLevel.info, {
         hop: 'mediator.forward.bridge',
@@ -50,7 +73,7 @@ export function wireEventInstrumentation(agent: MediatorAgent): void {
         jwe_fp_out: tryExtractJweFp(message.message),
         recipient_key_short: message.to ? truncateKey(message.to) : '',
         conn_id: connection?.id ?? '',
-        processing_ms: receivedAt ? Date.now() - receivedAt.getTime() : undefined,
+        processing_ms: receiveTs !== undefined ? Date.now() - receiveTs : undefined,
       })
     } catch {
       // best-effort — instrumentation must never disturb message processing

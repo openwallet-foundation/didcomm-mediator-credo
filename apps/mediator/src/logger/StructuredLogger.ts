@@ -52,6 +52,14 @@ export interface StructuredLogLine {
 
 const TASK_HOST = process.env.ECS_CONTAINER_METADATA_URI ? process.env.HOSTNAME || os.hostname() : os.hostname()
 
+// Returns true if a line at `level` would be emitted by emitStructured.
+// Use this to guard expensive field computation (e.g. JSON.parse) before
+// building the log line, so turning off debug-level logging avoids the
+// per-message parsing cost entirely.
+export function isStructuredEnabled(level: LogLevel): boolean {
+  return level >= getDebugLogLevel()
+}
+
 // Emit a structured instrumentation line to stdout (captured by the log
 // aggregator). Gated behind the runtime-toggleable debug level so it can be
 // silenced outside a debug window without a redeploy.
