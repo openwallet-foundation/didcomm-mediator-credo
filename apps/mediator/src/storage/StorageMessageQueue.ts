@@ -12,6 +12,12 @@ import { MessageRecord } from './MessageRecord.js'
 import { MessageRepository } from './MessageRepository.js'
 
 export class StorageServiceMessageQueue implements DidCommQueueTransportRepository {
+  // Aggregate queue-depth stats for the gauge snapshot (debug instrumentation).
+  public async getQueueStats(agentContext: AgentContext) {
+    const messageRepository = agentContext.resolve(MessageRepository)
+    return messageRepository.getQueueStats(agentContext)
+  }
+
   public async getAvailableMessageCount(agentContext: AgentContext, options: GetAvailableMessageCountOptions) {
     const { connectionId } = options
 
