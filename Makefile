@@ -16,6 +16,7 @@ ECS_TASK_DEF_FAMILY ?= QA-ANIMO-MEDIATOR-TDF
 
 # Short git hash of HEAD (7 chars).
 GIT_HASH := $(shell git rev-parse --short=7 HEAD)
+GIT_SHA  := $(shell git rev-parse HEAD)
 IMAGE_TAG := didcomm-mediator-$(GIT_HASH)
 
 # Account id resolved from the selected profile (or env credentials).
@@ -48,13 +49,17 @@ deploy-qa:
 	@$(MAKE) gh-release
 	@$(MAKE) deploy-ecs REMOTE_IMAGE=$(REMOTE_IMAGE)
 
+# owner/repo from origin remote (handles https and ssh URLs).
+GH_REPO = $(shell git config --get remote.origin.url | sed -E 's,git@github.com:,,; s,https://github.com/,,; s,\.git$$,,')
+
 .PHONY: gh-release
 gh-release:
 	@command -v gh >/dev/null || (echo "ERROR: gh CLI is required" && exit 1)
-	@echo ">> Creating GitHub release qa-$(GIT_HASH)..."
+	@echo ">> Creating GitHub release qa-$(GIT_HASH) on $(GH_REPO)..."
 	gh release create qa-$(GIT_HASH) \
+		--repo $(GH_REPO) \
 		--title "qa-$(GIT_HASH)" \
-		--target $(GIT_HASH) \
+		--target $(GIT_SHA) \
 		--generate-notes
 
 .PHONY: deploy-ecs
