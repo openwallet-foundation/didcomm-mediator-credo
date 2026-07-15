@@ -1,7 +1,10 @@
 node_modules
+**/node_modules
 helm
 devops
 build
+**/build
+**/dist
 .devcontainer
 .env
 .git
