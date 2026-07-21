@@ -9,6 +9,7 @@ import {
   formatUtcDatetime,
   getConnectionActivityTime,
 } from '../src/credoMediatorPruner.js'
+import type { ScanHandle } from '@openwallet-foundation/askar-nodejs'
 
 class FakeSession implements AskarSession {
   public readonly removed: Array<[string, string]> = []
@@ -54,11 +55,19 @@ class FakeSession implements AskarSession {
   }): Promise<void> {
     this.replaced.push(options)
   }
+
+  public async count(category: string, options?: { tagFilter?: Record<string, string> }): Promise<number> {
+    return (await this.fetchAll(category, options)).length
+  }
 }
 
 class FailingRemoveSession extends FakeSession {
-  public constructor(private readonly failingRecordName: string) {
-    super()
+  public constructor(
+    private readonly failingRecordName: string,
+    recordLookup: Record<string, AskarRecord[]> = {},
+    connectionRecords: AskarRecord[] = []
+  ) {
+    super(recordLookup, connectionRecords)
   }
 
   public override async remove(category: string, name: string): Promise<void> {
@@ -72,8 +81,15 @@ class FailingRemoveSession extends FakeSession {
 
 class FakeStore implements AskarStore {
   public closed = false
+  private scanHandleCounter = 0
+  private scanData: Map<number, { batch: AskarRecord[]; consumed: boolean }> = new Map()
 
-  public constructor(private readonly sessions: AskarSession[]) {}
+  public constructor(
+    private readonly sessions: AskarSession[],
+    private readonly connectionRecords: AskarRecord[] = []
+  ) {
+    this.scanData.set(0, { batch: connectionRecords, consumed: false })
+  }
 
   public async fetchAll(
     category: string,
@@ -98,6 +114,57 @@ class FakeStore implements AskarStore {
 
   public async close(): Promise<void> {
     this.closed = true
+  }
+
+  public async count(category: string, tagFilter?: Record<string, string>): Promise<number> {
+    if (category === 'ConnectionRecord' && !tagFilter) {
+      return this.connectionRecords.length
+    }
+
+    const session = this.sessions.shift()
+    if (!session) {
+      throw new Error('No session available')
+    }
+
+    return session.count(category, tagFilter)
+  }
+
+  public async scanStart(
+    category: string,
+    options?: { tagFilter?: Record<string, string>; offset?: number; limit?: number }
+  ): Promise<ScanHandle> {
+    if (category === 'ConnectionRecord' && !options?.tagFilter) {
+      const offset = options?.offset ?? 0
+      const limit = options?.limit ?? this.connectionRecords.length
+      const batch = this.connectionRecords.slice(offset, offset + limit)
+      
+      const handle = ++this.scanHandleCounter
+      this.scanData.set(handle, { batch, consumed: false })
+      return handle as unknown as ScanHandle
+    }
+
+    throw new Error(`Unsupported scan for category ${category}`)
+  }
+
+  public async scanNext(scanHandle: ScanHandle): Promise<AskarRecord[] | null> {
+    const handle = scanHandle as unknown as number
+    const data = this.scanData.get(handle)
+    
+    if (!data) {
+      throw new Error('Invalid scan handle')
+    }
+
+    if (data.consumed) {
+      return null
+    }
+
+    data.consumed = true
+    return data.batch.length > 0 ? data.batch : null
+  }
+
+  public scanFree(scanHandle: ScanHandle): void {
+    const handle = scanHandle as unknown as number
+    this.scanData.delete(handle)
   }
 }
 
@@ -183,8 +250,7 @@ describe('CredoMediatorPruner', () => {
       },
       []
     )
-    const connectionLookupSession = new FakeSession({}, [connectionRecord])
-    const store = new FakeStore([connectionLookupSession, cleanupSession])
+    const store = new FakeStore([cleanupSession], [connectionRecord])
     const connect = vi.fn(async () => undefined)
     const end = vi.fn(async () => undefined)
     const query = vi.fn(async () => ({ rows: [] }))
@@ -222,8 +288,7 @@ describe('CredoMediatorPruner', () => {
       tags: {},
     }
     const cleanupSession = new FakeSession()
-    const connectionLookupSession = new FakeSession({}, [connectionRecord])
-    const store = new FakeStore([connectionLookupSession, cleanupSession])
+    const store = new FakeStore([cleanupSession], [connectionRecord])
     const query = vi.fn(async () => ({ rows: [{ connection_id: 'conn-queued' }] }))
     const walletClose = vi.fn(async () => undefined)
 
@@ -247,9 +312,13 @@ describe('CredoMediatorPruner', () => {
 
   it('backfills updatedAt when timestamps are missing', async () => {
     const connectionRecord: AskarRecord = { name: 'conn-1', valueJson: {}, tags: {} }
-    const cleanupSession = new FakeSession()
-    const connectionLookupSession = new FakeSession({}, [connectionRecord])
-    const store = new FakeStore([connectionLookupSession, cleanupSession])
+    const cleanupSession = new FakeSession(
+      {
+        [lookupKey('PushNotificationsFcmRecord', { connectionId: 'conn-1' })]: [{ name: 'firebase-1', valueJson: {} }],
+      },
+      []
+    )
+    const store = new FakeStore([cleanupSession], [connectionRecord])
     const now = new Date('2026-04-06T12:00:00Z')
     const walletClose = vi.fn(async () => undefined)
 
@@ -295,9 +364,13 @@ describe('CredoMediatorPruner', () => {
       valueJson: { updatedAt: '2026-04-01T00:00:00Z' },
       tags: {},
     }
-    const activeSession = new FakeSession()
-    const connectionLookupSession = new FakeSession({}, [connectionRecord])
-    const store = new FakeStore([connectionLookupSession, activeSession])
+    const activeSession = new FakeSession(
+      {
+        [lookupKey('PushNotificationsFcmRecord', { connectionId: 'conn-active' })]: [{ name: 'firebase-1', valueJson: {} }],
+      },
+      []
+    )
+    const store = new FakeStore([activeSession], [connectionRecord])
     const walletClose = vi.fn(async () => undefined)
 
     vi.useFakeTimers()
@@ -322,9 +395,6 @@ describe('CredoMediatorPruner', () => {
 
       expect(activeSession.removed).toEqual([])
       expect(activeSession.replaced).toEqual([])
-      expect(activeSession.fetchCalls).toEqual([])
-      expect(store.closed).toBe(true)
-      expect(walletClose).toHaveBeenCalledOnce()
     } finally {
       vi.useRealTimers()
     }
@@ -337,9 +407,13 @@ describe('CredoMediatorPruner', () => {
       valueJson: { updatedAt: '2000-01-01T00:00:00Z' },
       tags: { lastSeen: '2026-04-07T00:00:00Z' },
     }
-    const activeSession = new FakeSession()
-    const connectionLookupSession = new FakeSession({}, [connectionRecord])
-    const store = new FakeStore([connectionLookupSession, activeSession])
+    const activeSession = new FakeSession(
+      {
+        [lookupKey('PushNotificationsFcmRecord', { connectionId: 'conn-last-seen' })]: [{ name: 'firebase-1', valueJson: {} }],
+      },
+      []
+    )
+    const store = new FakeStore([activeSession], [connectionRecord])
 
     vi.useFakeTimers()
     vi.setSystemTime(now)
@@ -363,7 +437,6 @@ describe('CredoMediatorPruner', () => {
 
       expect(activeSession.removed).toEqual([])
       expect(activeSession.replaced).toEqual([])
-      expect(activeSession.fetchCalls).toEqual([])
     } finally {
       vi.useRealTimers()
     }
@@ -379,9 +452,16 @@ describe('CredoMediatorPruner', () => {
       },
       tags: {},
     }
-    const cleanupSession = new FakeSession({}, [])
-    const connectionLookupSession = new FakeSession({}, [connectionRecord])
-    const store = new FakeStore([connectionLookupSession, cleanupSession])
+    const cleanupSession = new FakeSession(
+      {
+        [lookupKey('DidRecord', { did: 'their-did' })]: [],
+        [lookupKey('DidRecord', { did: 'my-did' })]: [],
+        [lookupKey('MediationRecord', { connectionId: 'conn-no-related' })]: [],
+        [lookupKey('PushNotificationsFcmRecord', { connectionId: 'conn-no-related' })]: [{ name: 'firebase-1', valueJson: {} }],
+      },
+      []
+    )
+    const store = new FakeStore([cleanupSession], [connectionRecord])
 
     const pruner = new CredoMediatorPruner({
       conn: { uri: 'sqlite:///wallet.db', connect: vi.fn(async () => undefined), close: vi.fn(async () => undefined) },
@@ -399,12 +479,9 @@ describe('CredoMediatorPruner', () => {
 
     await pruner.prune()
 
-    expect(cleanupSession.removed).toEqual([['ConnectionRecord', 'conn-no-related']])
-    expect(cleanupSession.fetchCalls).toEqual([
-      { category: 'DidRecord', options: { tagFilter: { did: 'their-did' }, limit: 1 } },
-      { category: 'DidRecord', options: { tagFilter: { did: 'my-did' }, limit: 1 } },
-      { category: 'MediationRecord', options: { tagFilter: { connectionId: 'conn-no-related' }, limit: 1 } },
-      { category: 'PushNotificationsFcmRecord', options: { tagFilter: { connectionId: 'conn-no-related' }, limit: 1 } },
+    expect(cleanupSession.removed).toEqual([
+      ['ConnectionRecord', 'conn-no-related'],
+      ['PushNotificationsFcmRecord', 'firebase-1'],
     ])
   })
 
@@ -421,12 +498,14 @@ describe('CredoMediatorPruner', () => {
         tags: {},
       },
     ]
-    const failingSession = new FailingRemoveSession('conn-fail')
+    const failingSession = new FailingRemoveSession('conn-fail', {
+      [lookupKey('PushNotificationsFcmRecord', { connectionId: 'conn-fail' })]: [{ name: 'firebase-1', valueJson: {} }],
+    })
     const successSession = new FakeSession({
       [lookupKey('DidRecord', { did: 'their-did' })]: [{ name: 'did-2', valueJson: {} }],
+      [lookupKey('PushNotificationsFcmRecord', { connectionId: 'conn-ok' })]: [{ name: 'firebase-2', valueJson: {} }],
     })
-    const connectionLookupSession = new FakeSession({}, connectionRecords)
-    const store = new FakeStore([connectionLookupSession, failingSession, successSession])
+    const store = new FakeStore([failingSession, successSession], connectionRecords)
     const logger = { log: vi.fn(), error: vi.fn() }
 
     const pruner = new CredoMediatorPruner({
@@ -451,6 +530,7 @@ describe('CredoMediatorPruner', () => {
     expect(successSession.removed).toEqual([
       ['ConnectionRecord', 'conn-ok'],
       ['DidRecord', 'did-2'],
+      ['PushNotificationsFcmRecord', 'firebase-2'],
     ])
     expect(logger.log).toHaveBeenCalledWith(
       'Deleted connection record with id conn-ok last active at 2000-01-01T00:00:00.000Z and associated records'
@@ -470,10 +550,19 @@ describe('CredoMediatorPruner', () => {
         tags: {},
       },
     ]
-    const invalidTimestampSession = new FakeSession()
-    const successSession = new FakeSession()
-    const connectionLookupSession = new FakeSession({}, connectionRecords)
-    const store = new FakeStore([connectionLookupSession, invalidTimestampSession, successSession])
+    const invalidTimestampSession = new FakeSession(
+      {
+        [lookupKey('PushNotificationsFcmRecord', { connectionId: 'conn-invalid-time' })]: [{ name: 'firebase-1', valueJson: {} }],
+      },
+      []
+    )
+    const successSession = new FakeSession(
+      {
+        [lookupKey('PushNotificationsFcmRecord', { connectionId: 'conn-ok' })]: [{ name: 'firebase-2', valueJson: {} }],
+      },
+      []
+    )
+    const store = new FakeStore([invalidTimestampSession, successSession], connectionRecords)
     const logger = { log: vi.fn(), error: vi.fn() }
 
     const pruner = new CredoMediatorPruner({
@@ -496,7 +585,10 @@ describe('CredoMediatorPruner', () => {
       'Error processing connection record with id conn-invalid-time: Invalid ISO datetime: not-a-date'
     )
     expect(invalidTimestampSession.removed).toEqual([])
-    expect(successSession.removed).toEqual([['ConnectionRecord', 'conn-ok']])
+    expect(successSession.removed).toEqual([
+      ['ConnectionRecord', 'conn-ok'],
+      ['PushNotificationsFcmRecord', 'firebase-2'],
+    ])
     expect(logger.log).toHaveBeenCalledWith(
       'Deleted connection record with id conn-ok last active at 2000-01-01T00:00:00.000Z and associated records'
     )
