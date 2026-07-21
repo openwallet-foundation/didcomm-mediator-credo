@@ -1,0 +1,67 @@
+name: Mediation Pruner
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: Branch or ref to build
+        required: true
+        default: main
+        type: string
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  validate:
+    name: Validate Mediation Pruner
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch }}
+
+      - uses: pnpm/action-setup@v4
+
+      - name: Setup NodeJS
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run mediation-pruner tests
+        run: pnpm --filter credo-mediation-pruner-ts test
+
+      - name: Build mediation-pruner package
+        run: pnpm --filter credo-mediation-pruner-ts build
+
+  publish-image:
+    name: Publish Mediation Pruner Image
+    needs: validate
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+      attestations: write
+      id-token: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch }}
+
+      - name: Build mediation-pruner image
+        uses: ./.github/actions/docker-build
+        with:
+          registry: ${{ env.REGISTRY }}
+          image_name: ${{ github.repository }}/mediation-pruner
+          context: ./
+          dockerfile: apps/mediation-pruner/Dockerfile
+          docker_user: ${{ github.actor }}
+          docker_password: ${{ secrets.GITHUB_TOKEN }}

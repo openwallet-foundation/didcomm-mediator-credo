@@ -1,0 +1,12 @@
+services:
+  mediation-pruner:
+    build:
+      context: ../..
+      dockerfile: apps/mediation-pruner/Dockerfile
+    image: didcomm-mediation-pruner:local
+    environment:
+      WALLET_URI: ${WALLET_URI}
+      PICKUP_REPOSITORY_URL: ${PICKUP_REPOSITORY_URL}
+      WALLET_KEY: ${WALLET_KEY}
+      WALLET_KEY_DERIVATION_METHOD: ${WALLET_KEY_DERIVATION_METHOD:-ARGON2I_MOD}
+      INACTIVE_DAYS_THRESHOLD: ${INACTIVE_DAYS_THRESHOLD:-365}

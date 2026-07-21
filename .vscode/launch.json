@@ -1,0 +1,17 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Mediation Pruner: Launch",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/apps/mediation-pruner",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["start:debug"],
+      "console": "integratedTerminal",
+      "skipFiles": ["<node_internals>/**"],
+      "sourceMaps": true,
+      "outFiles": ["${workspaceFolder}/apps/mediation-pruner/build/**/*.js"]
+    }
+  ]
+}

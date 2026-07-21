@@ -1,0 +1,30 @@
+{
+  "name": "credo-mediation-pruner-ts",
+  "version": "0.1.0",
+  "private": true,
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@openwallet-foundation/askar-nodejs",
+      "esbuild",
+      "koffi"
+    ]
+  },
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "prestart": "pnpm build",
+    "start": "node build/main.js",
+    "start:debug": "pnpm build && node --enable-source-maps --inspect-brk build/main.js",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@openwallet-foundation/askar-nodejs": "^0.6.0",
+    "pg": "^8.20.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.5.2",
+    "@types/pg": "^8.11.11",
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.4"
+  }
+}
