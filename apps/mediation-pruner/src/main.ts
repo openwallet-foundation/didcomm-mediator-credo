@@ -97,6 +97,8 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   await runCredoMediatorPrunerFromEnv().catch((error: unknown) => {
     const message = error instanceof Error ? error.message : String(error)
     console.error(message)
-    process.exitCode = 1
+    process.exit(1)
   })
+  console.log('Credo Mediator Pruner finished successfully')
+  process.exit(0)
 }
