@@ -10,8 +10,6 @@ import {
   DynamoDBClientConfigType,
   QueryCommand,
   QueryCommandInput,
-  ScanCommand,
-  ScanCommandInput,
   UpdateItemCommand,
 } from '@aws-sdk/client-dynamodb'
 import { marshall, unmarshall } from '@aws-sdk/util-dynamodb'
@@ -73,12 +71,67 @@ export class DynamoDbClientRepository {
     } catch (error) {
       // Already exists
       if (error instanceof Error && error.name === 'ResourceInUseException') {
+        await dcr.validateTableKeySchema()
         return dcr
       }
       throw error
     }
 
     return dcr
+  }
+
+  private async validateTableKeySchema(): Promise<void> {
+    const response = await this.dynamodbClient.send(
+      new DescribeTableCommand({
+        TableName: this.tableName,
+      })
+    )
+
+    const actualKeySchema = response.Table?.KeySchema
+    const actualAttributeDefinitions = response.Table?.AttributeDefinitions
+    const hasExpectedKeySchema =
+      actualKeySchema?.length === keySchema.length &&
+      keySchema.every((expectedKey) =>
+        actualKeySchema.some(
+          (actualKey) =>
+            actualKey.AttributeName === expectedKey.AttributeName && actualKey.KeyType === expectedKey.KeyType
+        )
+      )
+    const hasExpectedAttributeDefinitions = attributeDefinitions.every((expectedAttribute) =>
+      actualAttributeDefinitions?.some(
+        (actualAttribute) =>
+          actualAttribute.AttributeName === expectedAttribute.AttributeName &&
+          actualAttribute.AttributeType === expectedAttribute.AttributeType
+      )
+    )
+
+    if (!hasExpectedKeySchema || !hasExpectedAttributeDefinitions) {
+      throw new Error(
+        `DynamoDB table ${this.tableName} has an incompatible schema. Expected key schema ${JSON.stringify(
+          keySchema
+        )} and attribute definitions ${JSON.stringify(attributeDefinitions)}, received key schema ${JSON.stringify(
+          actualKeySchema
+        )} and attribute definitions ${JSON.stringify(actualAttributeDefinitions)}`
+      )
+    }
+  }
+
+  private async getLatestMessageId(connectionId: string) {
+    const response = await this.dynamodbClient.send(
+      new QueryCommand({
+        TableName: this.tableName,
+        KeyConditionExpression: 'connectionId = :connectionId',
+        ExpressionAttributeValues: {
+          ':connectionId': { S: connectionId },
+        },
+        ProjectionExpression: 'messageId',
+        Select: 'SPECIFIC_ATTRIBUTES',
+        Limit: 1,
+        ScanIndexForward: false,
+      })
+    )
+
+    return response.Items?.[0]?.messageId
   }
 
   private async waitForTableToExist(): Promise<void> {
@@ -114,20 +167,62 @@ export class DynamoDbClientRepository {
     })
   }
 
-  async getMessageCount(connectionId: string): Promise<number> {
-    const params: ScanCommandInput = {
-      TableName: this.tableName,
-      FilterExpression: 'connectionId = :connectionId',
-      ExpressionAttributeValues: {
-        ':connectionId': { S: connectionId },
-      },
-      Select: 'COUNT',
-    }
-
+  async getMessageCount(connectionId: string, recipientDid?: string, maximumCount?: number): Promise<number> {
     try {
-      const command = new ScanCommand(params)
-      const response = await this.dynamodbClient.send(command)
-      return response.Count || 0
+      const params: QueryCommandInput = {
+        TableName: this.tableName,
+        KeyConditionExpression: 'connectionId = :connectionId',
+        ExpressionAttributeValues: {
+          ':connectionId': { S: connectionId },
+        },
+        Select: 'COUNT',
+      }
+
+      if (recipientDid !== undefined) {
+        const latestMessageId = await this.getLatestMessageId(connectionId)
+        if (!latestMessageId) return 0
+
+        params.KeyConditionExpression += ' AND messageId <= :latestMessageId'
+        params.FilterExpression = 'contains(recipientDids, :recipientDid)'
+        params.ExpressionAttributeValues = {
+          ...params.ExpressionAttributeValues,
+          ':recipientDid': { S: recipientDid },
+          ':latestMessageId': latestMessageId,
+        }
+      } else {
+        params.Limit = maximumCount
+      }
+
+      let count = 0
+      let lastEvaluatedKey: QueryCommandInput['ExclusiveStartKey']
+
+      do {
+        const previousLastEvaluatedKey = lastEvaluatedKey
+        const command = new QueryCommand({
+          ...params,
+          ExclusiveStartKey: lastEvaluatedKey,
+        })
+        const response = await this.dynamodbClient.send(command)
+
+        count += response.Count || 0
+        lastEvaluatedKey = response.LastEvaluatedKey
+
+        if (maximumCount !== undefined && count >= maximumCount) {
+          return maximumCount
+        }
+
+        if (
+          lastEvaluatedKey &&
+          previousLastEvaluatedKey &&
+          JSON.stringify(lastEvaluatedKey) === JSON.stringify(previousLastEvaluatedKey)
+        ) {
+          throw new Error(
+            `DynamoDB returned a non-advancing pagination key while counting messages for connection ${connectionId}`
+          )
+        }
+      } while (lastEvaluatedKey)
+
+      return count
     } catch (error) {
       this.logger.error('Error getting entries count:', { error })
       throw error
@@ -146,37 +241,61 @@ export class DynamoDbClientRepository {
       ExpressionAttributeValues: {
         ':connectionId': { S: options.connectionId },
       },
-      Limit: options.limit,
     }
 
-    if (options.recipientDid) {
+    if (options.recipientDid !== undefined) {
+      const latestMessageId = await this.getLatestMessageId(options.connectionId)
+      if (!latestMessageId) return []
+
+      queryParams.KeyConditionExpression += ' AND messageId <= :latestMessageId'
       queryParams.FilterExpression = 'contains(recipientDids, :recipientDid)'
-
-      if (queryParams.ExpressionAttributeValues) {
-        queryParams.ExpressionAttributeValues[':recipientDid'] = { S: options.recipientDid }
+      queryParams.ExpressionAttributeValues = {
+        ...queryParams.ExpressionAttributeValues,
+        ':recipientDid': { S: options.recipientDid },
+        ':latestMessageId': latestMessageId,
       }
+    } else {
+      queryParams.Limit = options.limit
     }
 
-    const command = new QueryCommand(queryParams)
-    const response = await this.dynamodbClient.send(command)
+    const messages: QueuedMessage[] = []
+    let lastEvaluatedKey: QueryCommandInput['ExclusiveStartKey']
 
-    const messages = (response.Items?.map((item) => unmarshall(item)) || []).map(
-      (i) =>
-        ({
-          ...i,
-          receivedAt: new Date(i.receivedAt),
-          id: i.messageId.toString(),
-        }) as unknown as QueuedMessage
+    do {
+      const response = await this.dynamodbClient.send(
+        new QueryCommand({
+          ...queryParams,
+          ExclusiveStartKey: lastEvaluatedKey,
+        })
+      )
+
+      messages.push(
+        ...(response.Items?.map((item) => unmarshall(item)) || []).map(
+          (item) =>
+            ({
+              ...item,
+              receivedAt: new Date(item.receivedAt),
+              id: item.messageId.toString(),
+            }) as unknown as QueuedMessage
+        )
+      )
+      lastEvaluatedKey = response.LastEvaluatedKey
+    } while (
+      options.recipientDid !== undefined &&
+      lastEvaluatedKey &&
+      (options.limit === undefined || messages.length < options.limit)
     )
 
-    if (options.deleteMessages && messages.length > 0) {
+    const messagesToReturn = options.limit === undefined ? messages : messages.slice(0, options.limit)
+
+    if (options.deleteMessages && messagesToReturn.length > 0) {
       await this.removeMessages({
         connectionId: options.connectionId,
-        messageIds: messages.map((m) => m.id),
+        messageIds: messagesToReturn.map((m) => m.id),
       })
     }
 
-    return messages
+    return messagesToReturn
   }
 
   async addMessage(options: AddQueuedMessageOptions): Promise<string> {
