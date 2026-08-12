@@ -1,9 +1,10 @@
+import { randomUUID } from 'node:crypto'
 import { ConsoleLogger, LogLevel } from '@credo-ts/core'
 import { DidCommEncryptedMessage } from '@credo-ts/didcomm'
 import { afterEach, beforeAll, expect, suite, test } from 'vitest'
 import { CosmosDbClientRepository } from '../src/client.js'
 
-const connectionId = '4ffdd113-117b-4827-9af5-28aa73ec4bad'
+const connectionId = randomUUID()
 const recipientDids = ['did:key:123', 'did:jwk:123', 'did:peer:3abba']
 const encryptedMessage: DidCommEncryptedMessage = {
   ciphertext: 'ciphertext',
@@ -59,15 +60,14 @@ suite('cosmosdb client', () => {
   test('add a message', async (ctx) => {
     if (skipTests || !client) return ctx.skip()
 
-    const timestamp = new Date()
     const id = await client.addMessage({
       connectionId,
-      receivedAt: timestamp,
+      receivedAt: new Date(),
       encryptedMessage,
       recipientDids,
     })
 
-    expect(id.startsWith(timestamp.getTime().toString())).toBeTruthy()
+    expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i)
   })
 
   test('get count', async (ctx) => {

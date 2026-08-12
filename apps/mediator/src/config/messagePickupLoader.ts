@@ -14,16 +14,19 @@ export async function loadMessagePickupStorage(): Promise<ExtendedQueueTransport
   const { storage } = config.messagePickup
 
   if (storage.type === 'dynamodb') {
+    const { dynamodb } = config.messagePickup
+    if (!dynamodb) throw new Error('DynamoDB message pickup configuration is missing')
+
     logger.info('Using dynamodb message pickup storage')
     return await DidCommTransportQueueDynamoDb.initialize({
       // Endpoint is not needed when deploying to AWS, but for local development it can be useful
-      endpoint: storage.endpoint,
+      endpoint: dynamodb.endpoint,
       logger,
-      region: storage.region,
-      tableName: storage.tableName,
+      region: dynamodb.region,
+      tableName: dynamodb.tableName,
       credentials: {
-        accessKeyId: storage.accessKeyId,
-        secretAccessKey: storage.secretAccessKey,
+        accessKeyId: dynamodb.accessKeyId,
+        secretAccessKey: dynamodb.secretAccessKey,
       },
     })
   }
@@ -40,12 +43,15 @@ export async function loadMessagePickupStorage(): Promise<ExtendedQueueTransport
   }
 
   if (storage.type === 'cosmosdb') {
+    const { cosmosdb } = config.messagePickup
+    if (!cosmosdb) throw new Error('Cosmos DB message pickup configuration is missing')
+
     logger.info('Using cosmosdb message pickup storage')
     return await DidCommTransportQueueCosmosDb.initialize({
-      endpoint: storage.endpoint,
-      key: storage.key,
-      databaseName: storage.databaseName,
-      containerName: storage.containerName,
+      endpoint: cosmosdb.endpoint,
+      key: cosmosdb.key,
+      databaseName: cosmosdb.databaseName,
+      containerName: cosmosdb.containerName,
       logger,
     })
   }

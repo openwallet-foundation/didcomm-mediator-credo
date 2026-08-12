@@ -23,7 +23,9 @@
   },
   "messagePickup": {
     "storage": {
-      "type": "cosmosdb",
+      "type": "cosmosdb"
+    },
+    "cosmosdb": {
       "endpoint": "https://your-cosmosdb-account.documents.azure.com:443/",
       "key": "your-cosmosdb-primary-key",
       "databaseName": "didcomm-mediator",

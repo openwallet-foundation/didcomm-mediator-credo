@@ -169,80 +169,16 @@ const zConfig = z
           .discriminatedUnion(
             'type',
             [
-              z.object({
-                type: z.literal('credo'),
-              }),
+              z.object({ type: z.literal('credo') }),
               z.object({
                 type: z.literal('postgres'),
-                host: z.string({
-                  error:
-                    "Message pickup storage host must be a string when message pickup storage type is 'postgres'. Can also be set using 'MESSAGE_PICKUP__STORAGE__HOST' environment variable",
-                }),
-                user: z.string({
-                  error:
-                    "Message pickup storage user must be a string when message pickup storage type is 'postgres'. Can also be set using 'MESSAGE_PICKUP__STORAGE__USER' environment variable",
-                }),
-                password: z.string({
-                  error:
-                    "Message pickup storage password must be a string when message pickup storage type is 'postgres'. Can also be set using 'MESSAGE_PICKUP__STORAGE__PASSWORD' environment variable",
-                }),
-                database: z.string({
-                  error:
-                    "Message pickup storage database must be a string when message pickup storage type is 'postgres'. Can also be set using 'MESSAGE_PICKUP__STORAGE__DATABASE' environment variable",
-                }),
+                host: z.string(),
+                user: z.string(),
+                password: z.string(),
+                database: z.string(),
               }),
-              z.object({
-                type: z.literal('dynamodb'),
-                endpoint: z
-                  .url({
-                    error:
-                      "Message pickup storage endpoint, if defined, must be an url when message pickup storage type is 'dynamodb'. Can also be set using 'MESSAGE_PICKUP__STORAGE__ENDPOINT' environment variable",
-                  })
-                  .optional(),
-                region: z
-                  .string({
-                    error:
-                      "Message pickup storage region must be a string when message pickup storage type is 'dynamodb'. Can also be set using 'MESSAGE_PICKUP__STORAGE__REGION' environment variable",
-                  })
-                  .optional(),
-                accessKeyId: z.string({
-                  error:
-                    "Message pickup storage access key id must be a string when message pickup storage type is 'dynamodb'. Can also be set using 'MESSAGE_PICKUP__STORAGE__ACCESS_KEY_ID' environment variable",
-                }),
-                tableName: z
-                  .string({
-                    error:
-                      "Message pickup storage table name must be a string when message pickup storage type is 'dynamodb'. Can also be set using 'MESSAGE_PICKUP__STORAGE__TABLE_NAME' environment variable",
-                  })
-                  .optional(),
-                secretAccessKey: z.string({
-                  error:
-                    "Message pickup storage secret access key must be a string when message pickup storage type is 'dynamodb'. Can also be set using 'MESSAGE_PICKUP__STORAGE__SECRET_ACCESS_KEY' environment variable",
-                }),
-              }),
-              z.object({
-                type: z.literal('cosmosdb'),
-                endpoint: z.url({
-                  error:
-                    "Message pickup storage endpoint must be a valid url when message pickup storage type is 'cosmosdb'. Can also be set using 'MESSAGE_PICKUP__STORAGE__ENDPOINT' environment variable",
-                }),
-                key: z.string({
-                  error:
-                    "Message pickup storage key must be a string when message pickup storage type is 'cosmosdb'. Can also be set using 'MESSAGE_PICKUP__STORAGE__KEY' environment variable",
-                }),
-                databaseName: z
-                  .string({
-                    error:
-                      "Message pickup storage database name must be a string when message pickup storage type is 'cosmosdb'. Can also be set using 'MESSAGE_PICKUP__STORAGE__DATABASE_NAME' environment variable",
-                  })
-                  .optional(),
-                containerName: z
-                  .string({
-                    error:
-                      "Message pickup storage container name must be a string when message pickup storage type is 'cosmosdb'. Can also be set using 'MESSAGE_PICKUP__STORAGE__CONTAINER_NAME' environment variable",
-                  })
-                  .optional(),
-              }),
+              z.object({ type: z.literal('dynamodb') }),
+              z.object({ type: z.literal('cosmosdb') }),
             ],
             {
               error:
@@ -252,6 +188,23 @@ const zConfig = z
           .default({
             type: 'credo',
           }),
+        dynamodb: z
+          .object({
+            endpoint: z.url().optional(),
+            region: z.string().optional(),
+            accessKeyId: z.string(),
+            tableName: z.string().optional(),
+            secretAccessKey: z.string(),
+          })
+          .optional(),
+        cosmosdb: z
+          .object({
+            endpoint: z.url(),
+            key: z.string(),
+            databaseName: z.string().optional(),
+            containerName: z.string().optional(),
+          })
+          .optional(),
         multiInstanceDelivery: z
           .discriminatedUnion(
             'type',
@@ -271,6 +224,23 @@ const zConfig = z
           .default({
             type: 'none',
           }),
+      })
+      .superRefine((messagePickup, context) => {
+        const storageType = messagePickup.storage.type
+        const storageConfig =
+          storageType === 'dynamodb'
+            ? messagePickup.dynamodb
+            : storageType === 'cosmosdb'
+              ? messagePickup.cosmosdb
+              : undefined
+
+        if ((storageType === 'dynamodb' || storageType === 'cosmosdb') && !storageConfig) {
+          context.addIssue({
+            code: 'custom',
+            path: [storageType],
+            message: `Message pickup ${storageType} configuration is required when it is selected as storage.`,
+          })
+        }
       })
       .default({
         forwardingStrategy: DidCommMessageForwardingStrategy.DirectDelivery,

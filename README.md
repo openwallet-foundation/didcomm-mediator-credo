@@ -270,10 +270,10 @@ ASKAR__STORE_KEY=test \
 CACHE__TYPE=redis \
 CACHE__REDIS_URL=redis://127.0.0.1:6379 \
 MESSAGE_PICKUP__STORAGE__TYPE=dynamodb \
-MESSAGE_PICKUP__STORAGE__REGION=local \
-MESSAGE_PICKUP__STORAGE__ACCESS_KEY_ID=local \
-MESSAGE_PICKUP__STORAGE__TABLE_NAME=queued_messages \
-MESSAGE_PICKUP__STORAGE__SECRET_ACCESS_KEY=local \
+MESSAGE_PICKUP__DYNAMODB__REGION=local \
+MESSAGE_PICKUP__DYNAMODB__ACCESS_KEY_ID=local \
+MESSAGE_PICKUP__DYNAMODB__TABLE_NAME=queued_messages \
+MESSAGE_PICKUP__DYNAMODB__SECRET_ACCESS_KEY=local \
 pnpm dev
 ```
 
@@ -291,7 +291,9 @@ pnpm dev
   },
   "messagePickup": {
     "storage": {
-      "type": "dynamodb",
+      "type": "dynamodb"
+    },
+    "dynamodb": {
       "region": "local",
       "accessKeyId": "local",
       "secretAccessKey": "local"
@@ -315,9 +317,9 @@ docker run \
   -e "CACHE__TYPE=redis" \
   -e "CACHE__REDIS_URL=redis://127.0.0.1:6379" \
   -e "MESSAGE_PICKUP__STORAGE__TYPE=dynamodb" \
-  -e "MESSAGE_PICKUP__STORAGE__REGION=local" \
-  -e "MESSAGE_PICKUP__STORAGE__ACCESS_KEY_ID=local" \
-  -e "MESSAGE_PICKUP__STORAGE__SECRET_ACCESS_KEY=local" \
+  -e "MESSAGE_PICKUP__DYNAMODB__REGION=local" \
+  -e "MESSAGE_PICKUP__DYNAMODB__ACCESS_KEY_ID=local" \
+  -e "MESSAGE_PICKUP__DYNAMODB__SECRET_ACCESS_KEY=local" \
   -p 3000:3000 \
   ghcr.io/openwallet-foundation/didcomm-mediator-credo/mediator:latest
 ```

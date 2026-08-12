@@ -1,8 +1,8 @@
-import { randomInt } from 'node:crypto'
+import { randomUUID } from 'node:crypto'
 import { Container, CosmosClient, Database, PartitionKeyDefinitionVersion, PartitionKeyKind } from '@azure/cosmos'
 import { Logger } from '@credo-ts/core'
 import { DidCommEncryptedMessage } from '@credo-ts/didcomm'
-import { QueuedMessage, QueuedMessageDocument } from './structure.js'
+import { QueuedMessageDocument, toQueuedDidCommMessage } from './structure.js'
 
 export type AddQueuedMessageOptions = {
   connectionId: string
@@ -136,7 +136,7 @@ export class CosmosDbClientRepository {
     limit?: number
     recipientDid?: string
     deleteMessages?: boolean
-  }): Promise<QueuedMessage[]> {
+  }) {
     this.ensureInitialized()
 
     try {
@@ -150,7 +150,7 @@ export class CosmosDbClientRepository {
         parameters.push({ name: '@recipientDid', value: options.recipientDid })
       }
 
-      query += ' ORDER BY c.messageId'
+      query += ' ORDER BY c.receivedAt'
 
       if (options.limit && options.limit > 0) {
         query += ' OFFSET 0 LIMIT @limit'
@@ -164,16 +164,7 @@ export class CosmosDbClientRepository {
         })
         .fetchAll()
 
-      const messages = resources.map(
-        (doc) =>
-          ({
-            id: doc.messageId.toString(),
-            connectionId: doc.connectionId,
-            receivedAt: new Date(doc.receivedAt),
-            encryptedMessage: doc.encryptedMessage,
-            recipientDids: doc.recipientDids,
-          }) as unknown as QueuedMessage
-      )
+      const messages = resources.map(toQueuedDidCommMessage)
 
       if (options.deleteMessages && messages.length > 0) {
         await this.removeMessages({
@@ -193,24 +184,21 @@ export class CosmosDbClientRepository {
     this.ensureInitialized()
 
     try {
-      const randomizer = randomInt(0, 999).toString().padStart(3, '0')
       const receivedAt = options.receivedAt ?? new Date()
-      const messageId = Number(`${receivedAt.getTime()}${randomizer}`)
+      const messageId = randomUUID()
 
       const document: QueuedMessageDocument = {
-        // Cosmos DB requires unique 'id' within partition
-        // Using connectionId_messageId ensures uniqueness
-        id: `${options.connectionId}_${messageId}`,
+        id: messageId,
         connectionId: options.connectionId,
         messageId,
-        encryptedMessage: options.encryptedMessage as unknown as Record<string, unknown>,
+        encryptedMessage: options.encryptedMessage,
         recipientDids: options.recipientDids,
         receivedAt: receivedAt.getTime(),
       }
 
       await this.container.items.create(document)
 
-      return messageId.toString()
+      return messageId
     } catch (error) {
       this.logger.error('[CosmosDB] Error adding message:', { error })
       throw error
@@ -222,7 +210,7 @@ export class CosmosDbClientRepository {
 
     try {
       const deletePromises = options.messageIds.map(async (messageId) => {
-        const documentId = `${options.connectionId}_${messageId}`
+        const documentId = messageId
         try {
           await this.container.item(documentId, options.connectionId).delete()
         } catch (error) {

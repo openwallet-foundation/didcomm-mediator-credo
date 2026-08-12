@@ -7,8 +7,6 @@ on:
   push:
     branches:
       - main
-      - 'feat/**'
-  workflow_dispatch: # Allows manual triggering from GitHub UI
 
 jobs:
   validate:
@@ -41,19 +39,6 @@ jobs:
   tests:
     runs-on: ubuntu-latest
     name: Tests
-
-    services:
-      cosmosdb:
-        image: mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:latest
-        ports:
-          - 8081:8081
-          - 10251:10251
-          - 10252:10252
-          - 10253:10253
-          - 10254:10254
-        env:
-          AZURE_COSMOS_EMULATOR_PARTITION_COUNT: 10
-          AZURE_COSMOS_EMULATOR_IP_ADDRESS_OVERRIDE: 127.0.0.1
 
     steps:
       - name: Checkout Repo
@@ -89,12 +74,46 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Run tests
+        run: pnpm test
+
+  cosmosdb-tests:
+    runs-on: ubuntu-latest
+    name: Cosmos DB tests
+
+    services:
+      cosmosdb:
+        image: mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:latest
+        ports:
+          - 8081:8081
+          - 10251:10251
+          - 10252:10252
+          - 10253:10253
+          - 10254:10254
+        env:
+          AZURE_COSMOS_EMULATOR_PARTITION_COUNT: 10
+          AZURE_COSMOS_EMULATOR_IP_ADDRESS_OVERRIDE: 127.0.0.1
+
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - name: Setup NodeJS
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
       - name: Wait for Cosmos DB Emulator
         run: |
           timeout 300 bash -c 'until curl -ks https://localhost:8081/_explorer/emulator.pem > /dev/null 2>&1; do echo "Waiting for Cosmos DB emulator..."; sleep 5; done'
           echo "Cosmos DB emulator is ready"
 
-      - name: Run tests
-        run: pnpm test
+      - name: Run Cosmos DB tests
+        run: pnpm test packages/transport-queue-cosmosdb/tests
         env:
           NODE_TLS_REJECT_UNAUTHORIZED: "0"

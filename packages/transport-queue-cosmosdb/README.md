@@ -57,10 +57,10 @@ pnpm add @credo-ts/didcomm-transport-queue-cosmosdb
 You can also configure the Cosmos DB connection using environment variables:
 
 - `MESSAGE_PICKUP__STORAGE__TYPE`: Set to `cosmosdb`
-- `MESSAGE_PICKUP__STORAGE__ENDPOINT`: Cosmos DB endpoint URL
-- `MESSAGE_PICKUP__STORAGE__KEY`: Cosmos DB account key
-- `MESSAGE_PICKUP__STORAGE__DATABASE_NAME`: Database name (optional, defaults to `didcomm-mediator`)
-- `MESSAGE_PICKUP__STORAGE__CONTAINER_NAME`: Container name (optional, defaults to `queued_messages`)
+- `MESSAGE_PICKUP__COSMOSDB__ENDPOINT`: Cosmos DB endpoint URL
+- `MESSAGE_PICKUP__COSMOSDB__KEY`: Cosmos DB account key
+- `MESSAGE_PICKUP__COSMOSDB__DATABASE_NAME`: Database name (optional, defaults to `didcomm-mediator`)
+- `MESSAGE_PICKUP__COSMOSDB__CONTAINER_NAME`: Container name (optional, defaults to `queued_messages`)
 
 ### Full Azure Deployment Example
 
