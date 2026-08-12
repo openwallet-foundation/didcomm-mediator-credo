@@ -5,7 +5,9 @@
   },
   "messagePickup": {
     "storage": {
-      "type": "dynamodb",
+      "type": "dynamodb"
+    },
+    "dynamodb": {
       "region": "local",
       "accessKeyId": "local",
       "secretAccessKey": "local"

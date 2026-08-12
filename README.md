@@ -151,8 +151,10 @@ You can also provide the following environment variables, these CANNOT be provid
   - `simple-defaults.json`: Minimal config with all defaults
   - `full.json`: All options enabled (Postgres, Redis, DynamoDB, etc.)
   - `cache-in-memory.json`, `cache-redis.json`: Cache backend examples
-  - `message-pickup-credo.json`, `message-pickup-dynamodb.json`, `message-pickup-postgres.json`: Message pickup storage examples
+  - `message-pickup-credo.json`, `message-pickup-dynamodb.json`, `message-pickup-postgres.json`, `message-pickup-cosmosdb.json`: Message pickup storage examples
   - `storage-askar-sqlite.json`, `storage-askar-postgres.json`, `storage-drizzle-sqlite.json`, `storage-drizzle-postgres.json`: Storage backend examples
+  - `aws.json`: Full AWS deployment example with DynamoDB
+  - `azure.json`: Full Azure deployment example with Cosmos DB
 
 ### Configuration Reference
 
@@ -236,9 +238,10 @@ When running the Askar to Drizzle storage delettion after successul migration fr
 #### Message Pickup
 
 - `forwardingStrategy`: `DirectDelivery`, `QueueOnly`, `QueueAndLiveModeDelivery`. The `DirectDelivery` strategy will deliver messages directly to the recipient, while the `QueueOnly` strategy will only queue the messages for the recipient. The `QueueAndLiveModeDelivery` strategy will queue the messages for the recipient and deliver them directly if possible. The default is `DirectDelivery`.
-- `storage.type`: `credo`, `postgres`, or `dynamodb`
+- `storage.type`: `credo`, `postgres`, `dynamodb`, or `cosmosdb`
   - For `postgres`: `host`, `user`, `password`, `database`
-  - For `dynamodb`: `region`, `accessKeyId`, `secretAccessKey`, `tableName`
+  - For `dynamodb`: `region`, `accessKeyId`, `secretAccessKey`, `tableName` (AWS)
+  - For `cosmosdb`: `endpoint`, `key`, `databaseName`, `containerName` (Azure)
 - `multiInstanceDelivery.type`: `none` or `redis`.
   - `none`. In this case multi instance delivery is not enabled. Use this if you're using `postgres` for `messagePickup.storage.type`, or if only deploying a single instance.
   - For `redis`: You MUST also use `redis` for `cache.type` in this case. The redis URL will be extracted from the cache configuration. The `redis` multi instance delivery uses Redis streams, ensuring consistent delivery and handling of underliverd messages.
@@ -267,10 +270,10 @@ ASKAR__STORE_KEY=test \
 CACHE__TYPE=redis \
 CACHE__REDIS_URL=redis://127.0.0.1:6379 \
 MESSAGE_PICKUP__STORAGE__TYPE=dynamodb \
-MESSAGE_PICKUP__STORAGE__REGION=local \
-MESSAGE_PICKUP__STORAGE__ACCESS_KEY_ID=local \
-MESSAGE_PICKUP__STORAGE__TABLE_NAME=queued_messages \
-MESSAGE_PICKUP__STORAGE__SECRET_ACCESS_KEY=local \
+MESSAGE_PICKUP__DYNAMODB__REGION=local \
+MESSAGE_PICKUP__DYNAMODB__ACCESS_KEY_ID=local \
+MESSAGE_PICKUP__DYNAMODB__TABLE_NAME=queued_messages \
+MESSAGE_PICKUP__DYNAMODB__SECRET_ACCESS_KEY=local \
 pnpm dev
 ```
 
@@ -288,7 +291,9 @@ pnpm dev
   },
   "messagePickup": {
     "storage": {
-      "type": "dynamodb",
+      "type": "dynamodb"
+    },
+    "dynamodb": {
       "region": "local",
       "accessKeyId": "local",
       "secretAccessKey": "local"
@@ -312,9 +317,9 @@ docker run \
   -e "CACHE__TYPE=redis" \
   -e "CACHE__REDIS_URL=redis://127.0.0.1:6379" \
   -e "MESSAGE_PICKUP__STORAGE__TYPE=dynamodb" \
-  -e "MESSAGE_PICKUP__STORAGE__REGION=local" \
-  -e "MESSAGE_PICKUP__STORAGE__ACCESS_KEY_ID=local" \
-  -e "MESSAGE_PICKUP__STORAGE__SECRET_ACCESS_KEY=local" \
+  -e "MESSAGE_PICKUP__DYNAMODB__REGION=local" \
+  -e "MESSAGE_PICKUP__DYNAMODB__ACCESS_KEY_ID=local" \
+  -e "MESSAGE_PICKUP__DYNAMODB__SECRET_ACCESS_KEY=local" \
   -p 3000:3000 \
   ghcr.io/openwallet-foundation/didcomm-mediator-credo/mediator:latest
 ```

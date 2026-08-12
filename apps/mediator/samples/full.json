@@ -31,7 +31,9 @@
   "messagePickup": {
     "forwardingStrategy": "QueueOnly",
     "storage": {
-      "type": "dynamodb",
+      "type": "dynamodb"
+    },
+    "dynamodb": {
       "region": "local",
       "accessKeyId": "local",
       "secretAccessKey": "local"

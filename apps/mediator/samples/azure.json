@@ -1,0 +1,35 @@
+{
+  "agentPort": 5566,
+  "agentName": "Credo Azure Mediator",
+  "agentEndpoints": ["http://localhost:5566", "ws://localhost:5566"],
+  "cache": {
+    "type": "redis",
+    "redisUrl": "redis://mediator:password@your-redis-instance.redis.cache.windows.net:6380?tls=true"
+  },
+  "askar": {
+    "storeId": "mediator",
+    "storeKey": "your-secure-store-key-here",
+    "database": {
+      "type": "postgres",
+      "host": "your-postgres-server.postgres.database.azure.com",
+      "user": "postgres",
+      "password": "your-postgres-password"
+    }
+  },
+  "storage": {
+    "type": "drizzle",
+    "dialect": "postgres",
+    "databaseUrl": "postgresql://postgres:your-postgres-password@your-postgres-server.postgres.database.azure.com/drizzle"
+  },
+  "messagePickup": {
+    "storage": {
+      "type": "cosmosdb"
+    },
+    "cosmosdb": {
+      "endpoint": "https://your-cosmosdb-account.documents.azure.com:443/",
+      "key": "your-cosmosdb-primary-key",
+      "databaseName": "didcomm-mediator",
+      "containerName": "queued_messages"
+    }
+  }
+}
