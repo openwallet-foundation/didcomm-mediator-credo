@@ -37,6 +37,7 @@ import {
   tryExtractJweFp,
   tryExtractRecipientKeyShort,
 } from './logger/StructuredLogger.js'
+import { CoordinatedMediatorService } from './message-delivery/CoordinatedMediatorService.js'
 import { StorageServiceMessageQueue } from './storage/StorageMessageQueue.js'
 import { InstrumentedHttpOutboundTransport } from './transports/InstrumentedHttpOutboundTransport.js'
 import { InstrumentedTransportService } from './transports/InstrumentedTransportService.js'
@@ -216,8 +217,13 @@ export async function createAgent() {
     modules: modules as typeof modules & { askar: AskarModule },
   })
 
+  // Credo owns local live delivery after queueing a forwarded message. Marking
+  // that path lets the Redis queue listener avoid issuing the same delivery in
+  // parallel. The instrumented implementation extends this service.
+  agent.dependencyManager.registerSingleton(DidCommMediatorService, CoordinatedMediatorService)
+
   if (instrumentationEnabled) {
-    // Override two Credo singletons with instrumented subclasses, to capture the
+    // Register instrumented subclasses for two Credo singletons, to capture the
     // forward-delivery signals that no event/outbound-transport hook can see:
     //   - DidCommTransportService → wraps session.send for the LIVE delivery path
     //     (DirectDelivery's sendPackage uses session.send directly, bypassing

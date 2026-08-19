@@ -5,7 +5,6 @@ import {
   type DidCommInboundMessageContext,
   DidCommMediationRepository,
   DidCommMediatorRoutingRepository,
-  DidCommMediatorService,
 } from '@credo-ts/didcomm'
 
 import { config } from '../config.js'
@@ -17,6 +16,7 @@ import {
   truncateKey,
   tryExtractJweFp,
 } from '../logger/StructuredLogger.js'
+import { CoordinatedMediatorService } from '../message-delivery/CoordinatedMediatorService.js'
 
 // Instruments the mediator forward path directly, because the underlying
 // delivery (DidCommMessageSender.sendPackage for DirectDelivery, or the pickup
@@ -37,9 +37,10 @@ import {
 //   - Instrumented*OutboundTransport         → service endpoint (SentToTransport)
 //
 // Registered on the DidCommMediatorService DI token (see agent.ts) only when
-// instrumentation is enabled; otherwise the stock service is used unchanged.
+// instrumentation is enabled; otherwise the non-instrumented coordinated
+// service is used.
 @injectable()
-export class InstrumentedMediatorService extends DidCommMediatorService {
+export class InstrumentedMediatorService extends CoordinatedMediatorService {
   public constructor(
     mediationRepository: DidCommMediationRepository,
     mediatorRoutingRepository: DidCommMediatorRoutingRepository,
