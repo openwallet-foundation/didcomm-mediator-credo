@@ -71,6 +71,83 @@ index fd33a992b65e1d70b116d256ca885075495f844c..50c477a580d009062ff97911eb80ecc3
      }
      getByThreadId(agentContext, threadId) {
          return this.getSingleByQuery(agentContext, { threadId });
+diff --git a/build/modules/dids/repository/DidRepository.js b/build/modules/dids/repository/DidRepository.js
+index 0bf95a866ec00be24d800c204ff0e20555056d83..cb3869f357a1bd3a2ae01677af12168c9e9656e2 100644
+--- a/build/modules/dids/repository/DidRepository.js
++++ b/build/modules/dids/repository/DidRepository.js
+@@ -19,6 +19,7 @@ const plugins_1 = require("../../../plugins");
+ const Repository_1 = require("../../../storage/Repository");
+ const DidDocumentRole_1 = require("../domain/DidDocumentRole");
+ const DidRecord_1 = require("./DidRecord");
++const error_1 = require("../../../error");
+ let DidRepository = class DidRepository extends Repository_1.Repository {
+     constructor(storageService, eventEmitter) {
+         super(DidRecord_1.DidRecord, storageService, eventEmitter);
+@@ -46,27 +47,46 @@ let DidRepository = class DidRepository extends Repository_1.Repository {
+     findAllByRecipientKey(agentContext, recipientKey) {
+         return this.findByQuery(agentContext, { recipientKeyFingerprints: [recipientKey.fingerprint] });
+     }
+-    findAllByDid(agentContext, did) {
+-        return this.findByQuery(agentContext, { $or: [{ alternativeDids: [did] }, { did }] });
++    async findAllByDid(agentContext, did) {
++        // $or across a scalar tag and an array-containment tag can't share an index; split into two indexable queries instead.
++        const byDid = await this.findByQuery(agentContext, { did });
++        const byAlternativeDid = await this.findByQuery(agentContext, { alternativeDids: [did] });
++        const records = [...byDid, ...byAlternativeDid];
++        return [...new Map(records.map((record) => [record.id, record])).values()];
+     }
+-    findReceivedDid(agentContext, receivedDid) {
+-        return this.findSingleByQuery(agentContext, {
+-            $or: [{ alternativeDids: [receivedDid] }, { did: receivedDid }],
+-            role: DidDocumentRole_1.DidDocumentRole.Received,
+-        });
++    async findReceivedDid(agentContext, receivedDid) {
++        const byDid = await this.findByQuery(agentContext, { did: receivedDid, role: DidDocumentRole_1.DidDocumentRole.Received });
++        const byAlternativeDid = await this.findByQuery(agentContext, { alternativeDids: [receivedDid], role: DidDocumentRole_1.DidDocumentRole.Received });
++        const records = [...byDid, ...byAlternativeDid];
++        const uniqueRecords = [...new Map(records.map((record) => [record.id, record])).values()];
++        if (uniqueRecords.length > 1) {
++            throw new error_1.RecordDuplicateError(`Multiple records found for given query '${JSON.stringify({ $or: [{ alternativeDids: [receivedDid] }, { did: receivedDid }], role: DidDocumentRole_1.DidDocumentRole.Received })}'`, {
++                recordType: this.recordClass.type,
++            });
++        }
++        return uniqueRecords[0] ?? null;
+     }
+-    findCreatedDid(agentContext, createdDid) {
+-        return this.findSingleByQuery(agentContext, {
+-            $or: [{ alternativeDids: [createdDid] }, { did: createdDid }],
+-            role: DidDocumentRole_1.DidDocumentRole.Created,
+-        });
++    async findCreatedDid(agentContext, createdDid) {
++        const byDid = await this.findByQuery(agentContext, { did: createdDid, role: DidDocumentRole_1.DidDocumentRole.Created });
++        const byAlternativeDid = await this.findByQuery(agentContext, { alternativeDids: [createdDid], role: DidDocumentRole_1.DidDocumentRole.Created });
++        const records = [...byDid, ...byAlternativeDid];
++        const uniqueRecords = [...new Map(records.map((record) => [record.id, record])).values()];
++        if (uniqueRecords.length > 1) {
++            throw new error_1.RecordDuplicateError(`Multiple records found for given query '${JSON.stringify({ $or: [{ alternativeDids: [createdDid] }, { did: createdDid }], role: DidDocumentRole_1.DidDocumentRole.Created })}'`, {
++                recordType: this.recordClass.type,
++            });
++        }
++        return uniqueRecords[0] ?? null;
+     }
+-    getCreatedDids(agentContext, { method, did }) {
+-        return this.findByQuery(agentContext, {
+-            role: DidDocumentRole_1.DidDocumentRole.Created,
+-            method,
+-            $or: did ? [{ alternativeDids: [did] }, { did }] : undefined,
+-        });
++    async getCreatedDids(agentContext, { method, did }) {
++        if (!did) {
++            return this.findByQuery(agentContext, { role: DidDocumentRole_1.DidDocumentRole.Created, method });
++        }
++        // $or across a scalar tag and an array-containment tag can't share an index; split into two indexable queries instead.
++        const byDid = await this.findByQuery(agentContext, { role: DidDocumentRole_1.DidDocumentRole.Created, method, did });
++        const byAlternativeDid = await this.findByQuery(agentContext, { role: DidDocumentRole_1.DidDocumentRole.Created, method, alternativeDids: [did] });
++        const records = [...byDid, ...byAlternativeDid];
++        return [...new Map(records.map((record) => [record.id, record])).values()];
+     }
+     async storeCreatedDid(agentContext, { did, didDocument, tags }) {
+         const didRecord = new DidRecord_1.DidRecord({
 diff --git a/build/modules/message-pickup/services/MessagePickupSessionService.js b/build/modules/message-pickup/services/MessagePickupSessionService.js
 index d004326423598fd18d4af8c77c02298cfae27e2e..13688231ae82f08afa7ddb1d062c5f49ad05a5dc 100644
 --- a/build/modules/message-pickup/services/MessagePickupSessionService.js

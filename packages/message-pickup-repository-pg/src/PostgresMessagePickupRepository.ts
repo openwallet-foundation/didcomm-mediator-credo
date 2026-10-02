@@ -314,16 +314,24 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
     this.logger?.info(`[takeFromQueue] Initializing method for ConnectionId: ${connectionId}, Limit: ${limit}`)
 
     try {
-      // If deleteMessages is true, just fetch messages without updating their state
+      // If deleteMessages is true, delete and return matched messages in a single
+      // statement - running a SELECT first and a separate DELETE afterwards (as before)
+      // queried the table twice and could return rows that a concurrent call had
+      // already deleted, since the two queries weren't guaranteed to see the same set.
       if (deleteMessages) {
         const query = `
-        SELECT id, encrypted_message, state, created_at 
-        FROM queued_message 
-        WHERE (connection_id = $1 OR $2 = ANY (recipient_dids)) AND state = 'pending' 
-        ORDER BY created_at 
-        LIMIT $3
+        DELETE FROM queued_message
+        WHERE id IN (
+          SELECT id
+          FROM queued_message
+          WHERE (connection_id = $1 OR recipient_dids @> ARRAY[$2]::text[])
+            AND state = 'pending'
+          ORDER BY created_at
+          LIMIT $3
+        )
+        RETURNING id, encrypted_message, state, created_at;
       `
-        const params = [connectionId, recipientDid, limit ?? 0]
+        const params = [connectionId, recipientDid, limit ?? null]
         const result = await this.messagesCollection?.query(query, params)
 
         if (!result || result.rows.length === 0) {
@@ -331,28 +339,8 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
           return []
         }
 
-        const deleteQuery = `
-          DELETE FROM queued_message
-          WHERE id IN (
-            SELECT id
-            FROM queued_message
-            WHERE (connection_id = $1 OR $2 = ANY (recipient_dids))
-              AND state = 'pending'
-            ORDER BY created_at
-            LIMIT $3
-          )
-          RETURNING id, encrypted_message, state, created_at;
-        `
-        const deleteParams = [connectionId, recipientDid, limit ?? 0]
-        const deleteResult = await this.messagesCollection?.query(deleteQuery, deleteParams)
-
-        if (!deleteResult || deleteResult.rows.length === 0) {
-          this.logger?.debug(`[takeFromQueue] No messages deleted for ConnectionId: ${connectionId}`)
-          return []
-        }
-
         this.logger?.debug(
-          `[takeFromQueue] ${deleteResult.rows.length} messages deleted from queue for ConnectionId: ${connectionId}`
+          `[takeFromQueue] ${result.rows.length} messages deleted from queue for ConnectionId: ${connectionId}`
         )
 
         return result.rows.map((message) => ({
@@ -370,14 +358,14 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
       WHERE id IN (
         SELECT id 
         FROM queued_message 
-        WHERE (connection_id = $1 OR $2 = ANY (recipient_dids)) 
+        WHERE (connection_id = $1 OR recipient_dids @> ARRAY[$2]::text[]) 
         AND state = 'pending' 
         ORDER BY created_at 
         LIMIT $3
       )
       RETURNING id, encrypted_message, state, created_at;
     `
-      const params = [connectionId, recipientDid, limit ?? 0]
+      const params = [connectionId, recipientDid, limit ?? null]
       const result = await this.messagesCollection?.query(query, params)
 
       if (!result || result.rows.length === 0) {
