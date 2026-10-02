@@ -28,6 +28,49 @@ index 3a9174f399c78d9712f5ca67ada9a42de347610e..6f4fd058c17d66a6b194fe95f167e5c5
          this.transportSessionTable[session.id] = session;
          this.eventEmitter.emit(this.agentContext, {
              type: transport_1.TransportEventTypes.TransportSessionSaved,
+diff --git a/build/modules/connections/repository/ConnectionRepository.js b/build/modules/connections/repository/ConnectionRepository.js
+index fd33a992b65e1d70b116d256ca885075495f844c..643dde95e3d3d66559fa10e118d6aa3463a94d47 100644
+--- a/build/modules/connections/repository/ConnectionRepository.js
++++ b/build/modules/connections/repository/ConnectionRepository.js
+@@ -17,22 +17,28 @@ const EventEmitter_1 = require("../../../agent/EventEmitter");
+ const constants_1 = require("../../../constants");
+ const plugins_1 = require("../../../plugins");
+ const Repository_1 = require("../../../storage/Repository");
++const error_1 = require("../../../error");
+ const ConnectionRecord_1 = require("./ConnectionRecord");
+ let ConnectionRepository = class ConnectionRepository extends Repository_1.Repository {
+     constructor(storageService, eventEmitter) {
+         super(ConnectionRecord_1.ConnectionRecord, storageService, eventEmitter);
+     }
+     async findByDids(agentContext, { ourDid, theirDid }) {
+-        return this.findSingleByQuery(agentContext, {
+-            $or: [
+-                {
+-                    did: ourDid,
+-                    theirDid,
+-                },
+-                { did: ourDid, previousTheirDids: [theirDid] },
+-                { previousDids: [ourDid], theirDid },
+-            ],
+-        });
++        // A top-level $or across these differently-shaped tag clauses can't use an index and
++        // forces a full table scan at scale, so run each clause as its own indexable query instead.
++        const [byCurrentDids, byPreviousTheirDid, byPreviousOurDid] = await Promise.all([
++            this.findByQuery(agentContext, { did: ourDid, theirDid }),
++            this.findByQuery(agentContext, { did: ourDid, previousTheirDids: [theirDid] }),
++            this.findByQuery(agentContext, { previousDids: [ourDid], theirDid }),
++        ]);
++        const records = [...byCurrentDids, ...byPreviousTheirDid, ...byPreviousOurDid];
++        const uniqueRecords = [...new Map(records.map((record) => [record.id, record])).values()];
++        if (uniqueRecords.length > 1) {
++            throw new error_1.RecordDuplicateError(`Multiple records found for given query '${JSON.stringify({ ourDid, theirDid })}'`, {
++                recordType: this.recordClass.type,
++            });
++        }
++        return uniqueRecords[0] ?? null;
+     }
+     getByThreadId(agentContext, threadId) {
+         return this.getSingleByQuery(agentContext, { threadId });
 diff --git a/build/modules/message-pickup/services/MessagePickupSessionService.js b/build/modules/message-pickup/services/MessagePickupSessionService.js
 index d004326423598fd18d4af8c77c02298cfae27e2e..13688231ae82f08afa7ddb1d062c5f49ad05a5dc 100644
 --- a/build/modules/message-pickup/services/MessagePickupSessionService.js

@@ -22,7 +22,7 @@
   },
   "pnpm": {
     "patchedDependencies": {
-      "@credo-ts/core": "patches/@credo-ts__core.patch"
+      "@credo-ts/core@0.5.19": "patches/@credo-ts__core@0.5.19.patch"
     },
     "overrides": {
       "undici": "^6.27.0",
