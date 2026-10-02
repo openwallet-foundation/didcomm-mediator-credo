@@ -29,7 +29,7 @@ index 3a9174f399c78d9712f5ca67ada9a42de347610e..6f4fd058c17d66a6b194fe95f167e5c5
          this.eventEmitter.emit(this.agentContext, {
              type: transport_1.TransportEventTypes.TransportSessionSaved,
 diff --git a/build/modules/connections/repository/ConnectionRepository.js b/build/modules/connections/repository/ConnectionRepository.js
-index fd33a992b65e1d70b116d256ca885075495f844c..643dde95e3d3d66559fa10e118d6aa3463a94d47 100644
+index fd33a992b65e1d70b116d256ca885075495f844c..50c477a580d009062ff97911eb80ecc3f6b2c78a 100644
 --- a/build/modules/connections/repository/ConnectionRepository.js
 +++ b/build/modules/connections/repository/ConnectionRepository.js
 @@ -17,22 +17,28 @@ const EventEmitter_1 = require("../../../agent/EventEmitter");
@@ -55,11 +55,11 @@ index fd33a992b65e1d70b116d256ca885075495f844c..643dde95e3d3d66559fa10e118d6aa34
 -        });
 +        // A top-level $or across these differently-shaped tag clauses can't use an index and
 +        // forces a full table scan at scale, so run each clause as its own indexable query instead.
-+        const [byCurrentDids, byPreviousTheirDid, byPreviousOurDid] = await Promise.all([
-+            this.findByQuery(agentContext, { did: ourDid, theirDid }),
-+            this.findByQuery(agentContext, { did: ourDid, previousTheirDids: [theirDid] }),
-+            this.findByQuery(agentContext, { previousDids: [ourDid], theirDid }),
-+        ]);
++        // These run sequentially rather than via Promise.all: concurrent scans against the same
++        // wallet store can trip askar/sqlite locking and silently return no results.
++        const byCurrentDids = await this.findByQuery(agentContext, { did: ourDid, theirDid });
++        const byPreviousTheirDid = await this.findByQuery(agentContext, { did: ourDid, previousTheirDids: [theirDid] });
++        const byPreviousOurDid = await this.findByQuery(agentContext, { previousDids: [ourDid], theirDid });
 +        const records = [...byCurrentDids, ...byPreviousTheirDid, ...byPreviousOurDid];
 +        const uniqueRecords = [...new Map(records.map((record) => [record.id, record])).values()];
 +        if (uniqueRecords.length > 1) {
