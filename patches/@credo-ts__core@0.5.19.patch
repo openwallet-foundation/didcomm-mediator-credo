@@ -71,6 +71,37 @@ index fd33a992b65e1d70b116d256ca885075495f844c..50c477a580d009062ff97911eb80ecc3
      }
      getByThreadId(agentContext, threadId) {
          return this.getSingleByQuery(agentContext, { threadId });
+diff --git a/build/modules/connections/services/helpers.js b/build/modules/connections/services/helpers.js
+index ae1c685d5b242d68c26eef31cb78fbe1031606a1..1c7fb237427b19895bd2cefad7cedf7b55a127f5 100644
+--- a/build/modules/connections/services/helpers.js
++++ b/build/modules/connections/services/helpers.js
+@@ -115,22 +115,10 @@ async function getDidDocumentForCreatedDid(agentContext, did) {
+  * Due to how DIDComm v1 works (only reference the key not the did in encrypted message) we can't have multiple dids containing
+  * the same key as we won't know which did (and thus which connection) a message is intended for.
+  */
+-async function assertNoCreatedDidExistsForKeys(agentContext, recipientKeys) {
+-    const didRepository = agentContext.dependencyManager.resolve(dids_1.DidRepository);
+-    const recipientKeyFingerprints = recipientKeys.map((key) => key.fingerprint);
+-    const didsForServices = await didRepository.findByQuery(agentContext, {
+-        role: dids_1.DidDocumentRole.Created,
+-        // We want an $or query so we query for each key individually, not one did document
+-        // containing exactly the same keys as the did document we are trying to create
+-        $or: recipientKeyFingerprints.map((fingerprint) => ({
+-            recipientKeyFingerprints: [fingerprint],
+-        })),
+-    });
+-    if (didsForServices.length > 0) {
+-        const allDidRecipientKeys = didsForServices.flatMap((did) => did.getTags().recipientKeyFingerprints ?? []);
+-        const matchingFingerprints = allDidRecipientKeys.filter((f) => recipientKeyFingerprints.includes(f));
+-        throw new error_1.CredoError(`A did already exists for some of the keys in the provided services. DIDComm v1 uses key based routing, and therefore it is not allowed to re-use the same key in multiple did documents for DIDComm. If you use the same 'routing' object for multiple invitations, instead provide an 'invitationDid' to the create invitation method. The following fingerprints are already in use: ${matchingFingerprints.join(',')}`);
+-    }
++async function assertNoCreatedDidExistsForKeys(_agentContext, _recipientKeys) {
++    // Disabled: this check requires one query per recipient key (dids can have hundreds),
++    // against short-lived connections the cost isn't worth the low risk of key reuse across dids.
++    return;
+ }
+ async function createPeerDidFromServices(agentContext, services, numAlgo) {
+     const didsApi = agentContext.dependencyManager.resolve(dids_1.DidsApi);
 diff --git a/build/modules/dids/repository/DidRepository.js b/build/modules/dids/repository/DidRepository.js
 index 0bf95a866ec00be24d800c204ff0e20555056d83..cb3869f357a1bd3a2ae01677af12168c9e9656e2 100644
 --- a/build/modules/dids/repository/DidRepository.js
