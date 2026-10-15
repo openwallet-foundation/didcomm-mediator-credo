@@ -177,36 +177,29 @@ export class PostgresMessagePickupRepository implements MessagePickupRepository 
                 '[MessageHandlerMiddleware] Invalid context for live pickup session creation type message.'
               )
             } else {
-              // This block is to handle situations where the recipient is attempting to add the recipient key to multiple
-              // mediation records. Since we are allowing multiple connections to use the same recipient key, we need to delete
-              // the mediation record for the recipient key when we see an "add" action in a keylist update message.
-              // This is to prevent the mediation record duplicate records for the same recipient key.
               if (context.message.type === 'https://didcomm.org/coordinate-mediation/1.0/keylist-update') {
                 this.logger?.debug(
                   `[MessageHandlerMiddleware] Processing keylist update message for connectionId: ${connectionId}`
                 )
                 const keyListUpdateMessage = context.message as KeylistUpdateMessage
-                const addRecipientKeyUpdate = keyListUpdateMessage.updates.find(update => update.action === 'add')
-                if (!addRecipientKeyUpdate) {
-                  this.logger?.debug(
-                    `[MessageHandlerMiddleware] No "add" action found in keylist update message for connectionId: ${connectionId}. Skipping live session creation.`
-                  )
-                } else {
+                const addRecipientKeyUpdates = keyListUpdateMessage.updates.filter((update) => update.action === 'add')
+                for (const addRecipientKeyUpdate of addRecipientKeyUpdates) {
                   try {
-                    const didKey = DidKey.fromDid(addRecipientKeyUpdate.recipientKey)
-                    this.logger?.debug(
-                      `[MessageHandlerMiddleware] Attempting to find mediation record for recipient key: [${didKey.key.publicKeyBase58}]`
-                    )
-                    const mediationRecord = await mediationRepository.getSingleByRecipientKey(options.agent.context, didKey.key.publicKeyBase58)
-                    // We can't have duplicate keys in a mediation record. We are allowing a new connection to use this key.
-                    // Set the recipient keys to an empty array to prevent the mediation record from being found in subsequent messages,
-                    // effectively deleting the mediation record without actually deleting it from the database.
-                    // It will be removed later by a separate cleanup process.
-                    this.logger?.debug(
-                      `[MessageHandlerMiddleware] Found mediation record for recipient key: [${didKey.key.publicKeyBase58}] Removing recipient keys to avoid duplication.`
-                    )
-                    mediationRecord.recipientKeys = []
-                    await mediationRepository.update(options.agent.context, mediationRecord)
+                    const recipientKey = addRecipientKeyUpdate.recipientKey.startsWith('did:key:')
+                      ? DidKey.fromDid(addRecipientKeyUpdate.recipientKey).key.publicKeyBase58
+                      : addRecipientKeyUpdate.recipientKey
+                    const mediationRecords = await mediationRepository.findByQuery(context.agentContext, {
+                      recipientKeys: [recipientKey],
+                    })
+                    for (const mediationRecord of mediationRecords) {
+                      if (mediationRecord.connectionId === connectionId) continue
+
+                      this.logger?.debug(
+                        `[MessageHandlerMiddleware] Moving recipient key: [${recipientKey}] from connectionId: ${mediationRecord.connectionId} to connectionId: ${connectionId}.`
+                      )
+                      mediationRecord.recipientKeys = mediationRecord.recipientKeys.filter((key) => key !== recipientKey)
+                      await mediationRepository.update(context.agentContext, mediationRecord)
+                    }
                   } catch (error) {
                     this.logger?.warn(
                       `[MessageHandlerMiddleware] Failed to clean up mediation record for connectionId: ${connectionId}. Error: ${error}`
