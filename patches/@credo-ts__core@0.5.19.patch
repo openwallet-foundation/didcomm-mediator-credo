@@ -103,7 +103,7 @@ index ae1c685d5b242d68c26eef31cb78fbe1031606a1..1c7fb237427b19895bd2cefad7cedf7b
  async function createPeerDidFromServices(agentContext, services, numAlgo) {
      const didsApi = agentContext.dependencyManager.resolve(dids_1.DidsApi);
 diff --git a/build/modules/dids/repository/DidRepository.js b/build/modules/dids/repository/DidRepository.js
-index 0bf95a866ec00be24d800c204ff0e20555056d83..cb3869f357a1bd3a2ae01677af12168c9e9656e2 100644
+index 0bf95a866ec00be24d800c204ff0e20555056d83..e2390b1e6002152ac80fc1250b5fe4fa8fb8c1f3 100644
 --- a/build/modules/dids/repository/DidRepository.js
 +++ b/build/modules/dids/repository/DidRepository.js
 @@ -19,6 +19,7 @@ const plugins_1 = require("../../../plugins");
@@ -114,7 +114,40 @@ index 0bf95a866ec00be24d800c204ff0e20555056d83..cb3869f357a1bd3a2ae01677af12168c
  let DidRepository = class DidRepository extends Repository_1.Repository {
      constructor(storageService, eventEmitter) {
          super(DidRecord_1.DidRecord, storageService, eventEmitter);
-@@ -46,27 +47,46 @@ let DidRepository = class DidRepository extends Repository_1.Repository {
+@@ -27,46 +28,71 @@ let DidRepository = class DidRepository extends Repository_1.Repository {
+      * Finds a {@link DidRecord}, containing the specified recipientKey that was received by this agent.
+      * To find a {@link DidRecord} that was created by this agent, use {@link DidRepository.findCreatedDidByRecipientKey}.
+      */
+-    findReceivedDidByRecipientKey(agentContext, recipientKey) {
+-        return this.findSingleByQuery(agentContext, {
+-            recipientKeyFingerprints: [recipientKey.fingerprint],
+-            role: DidDocumentRole_1.DidDocumentRole.Received,
+-        });
++    async findReceivedDidByRecipientKey(agentContext, recipientKey) {
++        return this.findSingleByRecipientKeyAndRole(agentContext, recipientKey, DidDocumentRole_1.DidDocumentRole.Received);
+     }
+     /**
+      * Finds a {@link DidRecord}, containing the specified recipientKey that was created by this agent.
+      * To find a {@link DidRecord} that was received by this agent, use {@link DidRepository.findReceivedDidByRecipientKey}.
+      */
+-    findCreatedDidByRecipientKey(agentContext, recipientKey) {
+-        return this.findSingleByQuery(agentContext, {
+-            recipientKeyFingerprints: [recipientKey.fingerprint],
+-            role: DidDocumentRole_1.DidDocumentRole.Created,
+-        });
++    async findCreatedDidByRecipientKey(agentContext, recipientKey) {
++        return this.findSingleByRecipientKeyAndRole(agentContext, recipientKey, DidDocumentRole_1.DidDocumentRole.Created);
++    }
++    async findSingleByRecipientKeyAndRole(agentContext, recipientKey, role) {
++        // The role tag matches ~half of all DID records, so ANDing it in the tag query scales with table size; filter it in memory.
++        const records = (await this.findByQuery(agentContext, { recipientKeyFingerprints: [recipientKey.fingerprint] })).filter((record) => record.role === role);
++        if (records.length > 1) {
++            throw new error_1.RecordDuplicateError(`Multiple records found for given query '${JSON.stringify({ recipientKeyFingerprints: [recipientKey.fingerprint], role })}'`, {
++                recordType: this.recordClass.type,
++            });
++        }
++        return records[0] ?? null;
+     }
      findAllByRecipientKey(agentContext, recipientKey) {
          return this.findByQuery(agentContext, { recipientKeyFingerprints: [recipientKey.fingerprint] });
      }
@@ -133,9 +166,10 @@ index 0bf95a866ec00be24d800c204ff0e20555056d83..cb3869f357a1bd3a2ae01677af12168c
 -            role: DidDocumentRole_1.DidDocumentRole.Received,
 -        });
 +    async findReceivedDid(agentContext, receivedDid) {
-+        const byDid = await this.findByQuery(agentContext, { did: receivedDid, role: DidDocumentRole_1.DidDocumentRole.Received });
-+        const byAlternativeDid = await this.findByQuery(agentContext, { alternativeDids: [receivedDid], role: DidDocumentRole_1.DidDocumentRole.Received });
-+        const records = [...byDid, ...byAlternativeDid];
++        // role is filtered in memory; as a tag it matches ~half of all DID records.
++        const byDid = await this.findByQuery(agentContext, { did: receivedDid });
++        const byAlternativeDid = await this.findByQuery(agentContext, { alternativeDids: [receivedDid] });
++        const records = [...byDid, ...byAlternativeDid].filter((record) => record.role === DidDocumentRole_1.DidDocumentRole.Received);
 +        const uniqueRecords = [...new Map(records.map((record) => [record.id, record])).values()];
 +        if (uniqueRecords.length > 1) {
 +            throw new error_1.RecordDuplicateError(`Multiple records found for given query '${JSON.stringify({ $or: [{ alternativeDids: [receivedDid] }, { did: receivedDid }], role: DidDocumentRole_1.DidDocumentRole.Received })}'`, {
@@ -150,9 +184,10 @@ index 0bf95a866ec00be24d800c204ff0e20555056d83..cb3869f357a1bd3a2ae01677af12168c
 -            role: DidDocumentRole_1.DidDocumentRole.Created,
 -        });
 +    async findCreatedDid(agentContext, createdDid) {
-+        const byDid = await this.findByQuery(agentContext, { did: createdDid, role: DidDocumentRole_1.DidDocumentRole.Created });
-+        const byAlternativeDid = await this.findByQuery(agentContext, { alternativeDids: [createdDid], role: DidDocumentRole_1.DidDocumentRole.Created });
-+        const records = [...byDid, ...byAlternativeDid];
++        // role is filtered in memory; as a tag it matches ~half of all DID records.
++        const byDid = await this.findByQuery(agentContext, { did: createdDid });
++        const byAlternativeDid = await this.findByQuery(agentContext, { alternativeDids: [createdDid] });
++        const records = [...byDid, ...byAlternativeDid].filter((record) => record.role === DidDocumentRole_1.DidDocumentRole.Created);
 +        const uniqueRecords = [...new Map(records.map((record) => [record.id, record])).values()];
 +        if (uniqueRecords.length > 1) {
 +            throw new error_1.RecordDuplicateError(`Multiple records found for given query '${JSON.stringify({ $or: [{ alternativeDids: [createdDid] }, { did: createdDid }], role: DidDocumentRole_1.DidDocumentRole.Created })}'`, {
