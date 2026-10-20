@@ -38,6 +38,7 @@
     "@credo-ts/core": "catalog:",
     "@credo-ts/didcomm": "catalog:",
     "@credo-ts/didcomm-push-notifications": "workspace:*",
+    "@credo-ts/didcomm-transport-queue-cosmosdb": "workspace:*",
     "@credo-ts/didcomm-transport-queue-dynamodb": "workspace:*",
     "@credo-ts/didcomm-transport-queue-postgres": "workspace:*",
     "@credo-ts/drizzle-storage": "catalog:",

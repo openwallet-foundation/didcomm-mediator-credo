@@ -3,6 +3,7 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
+      "@credo-ts/didcomm-transport-queue-cosmosdb": ["./packages/transport-queue-cosmosdb/src/index.ts"],
       "@credo-ts/didcomm-transport-queue-dynamodb": ["./packages/transport-queue-dynamodb/src/index.ts"],
       "@credo-ts/didcomm-transport-queue-postgres": ["./packages/transport-queue-postgres/src/index.ts"],
       "@credo-ts/didcomm-push-notifications": ["./packages/push-notifications/src/index.ts"]
