@@ -114,12 +114,12 @@ sequenceDiagram
 `DidCommTransportQueuePostgres` subscribes to Credo's `DidCommMessagePickupEventTypes.LiveSessionSaved` and `LiveSessionRemoved` events and mirrors them to the shared `live_session` table:
 
 - On **LiveSessionSaved**: inserts a row `(session_id, connection_id, protocol_version, instance)` so that other instances can locate the owner.
-- On **LiveSessionRemoved**: deletes only the rows owned by this instance (scoped by `(session_id, instance)`). Any `sending` messages for that connection are then reverted back to `pending`, and a `NOTIFY newMessage` is published to wake up whoever currently owns a live session for that connection. This is important during session migrations between pods, where the old pod's `LiveSessionRemoved` can fire after the new pod's `LiveSessionSaved` has already taken ownership.
+- On **LiveSessionRemoved**: deletes only the rows owned by this instance (scoped by `(session_id, instance)`). Any `sending` messages for that connection are then reverted back to `pending` (except those another instance is delivering on its own live session), and a `NOTIFY newMessage` is published to wake up whoever currently owns a live session for that connection. This is important during session migrations between pods, where the old pod's `LiveSessionRemoved` can fire after the new pod's `LiveSessionSaved` has already taken ownership.
 
 To handle crashes where `LiveSessionRemoved` never fires, every instance:
 
 1. Registers a row in the `instance` table on startup and refreshes its `last_seen` every `heartbeatIntervalMs`.
-2. Runs a **reaper** every `reaperIntervalMs`, guarded by a Postgres session-level advisory lock so only one instance reaps per tick. The reaper deletes `live_session` rows whose owning `instance` is missing or whose `last_seen` is older than `instanceTimeoutMs`, reverts stuck `sending` messages back to `pending`, and notifies the `newMessage` channel so a surviving owner (if any) resumes delivery.
+2. Runs a **reaper** every `reaperIntervalMs`, guarded by a Postgres session-level advisory lock so only one instance reaps per tick. The reaper deletes `live_session` rows whose owning `instance` is missing or whose `last_seen` is older than `instanceTimeoutMs`, reverts stuck `sending` messages back to `pending` (except those another instance is delivering on its own live session), and notifies the `newMessage` channel so a surviving owner (if any) resumes delivery.
 3. On graceful `shutdown`, removes its own `live_session` and `instance` rows and notifies current owners so that in-flight traffic is handled without waiting for the reaper.
 
 ## Database schema
@@ -138,6 +138,7 @@ Stores persisted DIDComm messages. One row per message.
 | `encrypted_message` | `JSONB` | The packed DIDComm envelope. |
 | `state` | `message_state` enum: `pending` \| `sending` | `pending` = waiting to be picked up; `sending` = currently being delivered to a live session. |
 | `created_at` | `TIMESTAMP` (default `CURRENT_TIMESTAMP`) | Insertion time, used for FIFO ordering. |
+| `instance` | `VARCHAR(200)` | Instance that moved the message to `sending`. Reverts skip messages that another instance is delivering on its own live session. |
 
 Indexes: `(connection_id)`, `(connection_id, state)`, `(created_at)`.
 
