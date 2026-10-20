@@ -17,7 +17,7 @@ suite('dynamodb client', () => {
 
   beforeAll(async () => {
     client = await DynamoDbClientRepository.initialize({
-      logger: new ConsoleLogger(LogLevel.off),
+      logger: new ConsoleLogger(LogLevel.Off),
       region: 'local',
       credentials: {
         accessKeyId: 'local',
