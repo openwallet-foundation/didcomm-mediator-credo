@@ -255,6 +255,7 @@ export class DidCommTransportQueuePostgres implements DidCommQueueTransportRepos
         AND state = 'pending' 
         ORDER BY created_at 
         LIMIT $3
+        FOR UPDATE SKIP LOCKED
       )
       RETURNING id, encrypted_message, state, created_at;
     `
