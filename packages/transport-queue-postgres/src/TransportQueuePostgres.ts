@@ -25,6 +25,10 @@ import {
 } from './interfaces.js'
 import { buildPgDatabaseWithMigrations } from './utils/buildPgDatabaseWithMigrations.js'
 
+// Arbitrary but stable key used for the reaper's advisory lock. Chosen so it
+// is unlikely to collide with advisory locks used elsewhere in the same DB.
+const REAPER_ADVISORY_LOCK_KEY = 814200381
+
 export class DidCommTransportQueuePostgres implements DidCommQueueTransportRepository {
   private logger?: Logger
   private messagesCollection?: Pool
@@ -35,14 +39,41 @@ export class DidCommTransportQueuePostgres implements DidCommQueueTransportRepos
   private postgresHost: string
   private postgresDatabaseName: string
 
+  private heartbeatIntervalMs: number
+  private instanceTimeoutMs: number
+  private reaperIntervalMs: number
+  private heartbeatTimer?: NodeJS.Timeout
+  private reaperTimer?: NodeJS.Timeout
+  // LiveSessionRemoved can fire before the LiveSessionSaved insert for the same session has landed
+  private pendingLiveSessionInserts = new Map<string, Promise<void>>()
+
   public constructor(options: PostgresTransportQueuePostgresConfig) {
-    const { logger, postgresUser, postgresPassword, postgresHost, postgresDatabaseName } = options
+    const {
+      logger,
+      postgresUser,
+      postgresPassword,
+      postgresHost,
+      postgresDatabaseName,
+      heartbeatIntervalMs,
+      instanceTimeoutMs,
+      reaperIntervalMs,
+    } = options
 
     this.logger = logger
     this.postgresUser = postgresUser
     this.postgresPassword = postgresPassword
     this.postgresHost = postgresHost
     this.postgresDatabaseName = postgresDatabaseName || 'messagepickuprepository'
+
+    this.heartbeatIntervalMs = heartbeatIntervalMs ?? 10_000
+    this.instanceTimeoutMs = instanceTimeoutMs ?? 60_000
+    this.reaperIntervalMs = reaperIntervalMs ?? 30_000
+
+    if (this.instanceTimeoutMs <= this.heartbeatIntervalMs) {
+      this.logger?.warn(
+        `[initialize] instanceTimeoutMs (${this.instanceTimeoutMs}) should be significantly larger than heartbeatIntervalMs (${this.heartbeatIntervalMs}); otherwise transient latency may cause live instances to be considered dead.`
+      )
+    }
 
     // Initialize instanceName
     this.instanceName = `${os.hostname()}-${process.pid}-${randomUUID()}`
@@ -88,17 +119,57 @@ export class DidCommTransportQueuePostgres implements DidCommQueueTransportRepos
       // Initialize Listener PUB/SUB
       await this.initializeMessageListener(agent.context, 'newMessage')
 
+      // Register this instance in the heartbeat table BEFORE running the reaper,
+      // so a concurrent reaper on another pod cannot misclassify us as dead.
+      await this.heartbeat(agent.context)
+
+      // Proactively reap any live_session rows belonging to dead instances (including
+      // our own previous incarnations: our randomUUID-scoped instanceName is fresh,
+      // so any rows carrying a previous pod's identity are by definition stale).
+      // This also recovers rows left behind by crashes that never ran `shutdown`.
+      try {
+        await this.reapStaleInstances(agent.context)
+      } catch (reapError) {
+        agent.context.config.logger.warn(`[initialize] Startup reaper pass failed: ${reapError}`)
+      }
+
+      // Start periodic heartbeat + reaper timers. The reaper uses a Postgres advisory
+      // lock so only one surviving instance actually executes the reap per tick.
+      this.heartbeatTimer = setInterval(() => {
+        this.heartbeat(agent.context).catch((err) => agent.context.config.logger.warn(`[heartbeat] Failed: ${err}`))
+      }, this.heartbeatIntervalMs)
+      this.heartbeatTimer.unref?.()
+
+      this.reaperTimer = setInterval(() => {
+        this.reapStaleInstances(agent.context).catch((err) =>
+          agent.context.config.logger.warn(`[reaper] Failed: ${err}`)
+        )
+      }, this.reaperIntervalMs)
+      this.reaperTimer.unref?.()
+
       // Register event handlers
       agent.events.on(
         DidCommMessagePickupEventTypes.LiveSessionRemoved,
         async (data: MessagePickupLiveSessionRemovedEvent) => {
-          const connectionId = data.payload.session.connectionId
-          agent.context.config.logger.info(`*** Session removed for connectionId: ${connectionId} ***`)
+          const { id: sessionId, connectionId } = data.payload.session
+          agent.context.config.logger.info(
+            `*** Session removed for connectionId: ${connectionId} (sessionId: ${sessionId}) ***`
+          )
 
           try {
-            // Verify message sending method and delete session record from DB
-            await this.checkQueueMessages(agent.context, connectionId)
-            await this.removeLiveSessionOnDb(agent.context, connectionId)
+            // Only revive 'sending' messages back to 'pending' if WE actually owned the
+            // live_session row that is being removed. Otherwise we would race against
+            // another instance that legitimately took ownership of this connection's
+            // pickup session and is currently delivering, causing duplicate delivery.
+            await this.pendingLiveSessionInserts.get(sessionId)
+            const removed = await this.removeLiveSessionOnDb(agent.context, sessionId)
+            if (removed) {
+              await this.checkQueueMessages(agent.context, connectionId, this.instanceName)
+            } else {
+              agent.context.config.logger.debug(
+                `[LiveSessionRemoved] No live_session row owned by this instance (${this.instanceName}) for sessionId ${sessionId}; skipping checkQueueMessages to avoid racing the owning instance.`
+              )
+            }
           } catch (handlerError) {
             agent.context.config.logger.error(`Error handling LiveSessionRemoved: ${handlerError}`)
           }
@@ -111,11 +182,14 @@ export class DidCommTransportQueuePostgres implements DidCommQueueTransportRepos
           const liveSessionData = data.payload.session
           agent.context.config.logger.info(`*** Session saved for connectionId: ${liveSessionData.connectionId} ***`)
 
+          const insert = this.addLiveSessionOnDb(agent.context, liveSessionData, this.instanceName)
+          this.pendingLiveSessionInserts.set(liveSessionData.id, insert)
           try {
-            // Add the live session record to the database
-            await this.addLiveSessionOnDb(agent.context, liveSessionData, this.instanceName)
+            await insert
           } catch (handlerError) {
             agent.context.config.logger.error(`Error handling LiveSessionSaved: ${handlerError}`)
+          } finally {
+            this.pendingLiveSessionInserts.delete(liveSessionData.id)
           }
         }
       )
@@ -173,7 +247,7 @@ export class DidCommTransportQueuePostgres implements DidCommQueueTransportRepos
       // Use UPDATE and RETURNING to fetch and update messages in one step
       const query = `
       UPDATE queued_message
-      SET state = 'sending'
+      SET state = 'sending', instance = $4
       WHERE id IN (
         SELECT id 
         FROM queued_message 
@@ -181,10 +255,11 @@ export class DidCommTransportQueuePostgres implements DidCommQueueTransportRepos
         AND state = 'pending' 
         ORDER BY created_at 
         LIMIT $3
+        FOR UPDATE SKIP LOCKED
       )
       RETURNING id, encrypted_message, state, created_at;
     `
-      const params = [connectionId, recipientDid, limit ?? 0]
+      const params = [connectionId, recipientDid, limit ?? 0, this.instanceName]
       const result = await this.messagesCollection?.query(query, params)
 
       if (!result || result.rows.length === 0) {
@@ -274,8 +349,8 @@ export class DidCommTransportQueuePostgres implements DidCommQueueTransportRepos
 
       // Insert message into database
       const query = `
-        INSERT INTO queued_message(connection_id, recipient_dids, encrypted_message, state, created_at) 
-        VALUES($1, $2, $3, $4, $5) 
+        INSERT INTO queued_message(connection_id, recipient_dids, encrypted_message, state, created_at, instance) 
+        VALUES($1, $2, $3, $4, $5, $6) 
         RETURNING id
       `
 
@@ -287,6 +362,7 @@ export class DidCommTransportQueuePostgres implements DidCommQueueTransportRepos
         payload,
         state,
         receivedAt,
+        localLiveSession ? this.instanceName : null,
       ])
 
       const messageRecord = result?.rows[0]
@@ -376,6 +452,40 @@ export class DidCommTransportQueuePostgres implements DidCommQueueTransportRepos
   }
 
   public async shutdown(agentContext: AgentContext) {
+    agentContext.config.logger.info('[shutdown] Stopping heartbeat/reaper timers and releasing this instance')
+
+    if (this.heartbeatTimer) {
+      clearInterval(this.heartbeatTimer)
+      this.heartbeatTimer = undefined
+    }
+    if (this.reaperTimer) {
+      clearInterval(this.reaperTimer)
+      this.reaperTimer = undefined
+    }
+
+    // Best-effort graceful handoff: release any live_session rows we still own and
+    // wake up whichever instance may hold (or later reconnect on) each connection.
+    // We don't rely on this — the reaper will catch anything we miss — but it
+    // keeps the DB clean on controlled shutdowns and avoids waiting instanceTimeoutMs.
+    try {
+      const ownRows = await this.messagesCollection?.query<{ connection_id: string }>(
+        'DELETE FROM live_session WHERE instance = $1 RETURNING connection_id',
+        [this.instanceName]
+      )
+      const connectionIds = ownRows?.rows.map((r) => r.connection_id) ?? []
+      for (const connectionId of connectionIds) {
+        await this.checkQueueMessages(agentContext, connectionId, this.instanceName)
+      }
+    } catch (cleanupError) {
+      agentContext.config.logger.warn(`[shutdown] Failed releasing own live_session rows: ${cleanupError}`)
+    }
+
+    try {
+      await this.messagesCollection?.query('DELETE FROM instance WHERE name = $1', [this.instanceName])
+    } catch (cleanupError) {
+      agentContext.config.logger.warn(`[shutdown] Failed removing own instance row: ${cleanupError}`)
+    }
+
     agentContext.config.logger.info('[shutdown] Close connection to postgres')
     await this.messagesCollection?.end()
   }
@@ -426,30 +536,144 @@ export class DidCommTransportQueuePostgres implements DidCommQueueTransportRepos
   }
 
   /**
-   * This function checks that messages from the connectionId, which were left in the 'sending'
-   * state after a liveSessionRemove event, are updated to the 'pending' state for subsequent sending
-   * @param connectionID
+   * Upserts the heartbeat row for this instance. Called once at startup and then on
+   * a timer every `heartbeatIntervalMs`. The reaper on any instance considers us
+   * alive as long as `instance.last_seen` is newer than `now() - instanceTimeoutMs`.
    */
+  private async heartbeat(agentContext: AgentContext): Promise<void> {
+    try {
+      await this.messagesCollection?.query(
+        `INSERT INTO instance (name, last_seen) VALUES ($1, now())
+         ON CONFLICT (name) DO UPDATE SET last_seen = now()`,
+        [this.instanceName]
+      )
+    } catch (error) {
+      agentContext.config.logger.warn(`[heartbeat] Failed to upsert instance row: ${error}`)
+    }
+  }
 
-  private async checkQueueMessages(agentContext: AgentContext, connectionId: string): Promise<void> {
+  /**
+   * Deletes `live_session` rows owned by instances that are either absent from the
+   * `instance` table entirely (e.g. pre-heartbeat legacy rows, or rows orphaned by
+   * an instance that was deleted but whose live_session rows were missed) or whose
+   * last heartbeat is older than `instanceTimeoutMs`.
+   *
+   * For every connection whose live session was reaped, we revive any queued
+   * messages stuck in `sending` back to `pending` and publish to the `newMessage`
+   * pub/sub channel so that an instance currently owning a (possibly new) live
+   * session for the same connection drains them immediately. If no such owner
+   * exists, the next forward addressed to that connection will correctly observe
+   * no live session, triggering a push notification via the downstream consumer.
+   *
+   * Runs under a Postgres session-level advisory lock so only one instance does
+   * the reap per tick across the cluster. Other instances simply skip this tick.
+   */
+  private async reapStaleInstances(agentContext: AgentContext): Promise<void> {
+    if (!this.messagesCollection) return
+
+    const client = await this.messagesCollection.connect()
+    try {
+      const lockResult = await client.query<{ pg_try_advisory_lock: boolean }>(
+        'SELECT pg_try_advisory_lock($1) AS pg_try_advisory_lock',
+        [REAPER_ADVISORY_LOCK_KEY]
+      )
+      const acquired = lockResult.rows[0]?.pg_try_advisory_lock === true
+      if (!acquired) {
+        agentContext.config.logger.trace?.('[reaper] Another instance holds the reaper lock; skipping tick.')
+        return
+      }
+
+      try {
+        // Delete live_session rows whose instance is either unknown or stale.
+        // Exclude our own instance as a belt-and-suspenders guard: we're alive by
+        // definition, even if our heartbeat row were somehow missing transiently.
+        const reaped = await client.query<{ connection_id: string; session_id: string; instance: string }>(
+          `DELETE FROM live_session ls
+             WHERE ls.instance <> $1
+               AND NOT EXISTS (
+                 SELECT 1 FROM instance i
+                  WHERE i.name = ls.instance
+                    AND i.last_seen >= now() - ($2::bigint * interval '1 millisecond')
+               )
+           RETURNING ls.connection_id, ls.session_id, ls.instance`,
+          [this.instanceName, this.instanceTimeoutMs]
+        )
+
+        // Drop the heartbeat rows of the now-dead instances (again excluding ourselves).
+        await client.query(
+          `DELETE FROM instance
+             WHERE name <> $1
+               AND last_seen < now() - ($2::bigint * interval '1 millisecond')`,
+          [this.instanceName, this.instanceTimeoutMs]
+        )
+
+        if (reaped.rowCount && reaped.rowCount > 0) {
+          const staleInstances = new Set(reaped.rows.map((r) => r.instance))
+          agentContext.config.logger.info(
+            `[reaper] Reaped ${reaped.rowCount} live_session row(s) from ${staleInstances.size} dead instance(s): ${[...staleInstances].join(', ')}`
+          )
+
+          // Wake up current owners (if any) and revive any stuck 'sending' messages.
+          // Dedupe in case an instance had multiple rows for one connection.
+          const reapedOwners = new Map(reaped.rows.map((r) => [`${r.connection_id} ${r.instance}`, r]))
+          for (const { connection_id, instance } of reapedOwners.values()) {
+            await this.checkQueueMessages(agentContext, connection_id, instance)
+          }
+        } else {
+          agentContext.config.logger.debug('[reaper] No stale live_session rows to reap.')
+        }
+      } finally {
+        await client.query('SELECT pg_advisory_unlock($1)', [REAPER_ADVISORY_LOCK_KEY])
+      }
+    } catch (error) {
+      agentContext.config.logger.error(`[reaper] Error during reap: ${error}`)
+    } finally {
+      client.release()
+    }
+  }
+
+  /**
+   * Reverts 'sending' messages for the given connectionId back to 'pending' (typically after a
+   * LiveSessionRemoved event on the instance that owned the session). Messages that another
+   * instance is delivering on its own live session for this connection are left alone, so they
+   * are not delivered twice. Rows with no instance predate migration 003. If any rows were
+   * reverted and another instance currently owns a live session for that connection, we publish
+   * to the 'newMessage' pub/sub channel so the owner wakes up and drains the queue immediately.
+   *
+   * Without this notification, reverted messages would remain stuck as 'pending' on the DB
+   * until an unrelated event (a new forward arriving at the owning instance, or via pubsub
+   * from a third instance) caused `deliverMessagesFromQueue` to run. In a two-pod migration
+   * scenario where a forward landed on the old pod just before its WebSocket close fired,
+   * that message could otherwise be delivered with arbitrary delay.
+   */
+  private async checkQueueMessages(agentContext: AgentContext, connectionId: string, instance: string): Promise<void> {
     try {
       agentContext.config.logger.debug(`[checkQueueMessages] Init verify messages state 'sending'`)
-      const messagesToSend = await this.messagesCollection?.query(
-        'SELECT * FROM queued_message WHERE state = $1 and connection_id = $2',
-        ['sending', connectionId]
+      const result = await this.messagesCollection?.query(
+        `UPDATE queued_message qm SET state = 'pending', instance = NULL
+         WHERE qm.state = 'sending' AND qm.connection_id = $1
+           AND (qm.instance = $2 OR qm.instance IS NULL OR NOT EXISTS (
+             SELECT 1 FROM live_session ls WHERE ls.connection_id = qm.connection_id::text AND ls.instance = qm.instance
+           ))
+         RETURNING qm.id`,
+        [connectionId, instance]
       )
-      if (messagesToSend && messagesToSend.rows.length > 0) {
-        for (const message of messagesToSend.rows) {
-          // Update the message state to 'pending'
-          await this.messagesCollection?.query('UPDATE queued_message SET state = $1 WHERE id = $2', [
-            'pending',
-            message.id,
-          ])
-        }
+      const revertedCount = result?.rowCount ?? 0
 
+      if (revertedCount > 0) {
         agentContext.config.logger.debug(
-          `[checkQueueMessages] ${messagesToSend.rows.length} messages updated to 'pending'.`
+          `[checkQueueMessages] ${revertedCount} messages reverted to 'pending' for connectionId ${connectionId}.`
         )
+
+        // Notify any other instance currently owning a live session for this connection so
+        // it can pick up the reverted messages without waiting for a new forward.
+        try {
+          await this.pubSubInstance.publish('newMessage', connectionId)
+        } catch (publishError) {
+          agentContext.config.logger.warn(
+            `[checkQueueMessages] Failed to publish 'newMessage' for connectionId ${connectionId}: ${publishError}`
+          )
+        }
       } else {
         agentContext.config.logger.debug('[checkQueueMessages] No messages in "sending" state.')
       }
@@ -543,26 +767,34 @@ export class DidCommTransportQueuePostgres implements DidCommQueueTransportRepos
   }
 
   /**
-   *This method remove connectionId record to DB upon LiveSessionRemove event
-   * @param connectionId
+   * Removes the live_session row corresponding to the given pickup session id, scoped
+   * to this instance so we never delete rows owned by another mediator pod.
+   *
+   * Multiple live_session rows can legitimately coexist for the same connection_id
+   * during a session migration between pods (the new owner inserts its row before the
+   * old owner's WebSocket close fires LiveSessionRemoved). Deleting by connection_id
+   * would wipe out the still-active row on the new owner, leaving forwarded messages
+   * with `session = undefined` in addMessage — no pubsub publish, no live delivery,
+   * and (downstream) a spurious push notification.
+   *
+   * @returns true if a row was deleted (i.e. we did own a live session for this id)
    */
-  private async removeLiveSessionOnDb(agentContext: AgentContext, connectionId: string): Promise<void> {
-    agentContext.config.logger.debug(
-      `[removeLiveSessionOnDb] initializing remove LiveSession to connectionId ${connectionId}`
-    )
-    if (!connectionId) throw new Error('connectionId is not defined')
+  private async removeLiveSessionOnDb(agentContext: AgentContext, sessionId: string): Promise<boolean> {
+    agentContext.config.logger.debug(`[removeLiveSessionOnDb] initializing remove LiveSession sessionId ${sessionId}`)
+    if (!sessionId) throw new Error('sessionId is not defined')
     try {
-      // Construct the SQL query with the placeholders
-      const query = 'DELETE FROM live_session WHERE connection_id = $1'
-
-      // Add connectionId  for query parameters
-      const queryParams = [connectionId]
-
-      await this.messagesCollection?.query(query, queryParams)
-
-      agentContext.config.logger.debug(`[removeLiveSessionOnDb] removed LiveSession to connectionId ${connectionId}`)
+      const result = await this.messagesCollection?.query(
+        'DELETE FROM live_session WHERE session_id = $1 AND instance = $2 RETURNING session_id',
+        [sessionId, this.instanceName]
+      )
+      const removed = (result?.rowCount ?? 0) > 0
+      agentContext.config.logger.debug(
+        `[removeLiveSessionOnDb] removed=${removed} LiveSession sessionId ${sessionId} instance ${this.instanceName}`
+      )
+      return removed
     } catch (error) {
       agentContext.config.logger.error(`[removeLiveSessionOnDb] Error removing LiveSession: ${error}`)
+      return false
     }
   }
 
