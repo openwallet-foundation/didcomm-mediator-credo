@@ -84,7 +84,7 @@ describe('DidCommTransportQueuePostgres delivery guarantees', () => {
     pickupApi.deliverMessages.mockReset().mockResolvedValue(undefined)
     pickupApi.deliverMessagesFromQueue.mockReset().mockResolvedValue(undefined)
 
-    logger = new ConsoleLogger(LogLevel.off)
+    logger = new ConsoleLogger(LogLevel.Off)
     vi.spyOn(logger, 'warn')
     vi.spyOn(logger, 'error')
     agentContext = {
