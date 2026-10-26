@@ -25,6 +25,7 @@ flowchart LR
 - **Graceful shutdown**: on controlled shutdown, the instance releases its `live_session` and `instance` rows and wakes any other instance that may own a live session for the affected connections.
 - **Automatic database initialization**: creates the database (if needed) and applies schema migrations on startup.
 - **Event-driven notifications**: emits a `TransportQueuePostgresMessageQueued` event every time a message is queued. External listeners can react with push notifications, webhooks, metrics, etc.
+- **Ack timeout**: messages that stay in `sending` longer than `ackTimeoutMs` without being acknowledged go back to `pending` and are delivered again. A `TransportQueuePostgresMessagesPending` event tells listeners when messages went back to `pending` without a live delivery in progress.
 
 ## How does it work?
 
@@ -119,7 +120,7 @@ sequenceDiagram
 To handle crashes where `LiveSessionRemoved` never fires, every instance:
 
 1. Registers a row in the `instance` table on startup and refreshes its `last_seen` every `heartbeatIntervalMs`.
-2. Runs a **reaper** every `reaperIntervalMs`, guarded by a Postgres session-level advisory lock so only one instance reaps per tick. The reaper deletes `live_session` rows whose owning `instance` is missing or whose `last_seen` is older than `instanceTimeoutMs`, reverts stuck `sending` messages back to `pending` (except those another instance is delivering on its own live session), and notifies the `newMessage` channel so a surviving owner (if any) resumes delivery.
+2. Runs a **reaper** every `reaperIntervalMs`, guarded by a Postgres session-level advisory lock so only one instance reaps per tick. The reaper deletes `live_session` rows whose owning `instance` is missing or whose `last_seen` is older than `instanceTimeoutMs`, reverts stuck `sending` messages back to `pending` (except those another instance is delivering on its own live session), and notifies the `newMessage` channel so a surviving owner (if any) resumes delivery. In the same tick it moves messages that have been in `sending` for longer than `ackTimeoutMs` back to `pending` and notifies the `newMessage` channel for their connections.
 3. On graceful `shutdown`, removes its own `live_session` and `instance` rows and notifies current owners so that in-flight traffic is handled without waiting for the reaper.
 
 ## Database schema
@@ -139,8 +140,10 @@ Stores persisted DIDComm messages. One row per message.
 | `state` | `message_state` enum: `pending` \| `sending` | `pending` = waiting to be picked up; `sending` = currently being delivered to a live session. |
 | `created_at` | `TIMESTAMP` (default `CURRENT_TIMESTAMP`) | Insertion time, used for FIFO ordering. |
 | `instance` | `VARCHAR(200)` | Instance that moved the message to `sending`. Reverts skip messages that another instance is delivering on its own live session. |
+| `sending_since` | `TIMESTAMPTZ` | When the message last moved to `sending`. Used by the ack timeout. |
+| `attempts` | `INTEGER NOT NULL DEFAULT 0` | How many times the message moved to `sending`. A warning is logged when a message reverted by the ack timeout went above 5. |
 
-Indexes: `(connection_id)`, `(connection_id, state)`, `(created_at)`.
+Indexes: `(connection_id)`, `(connection_id, state)`, `(created_at)`, `(sending_since) WHERE state = 'sending'`.
 
 ### `live_session`
 
@@ -201,6 +204,7 @@ const queueTransportRepository = new DidCommTransportQueuePostgres({
   heartbeatIntervalMs: 10_000,
   instanceTimeoutMs: 60_000,
   reaperIntervalMs: 30_000,
+  ackTimeoutMs: 60_000,
 })
 ```
 
@@ -241,6 +245,25 @@ Event payload shape:
   }
   session?: DidCommMessagePickupSession // present when a live session is known (local or on another instance)
 }
+```
+
+### Handling the `TransportQueuePostgresMessagesPending` event
+
+The event carries only `{ connectionId }`. It is emitted when a live session ends on this instance with messages moved back to `pending`, when the reaper removes a stale live session, when the ack timeout moves messages back to `pending`, and when a live delivery fails in `addMessage`. It is not emitted for every queued message, so listeners typically wait a while and then wake the recipient if messages are still pending and nobody holds a live session:
+
+```ts
+import {
+  PostgresMessagesPendingEvent,
+  PostgresMessagesPendingEventType,
+} from '@credo-ts/didcomm-transport-queue-postgres'
+
+agent.events.on<PostgresMessagesPendingEvent>(PostgresMessagesPendingEventType, ({ payload: { connectionId } }) => {
+  setTimeout(async () => {
+    const pending = await queueTransportRepository.getAvailableMessageCount(agent.context, { connectionId })
+    const liveSession = await queueTransportRepository.findLiveSessionInDb(agent.context, connectionId)
+    if (pending > 0 && !liveSession) await notificationService.notify(connectionId)
+  }, 60_000)
+})
 ```
 
 ### Wiring it into an agent
