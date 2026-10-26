@@ -27,6 +27,12 @@ export interface PostgresTransportQueuePostgresConfig {
    * reaper per tick (protected by a Postgres advisory lock). Defaults to 30_000ms.
    */
   reaperIntervalMs?: number
+
+  /**
+   * How long a message can stay in `sending` without being acknowledged before the
+   * reaper moves it back to `pending`. Defaults to 60_000ms.
+   */
+  ackTimeoutMs?: number
 }
 
 export const PostgresMessageQueuedEventType = 'TransportQueuePostgresMessageQueued' as const
@@ -43,6 +49,18 @@ export interface PostgresMessageQueuedEvent extends BaseEvent {
       state: 'pending' | 'sending'
     }
     session?: DidCommMessagePickupSession
+  }
+}
+
+export const PostgresMessagesPendingEventType = 'TransportQueuePostgresMessagesPending' as const
+
+/**
+ * Emitted when messages for a connection went back to `pending` with no live delivery in progress.
+ */
+export interface PostgresMessagesPendingEvent extends BaseEvent {
+  type: typeof PostgresMessagesPendingEventType
+  payload: {
+    connectionId: string
   }
 }
 

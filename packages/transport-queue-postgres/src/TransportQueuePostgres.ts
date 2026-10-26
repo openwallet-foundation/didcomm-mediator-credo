@@ -15,12 +15,14 @@ import {
   RemoveMessagesOptions,
   TakeFromQueueOptions,
 } from '@credo-ts/didcomm'
-import { Pool } from 'pg'
+import { Pool, PoolClient } from 'pg'
 import PGPubsub from 'pg-pubsub'
 import {
   ExtendedMessagePickupSession,
   PostgresMessageQueuedEvent,
   PostgresMessageQueuedEventType,
+  PostgresMessagesPendingEvent,
+  PostgresMessagesPendingEventType,
   PostgresTransportQueuePostgresConfig,
 } from './interfaces.js'
 import { buildPgDatabaseWithMigrations } from './utils/buildPgDatabaseWithMigrations.js'
@@ -28,6 +30,9 @@ import { buildPgDatabaseWithMigrations } from './utils/buildPgDatabaseWithMigrat
 // Arbitrary but stable key used for the reaper's advisory lock. Chosen so it
 // is unlikely to collide with advisory locks used elsewhere in the same DB.
 const REAPER_ADVISORY_LOCK_KEY = 814200381
+const SENDING_INDEX_ADVISORY_LOCK_KEY = 814200382
+
+const ATTEMPTS_WARNING_THRESHOLD = 5
 
 export class DidCommTransportQueuePostgres implements DidCommQueueTransportRepository {
   private logger?: Logger
@@ -42,6 +47,7 @@ export class DidCommTransportQueuePostgres implements DidCommQueueTransportRepos
   private heartbeatIntervalMs: number
   private instanceTimeoutMs: number
   private reaperIntervalMs: number
+  private ackTimeoutMs: number
   private heartbeatTimer?: NodeJS.Timeout
   private reaperTimer?: NodeJS.Timeout
   // LiveSessionRemoved can fire before the LiveSessionSaved insert for the same session has landed
@@ -57,6 +63,7 @@ export class DidCommTransportQueuePostgres implements DidCommQueueTransportRepos
       heartbeatIntervalMs,
       instanceTimeoutMs,
       reaperIntervalMs,
+      ackTimeoutMs,
     } = options
 
     this.logger = logger
@@ -68,6 +75,7 @@ export class DidCommTransportQueuePostgres implements DidCommQueueTransportRepos
     this.heartbeatIntervalMs = heartbeatIntervalMs ?? 10_000
     this.instanceTimeoutMs = instanceTimeoutMs ?? 60_000
     this.reaperIntervalMs = reaperIntervalMs ?? 30_000
+    this.ackTimeoutMs = ackTimeoutMs ?? 60_000
 
     if (this.instanceTimeoutMs <= this.heartbeatIntervalMs) {
       this.logger?.warn(
@@ -115,6 +123,12 @@ export class DidCommTransportQueuePostgres implements DidCommQueueTransportRepos
         database: this.postgresDatabaseName,
         port: 5432,
       })
+
+      this.createSendingIndex().catch((error) =>
+        agent.context.config.logger.warn(
+          `[initialize] Failed to create index queued_message_sending_since_idx: ${error}`
+        )
+      )
 
       // Initialize Listener PUB/SUB
       await this.initializeMessageListener(agent.context, 'newMessage')
@@ -164,7 +178,8 @@ export class DidCommTransportQueuePostgres implements DidCommQueueTransportRepos
             await this.pendingLiveSessionInserts.get(sessionId)
             const removed = await this.removeLiveSessionOnDb(agent.context, sessionId)
             if (removed) {
-              await this.checkQueueMessages(agent.context, connectionId, this.instanceName)
+              const reverted = await this.checkQueueMessages(agent.context, connectionId, this.instanceName)
+              if (reverted > 0) this.emitMessagesPendingEvent(agent.context, connectionId)
             } else {
               agent.context.config.logger.debug(
                 `[LiveSessionRemoved] No live_session row owned by this instance (${this.instanceName}) for sessionId ${sessionId}; skipping checkQueueMessages to avoid racing the owning instance.`
@@ -247,7 +262,7 @@ export class DidCommTransportQueuePostgres implements DidCommQueueTransportRepos
       // Use UPDATE and RETURNING to fetch and update messages in one step
       const query = `
       UPDATE queued_message
-      SET state = 'sending', instance = $4
+      SET state = 'sending', instance = $4, sending_since = now(), attempts = attempts + 1
       WHERE id IN (
         SELECT id 
         FROM queued_message 
@@ -349,8 +364,8 @@ export class DidCommTransportQueuePostgres implements DidCommQueueTransportRepos
 
       // Insert message into database
       const query = `
-        INSERT INTO queued_message(connection_id, recipient_dids, encrypted_message, state, created_at, instance) 
-        VALUES($1, $2, $3, $4, $5, $6) 
+        INSERT INTO queued_message(connection_id, recipient_dids, encrypted_message, state, created_at, instance, sending_since, attempts)
+        VALUES($1, $2, $3, $4, $5, $6, CASE WHEN $7::boolean THEN now() END, $8)
         RETURNING id
       `
 
@@ -363,6 +378,8 @@ export class DidCommTransportQueuePostgres implements DidCommQueueTransportRepos
         state,
         receivedAt,
         localLiveSession ? this.instanceName : null,
+        Boolean(localLiveSession),
+        localLiveSession ? 1 : 0,
       ])
 
       const messageRecord = result?.rows[0]
@@ -390,10 +407,28 @@ export class DidCommTransportQueuePostgres implements DidCommQueueTransportRepos
         agentContext.config.logger.debug(`[addMessage] Local live session exists for connectionId: ${connectionId}`)
 
         const messagePickupApi = agentContext.resolve(DidCommMessagePickupApi)
-        await messagePickupApi.deliverMessages({
-          pickupSessionId: localLiveSession.id,
-          messages: [{ id: messageRecord.id, encryptedMessage: payload, receivedAt }],
-        })
+        try {
+          await messagePickupApi.deliverMessages({
+            pickupSessionId: localLiveSession.id,
+            messages: [{ id: messageRecord.id, encryptedMessage: payload, receivedAt }],
+          })
+        } catch (deliveryError) {
+          agentContext.config.logger.warn(
+            `[addMessage] Live delivery failed for connectionId: ${connectionId}, moving message ${messageRecord.id} back to 'pending': ${deliveryError}`
+          )
+          await this.messagesCollection.query(
+            `UPDATE queued_message SET state = 'pending', instance = NULL, sending_since = NULL WHERE id = $1 AND state = 'sending' AND instance = $2`,
+            [messageRecord.id, this.instanceName]
+          )
+          try {
+            await this.pubSubInstance.publish('newMessage', connectionId)
+          } catch (publishError) {
+            agentContext.config.logger.warn(
+              `[addMessage] Failed to publish 'newMessage' for connectionId ${connectionId}: ${publishError}`
+            )
+          }
+          this.emitMessagesPendingEvent(agentContext, connectionId)
+        }
       } else if (liveSessionInPostgres) {
         agentContext.config.logger.debug(
           `[addMessage] Publishing new message event to Pub/Sub channel for connectionId: ${connectionId}`
@@ -516,9 +551,16 @@ export class DidCommTransportQueuePostgres implements DidCommQueueTransportRepos
 
           const messagePickupApi = agentContext.resolve(DidCommMessagePickupApi)
           // Deliver messages from the queue for the live session
-          await messagePickupApi.deliverMessagesFromQueue({
-            pickupSessionId: pickupLiveSession.id,
-          })
+          // pg-pubsub ignores this listener's promise, so a rejection would crash the process
+          try {
+            await messagePickupApi.deliverMessagesFromQueue({
+              pickupSessionId: pickupLiveSession.id,
+            })
+          } catch (error) {
+            agentContext.config.logger.error(
+              `[initializeMessageListener] Failed to deliver queued messages for connectionId: ${connectionId}: ${error}`
+            )
+          }
         } else {
           agentContext.config.logger.debug(
             `[initializeMessageListener] No LiveSession found on channel: ${channel} for connectionId: ${connectionId}.`
@@ -619,14 +661,86 @@ export class DidCommTransportQueuePostgres implements DidCommQueueTransportRepos
           for (const { connection_id, instance } of reapedOwners.values()) {
             await this.checkQueueMessages(agentContext, connection_id, instance)
           }
+          for (const connectionId of new Set(reaped.rows.map((r) => r.connection_id))) {
+            this.emitMessagesPendingEvent(agentContext, connectionId)
+          }
         } else {
           agentContext.config.logger.debug('[reaper] No stale live_session rows to reap.')
         }
+
+        await this.revertUnackedMessages(agentContext, client)
       } finally {
         await client.query('SELECT pg_advisory_unlock($1)', [REAPER_ADVISORY_LOCK_KEY])
       }
     } catch (error) {
       agentContext.config.logger.error(`[reaper] Error during reap: ${error}`)
+    } finally {
+      client.release()
+    }
+  }
+
+  private async revertUnackedMessages(agentContext: AgentContext, client: PoolClient): Promise<void> {
+    // Instances older than migration 004 do not set sending_since, so their rows get a full ack timeout from now.
+    await client.query(
+      `UPDATE queued_message SET sending_since = now() WHERE state = 'sending' AND sending_since IS NULL`
+    )
+    const reverted = await client.query<{ id: string; connection_id: string; attempts: number }>(
+      `UPDATE queued_message SET state = 'pending', instance = NULL, sending_since = NULL
+         WHERE state = 'sending' AND sending_since < now() - ($1::bigint * interval '1 millisecond')
+       RETURNING id, connection_id, attempts`,
+      [this.ackTimeoutMs]
+    )
+    if (!reverted.rowCount) return
+
+    const connectionIds = new Set(reverted.rows.map((r) => r.connection_id))
+    agentContext.config.logger.info(
+      `[reaper] ${reverted.rowCount} message(s) unacked for ${this.ackTimeoutMs}ms reverted to 'pending' for ${connectionIds.size} connection(s)`
+    )
+
+    const retried = reverted.rows.filter((r) => r.attempts > ATTEMPTS_WARNING_THRESHOLD)
+    if (retried.length > 0) {
+      agentContext.config.logger.warn(
+        `[reaper] Message(s) sent more than ${ATTEMPTS_WARNING_THRESHOLD} times without an ack: ${retried.map((r) => `${r.id} (connectionId ${r.connection_id}, attempts ${r.attempts})`).join(', ')}`
+      )
+    }
+
+    for (const connectionId of connectionIds) {
+      try {
+        await this.pubSubInstance.publish('newMessage', connectionId)
+      } catch (publishError) {
+        agentContext.config.logger.warn(
+          `[reaper] Failed to publish 'newMessage' for connectionId ${connectionId}: ${publishError}`
+        )
+      }
+      this.emitMessagesPendingEvent(agentContext, connectionId)
+    }
+  }
+
+  // Not a migration: CONCURRENTLY keeps queued_message writable during the build but cannot run in the migration transaction
+  private async createSendingIndex(): Promise<void> {
+    if (!this.messagesCollection) return
+
+    const client = await this.messagesCollection.connect()
+    try {
+      const lockResult = await client.query<{ pg_try_advisory_lock: boolean }>(
+        'SELECT pg_try_advisory_lock($1) AS pg_try_advisory_lock',
+        [SENDING_INDEX_ADVISORY_LOCK_KEY]
+      )
+      if (lockResult.rows[0]?.pg_try_advisory_lock !== true) return
+
+      try {
+        const index = await client.query<{ indisvalid: boolean }>(
+          `SELECT indisvalid FROM pg_index WHERE indexrelid = to_regclass('queued_message_sending_since_idx')`
+        )
+        if (index.rows[0]?.indisvalid) return
+        // An interrupted build leaves an invalid index behind that the planner never uses
+        if (index.rows[0]) await client.query('DROP INDEX CONCURRENTLY queued_message_sending_since_idx')
+        await client.query(
+          `CREATE INDEX CONCURRENTLY queued_message_sending_since_idx ON queued_message (sending_since) WHERE state = 'sending'`
+        )
+      } finally {
+        await client.query('SELECT pg_advisory_unlock($1)', [SENDING_INDEX_ADVISORY_LOCK_KEY])
+      }
     } finally {
       client.release()
     }
@@ -646,11 +760,15 @@ export class DidCommTransportQueuePostgres implements DidCommQueueTransportRepos
    * scenario where a forward landed on the old pod just before its WebSocket close fired,
    * that message could otherwise be delivered with arbitrary delay.
    */
-  private async checkQueueMessages(agentContext: AgentContext, connectionId: string, instance: string): Promise<void> {
+  private async checkQueueMessages(
+    agentContext: AgentContext,
+    connectionId: string,
+    instance: string
+  ): Promise<number> {
     try {
       agentContext.config.logger.debug(`[checkQueueMessages] Init verify messages state 'sending'`)
       const result = await this.messagesCollection?.query(
-        `UPDATE queued_message qm SET state = 'pending', instance = NULL
+        `UPDATE queued_message qm SET state = 'pending', instance = NULL, sending_since = NULL
          WHERE qm.state = 'sending' AND qm.connection_id = $1
            AND (qm.instance = $2 OR qm.instance IS NULL OR NOT EXISTS (
              SELECT 1 FROM live_session ls WHERE ls.connection_id = qm.connection_id::text AND ls.instance = qm.instance
@@ -677,8 +795,10 @@ export class DidCommTransportQueuePostgres implements DidCommQueueTransportRepos
       } else {
         agentContext.config.logger.debug('[checkQueueMessages] No messages in "sending" state.')
       }
+      return revertedCount
     } catch (error) {
       agentContext.config.logger.error(`[checkQueueMessages] Error processing messages: ${error}`)
+      return 0
     }
   }
 
@@ -710,7 +830,7 @@ export class DidCommTransportQueuePostgres implements DidCommQueueTransportRepos
    * @param connectionId
    * @returns liveSession object or false
    */
-  private async findLiveSessionInDb(
+  public async findLiveSessionInDb(
     agentContext: AgentContext,
     connectionId: string
   ): Promise<ExtendedMessagePickupSession | undefined> {
@@ -796,6 +916,13 @@ export class DidCommTransportQueuePostgres implements DidCommQueueTransportRepos
       agentContext.config.logger.error(`[removeLiveSessionOnDb] Error removing LiveSession: ${error}`)
       return false
     }
+  }
+
+  private emitMessagesPendingEvent(agentContext: AgentContext, connectionId: string): void {
+    agentContext.resolve(EventEmitter).emit<PostgresMessagesPendingEvent>(agentContext, {
+      type: PostgresMessagesPendingEventType,
+      payload: { connectionId },
+    })
   }
 
   /**
