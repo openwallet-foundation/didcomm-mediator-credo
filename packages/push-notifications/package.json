@@ -34,7 +34,7 @@
     "typescript": "catalog:"
   },
   "peerDependencies": {
-    "@credo-ts/core": "catalog:",
-    "@credo-ts/didcomm": "catalog:"
+    "@credo-ts/core": "^0.6.0 || ^0.7.0",
+    "@credo-ts/didcomm": "^0.6.0 || ^0.7.0"
   }
 }

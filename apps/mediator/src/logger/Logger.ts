@@ -8,13 +8,13 @@ export class Logger extends BaseLogger {
 
   // Map our log levels to tslog levels
   private tsLogLevelMap = {
-    [LogLevel.test]: 'silly',
-    [LogLevel.trace]: 'trace',
-    [LogLevel.debug]: 'debug',
-    [LogLevel.info]: 'info',
-    [LogLevel.warn]: 'warn',
-    [LogLevel.error]: 'error',
-    [LogLevel.fatal]: 'fatal',
+    [LogLevel.Test]: 'silly',
+    [LogLevel.Trace]: 'trace',
+    [LogLevel.Debug]: 'debug',
+    [LogLevel.Info]: 'info',
+    [LogLevel.Warn]: 'warn',
+    [LogLevel.Error]: 'error',
+    [LogLevel.Fatal]: 'fatal',
   } as const
 
   public constructor(logLevel: LogLevel) {
@@ -27,10 +27,10 @@ export class Logger extends BaseLogger {
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: no explanation
-  private log(level: Exclude<LogLevel, LogLevel.off>, message: string, data?: Record<string, any>): void {
+  private log(level: Exclude<LogLevel, LogLevel.Off>, message: string, data?: Record<string, any>): void {
     const tsLogLevel = this.tsLogLevelMap[level]
 
-    if (this.logLevel === LogLevel.off) return
+    if (this.logLevel === LogLevel.Off) return
 
     if (data) {
       this.logger[tsLogLevel](message, JSON.parse(JSON.stringify(data, replaceError, 2)))
@@ -41,36 +41,36 @@ export class Logger extends BaseLogger {
 
   // biome-ignore lint/suspicious/noExplicitAny: no explanation
   public test(message: string, data?: Record<string, any>): void {
-    this.log(LogLevel.test, message, data)
+    this.log(LogLevel.Test, message, data)
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: no explanation
   public trace(message: string, data?: Record<string, any>): void {
-    this.log(LogLevel.trace, message, data)
+    this.log(LogLevel.Trace, message, data)
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: no explanation
   public debug(message: string, data?: Record<string, any>): void {
-    this.log(LogLevel.debug, message, data)
+    this.log(LogLevel.Debug, message, data)
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: no explanation
   public info(message: string, data?: Record<string, any>): void {
-    this.log(LogLevel.info, message, data)
+    this.log(LogLevel.Info, message, data)
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: no explanation
   public warn(message: string, data?: Record<string, any>): void {
-    this.log(LogLevel.warn, message, data)
+    this.log(LogLevel.Warn, message, data)
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: no explanation
   public error(message: string, data?: Record<string, any>): void {
-    this.log(LogLevel.error, message, data)
+    this.log(LogLevel.Error, message, data)
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: no explanation
   public fatal(message: string, data?: Record<string, any>): void {
-    this.log(LogLevel.fatal, message, data)
+    this.log(LogLevel.Fatal, message, data)
   }
 }

@@ -44,7 +44,7 @@
     "@credo-ts/node": "catalog:",
     "@credo-ts/redis-cache": "catalog:",
     "@libsql/client": "^0.15.15",
-    "@openwallet-foundation/askar-nodejs": "^0.4.3",
+    "@openwallet-foundation/askar-nodejs": "^0.6.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.2",
     "drizzle-orm": "^0.44.7",

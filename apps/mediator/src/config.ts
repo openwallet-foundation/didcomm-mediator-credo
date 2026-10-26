@@ -370,7 +370,18 @@ const zConfig = z
 
 export type Config = z.infer<typeof zConfig>
 export const config = loadMediatorConfig()
-export const logger = new Logger(LogLevel[config.logLevel])
+
+const logLevels = {
+  trace: LogLevel.Trace,
+  debug: LogLevel.Debug,
+  info: LogLevel.Info,
+  warn: LogLevel.Warn,
+  error: LogLevel.Error,
+  fatal: LogLevel.Fatal,
+  off: LogLevel.Off,
+} satisfies Record<Config['logLevel'], LogLevel>
+
+export const logger = new Logger(logLevels[config.logLevel])
 
 function loadMediatorConfig(): Config {
   try {
