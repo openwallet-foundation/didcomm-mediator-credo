@@ -23,7 +23,9 @@
   },
   "messagePickup": {
     "storage": {
-      "type": "dynamodb",
+      "type": "dynamodb"
+    },
+    "dynamodb": {
       "region": "eu-central-1",
       "accessKeyId": "09f2bab2-7c60-42dc-82b7-61299ec678e9",
       "secretAccessKey": "4487e488-9f17-4f0f-89fd-7f63e4feab7f"

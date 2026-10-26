@@ -4,6 +4,10 @@ import { defineConfig } from 'vite'
 export default defineConfig({
   resolve: {
     alias: {
+      '@credo-ts/didcomm-transport-queue-cosmosdb': path.resolve(
+        import.meta.dirname,
+        './packages/transport-queue-cosmosdb/src/index.ts'
+      ),
       '@credo-ts/didcomm-transport-queue-dynamodb': path.resolve(
         import.meta.dirname,
         './packages/transport-queue-dynamodb/src/index.ts'

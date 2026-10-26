@@ -1,0 +1,164 @@
+import { randomUUID } from 'node:crypto'
+import { ConsoleLogger, LogLevel } from '@credo-ts/core'
+import { DidCommEncryptedMessage } from '@credo-ts/didcomm'
+import { afterEach, beforeAll, expect, suite, test } from 'vitest'
+import { CosmosDbClientRepository } from '../src/client.js'
+
+const connectionId = randomUUID()
+const recipientDids = ['did:key:123', 'did:jwk:123', 'did:peer:3abba']
+const encryptedMessage: DidCommEncryptedMessage = {
+  ciphertext: 'ciphertext',
+  iv: 'iv',
+  protected: 'protected',
+  tag: 'tag',
+}
+
+/**
+ * NOTE:
+ * These tests require a running Cosmos DB emulator or actual Cosmos DB instance.
+ * For local development, use the Azure Cosmos DB Emulator:
+ * https://docs.microsoft.com/en-us/azure/cosmos-db/local-emulator
+ *
+ * Default emulator settings:
+ * - Endpoint: https://localhost:8081
+ * - Key: C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==
+ * IMPORTANT: the key is well-known and should not be used for production or shared environments.
+ */
+suite('cosmosdb client', () => {
+  let client: CosmosDbClientRepository | undefined
+  let skipTests = false
+
+  beforeAll(async () => {
+    // Skip tests if Cosmos DB emulator is not running
+    try {
+      client = await CosmosDbClientRepository.initialize({
+        logger: new ConsoleLogger(LogLevel.off),
+        endpoint: process.env.COSMOSDB_ENDPOINT ?? 'https://localhost:8081',
+        key:
+          process.env.COSMOSDB_KEY ??
+          'C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==',
+        databaseName: 'test-didcomm-mediator',
+        containerName: 'test-queued-messages',
+      })
+    } catch {
+      console.log('Skipping Cosmos DB tests - emulator not running')
+      skipTests = true
+    }
+  })
+
+  afterEach(async () => {
+    if (skipTests || !client) return
+    // Purge all messages for connectionId so each test starts clean
+    await client.getMessages({ connectionId, deleteMessages: true })
+  })
+
+  test('initialize', async (ctx) => {
+    if (skipTests) return ctx.skip()
+    expect(client).toBeDefined()
+  })
+
+  test('add a message', async (ctx) => {
+    if (skipTests || !client) return ctx.skip()
+
+    const id = await client.addMessage({
+      connectionId,
+      receivedAt: new Date(),
+      encryptedMessage,
+      recipientDids,
+    })
+
+    expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i)
+  })
+
+  test('get count', async (ctx) => {
+    if (skipTests || !client) return ctx.skip()
+
+    // Set up known state: add exactly one message
+    await client.addMessage({ connectionId, receivedAt: new Date(), encryptedMessage, recipientDids })
+
+    const count = await client.getMessageCount(connectionId)
+    expect(count).toBe(1)
+  })
+
+  test('get a message', async (ctx) => {
+    if (skipTests || !client) return ctx.skip()
+
+    await client.addMessage({ connectionId, receivedAt: new Date(), encryptedMessage, recipientDids })
+
+    const messages = await client.getMessages({
+      connectionId,
+      limit: 1,
+    })
+
+    expect(messages.length).toStrictEqual(1)
+
+    const [message] = messages
+
+    expect(message.connectionId).toStrictEqual(connectionId)
+    expect(message.receivedAt).toBeInstanceOf(Date)
+    expect(message.encryptedMessage).toEqual(encryptedMessage)
+    expect(message.recipientDids).toEqual(recipientDids)
+  })
+
+  test('get a message and filter on recipient did', async (ctx) => {
+    if (skipTests || !client) return ctx.skip()
+
+    await client.addMessage({ connectionId, receivedAt: new Date(), encryptedMessage, recipientDids })
+
+    const messages = await client.getMessages({
+      connectionId,
+      limit: 1,
+      recipientDid: recipientDids[0],
+    })
+
+    expect(messages.length).toStrictEqual(1)
+
+    const [message] = messages
+
+    expect(message.connectionId).toStrictEqual(connectionId)
+    expect(message.receivedAt).toBeInstanceOf(Date)
+    expect(message.encryptedMessage).toEqual(encryptedMessage)
+    expect(message.recipientDids).toEqual(recipientDids)
+  })
+
+  test('get message and remove a message', async (ctx) => {
+    if (skipTests || !client) return ctx.skip()
+
+    // Add two messages so deleting via getMessages (deleteMessages: true) produces a measurable change
+    await client.addMessage({ connectionId, receivedAt: new Date(), encryptedMessage, recipientDids })
+    await client.addMessage({ connectionId, receivedAt: new Date(), encryptedMessage, recipientDids })
+
+    const count = await client.getMessageCount(connectionId)
+
+    await client.getMessages({
+      connectionId,
+      deleteMessages: true,
+    })
+
+    const countAfterDelete = await client.getMessageCount(connectionId)
+
+    expect(count).toBeGreaterThan(countAfterDelete)
+  })
+
+  test('add and explicit delete', async (ctx) => {
+    if (skipTests || !client) return ctx.skip()
+
+    const id = await client.addMessage({
+      connectionId,
+      encryptedMessage,
+      receivedAt: new Date(),
+      recipientDids,
+    })
+
+    const countBefore = await client.getMessageCount(connectionId)
+
+    await client.removeMessages({
+      connectionId,
+      messageIds: [id],
+    })
+
+    const countAfter = await client.getMessageCount(connectionId)
+
+    expect(countBefore).toBeGreaterThan(countAfter)
+  })
+})
