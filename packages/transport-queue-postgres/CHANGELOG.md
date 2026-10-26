@@ -1,5 +1,11 @@
 # @credo-ts/didcomm-transport-queue-postgres
 
+## 0.0.3
+
+### Patch Changes
+
+- d986627: fix: failed live deliveries go back to `pending` right away and unacked ones after `ackTimeoutMs` (default 60s). A new `TransportQueuePostgresMessagesPending` event tells listeners when to wake the recipient. Messages already stuck in `sending` are delivered again once after upgrading.
+
 ## 0.0.2
 
 ### Patch Changes
