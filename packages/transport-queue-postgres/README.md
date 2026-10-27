@@ -143,7 +143,7 @@ Stores persisted DIDComm messages. One row per message.
 | `sending_since` | `TIMESTAMPTZ` | When the message last moved to `sending`. Used by the ack timeout. |
 | `attempts` | `INTEGER NOT NULL DEFAULT 0` | How many times the message moved to `sending`. A warning is logged when a message reverted by the ack timeout went above 5. |
 
-Indexes: `(connection_id)`, `(connection_id, state)`, `(created_at)`, `(sending_since) WHERE state = 'sending'`.
+Indexes: `(connection_id)`, `(connection_id, state)`, `(created_at)`, `(sending_since) WHERE state = 'sending'`, `GIN (recipient_dids)`. The last two are built with `CREATE INDEX CONCURRENTLY` on startup rather than in a migration, so large tables stay writable.
 
 ### `live_session`
 

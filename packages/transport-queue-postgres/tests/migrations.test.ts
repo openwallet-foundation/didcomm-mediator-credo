@@ -1,16 +1,8 @@
-import { randomUUID } from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
-import { Client } from 'pg'
 import { afterAll, beforeAll, describe, expect, test } from 'vitest'
 import { buildPgDatabaseWithMigrations } from '../src/utils/buildPgDatabaseWithMigrations.js'
-
-const postgresConfig = {
-  user: process.env.POSTGRES_USER ?? 'postgres',
-  password: process.env.POSTGRES_PASSWORD ?? 'postgres',
-  host: process.env.POSTGRES_HOST ?? 'localhost',
-  port: Number(process.env.POSTGRES_PORT ?? 5432),
-}
+import { dropDatabase, postgresConfig, uniqueDatabaseName, withClient } from './postgres.js'
 
 const migrationsDir = path.resolve(import.meta.dirname, '../migrations')
 const liveModePostgresMigrationsDir = path.resolve(import.meta.dirname, 'fixtures/live-mode-postgres')
@@ -19,19 +11,8 @@ const tables = ['queued_message', 'live_session', 'instance']
 const liveModePostgresOnlyColumns = ['live_session.expires_at']
 const liveModePostgresOnlyIndexes = ['live_session_expires_at_idx', 'queued_message_recipient_dids_gin_idx']
 
-const suffix = randomUUID().replace(/-/g, '').slice(0, 12)
-const ourDatabase = `tq_migrations_ours_${suffix}`
-const liveModePostgresDatabase = `tq_migrations_live_mode_${suffix}`
-
-async function withClient<T>(database: string | undefined, run: (client: Client) => Promise<T>): Promise<T> {
-  const client = new Client({ ...postgresConfig, database })
-  await client.connect()
-  try {
-    return await run(client)
-  } finally {
-    await client.end()
-  }
-}
+const ourDatabase = uniqueDatabaseName('tq_migrations_ours')
+const liveModePostgresDatabase = uniqueDatabaseName('tq_migrations_live_mode')
 
 // Recreates a database last migrated by live-mode-postgres: the shared 001, its own 002-004, schema_version 4.
 async function createLiveModePostgresDatabase() {
@@ -87,10 +68,8 @@ describe('migrations', () => {
   }, 30_000)
 
   afterAll(async () => {
-    await withClient(undefined, async (client) => {
-      await client.query(`DROP DATABASE IF EXISTS ${ourDatabase} WITH (FORCE)`)
-      await client.query(`DROP DATABASE IF EXISTS ${liveModePostgresDatabase} WITH (FORCE)`)
-    })
+    await dropDatabase(ourDatabase)
+    await dropDatabase(liveModePostgresDatabase)
   }, 30_000)
 
   test('a database created by live-mode-postgres converges on our schema', async () => {
