@@ -1,8 +1,10 @@
-import { AgentContext, EventEmitter, RecordNotFoundError, utils } from '@credo-ts/core'
-import type {
+import { Agent, AgentContext, EventEmitter, RecordNotFoundError, utils } from '@credo-ts/core'
+import {
   AddMessageOptions,
+  DidCommMessagePickupEventTypes,
   DidCommQueueTransportRepository,
   GetAvailableMessageCountOptions,
+  MessagePickupLiveSessionRemovedEvent,
   QueuedDidCommMessage,
   RemoveMessagesOptions,
   TakeFromQueueOptions,
@@ -18,12 +20,34 @@ export class StorageServiceMessageQueue implements DidCommQueueTransportReposito
    * first acknowledgement returns, so without a lease every forward reads and
    * delivers the same records again.
    *
-   * Leases are local to this single-instance storage backend. They expire so a
-   * message remains recoverable if a recipient disconnects before acknowledging
-   * delivery.
+   * Leases are instance-local, including when Credo storage is shared across
+   * instances with Redis multi-instance delivery. Redis routes delivery to the
+   * instance owning the live session. Reconnecting to another instance can
+   * redeliver in-flight messages, preserving at-least-once delivery semantics.
+   * Leases are released when a live session is removed and expire as a fallback
+   * so unacknowledged messages remain recoverable.
    */
-  private readonly deliveryLeases = new Map<string, number>()
-  private readonly deliveryLeaseDurationMs = 30_000
+  private readonly deliveryLeases = new Map<string, { connectionId: string; expiresAt: number }>()
+  private readonly ackTimeoutMs: number
+
+  public constructor(options: { ackTimeoutMs?: number } = {}) {
+    this.ackTimeoutMs = options.ackTimeoutMs ?? 60_000
+  }
+
+  public async initialize(agent: Agent): Promise<void> {
+    agent.events.on(
+      DidCommMessagePickupEventTypes.LiveSessionRemoved,
+      (event: MessagePickupLiveSessionRemovedEvent) => {
+        this.releaseLeases(event.payload.session.connectionId)
+      }
+    )
+  }
+
+  public releaseLeases(connectionId: string): void {
+    for (const [messageId, lease] of this.deliveryLeases) {
+      if (lease.connectionId === connectionId) this.deliveryLeases.delete(messageId)
+    }
+  }
 
   public async getAvailableMessageCount(agentContext: AgentContext, options: GetAvailableMessageCountOptions) {
     const { connectionId } = options
@@ -31,9 +55,16 @@ export class StorageServiceMessageQueue implements DidCommQueueTransportReposito
     const messageRepository = agentContext.resolve(MessageRepository)
     const messageRecords = await messageRepository.findByConnectionId(agentContext, connectionId)
 
-    agentContext.config.logger.debug(`Found ${messageRecords.length} messages for connection ${connectionId}`)
+    this.clearExpiredDeliveryLeases(Date.now())
+    const availableMessageCount = messageRecords.filter(
+      (messageRecord) => !this.deliveryLeases.has(messageRecord.id)
+    ).length
 
-    return messageRecords.length
+    agentContext.config.logger.debug(
+      `Found ${availableMessageCount} available messages for connection ${connectionId}`
+    )
+
+    return availableMessageCount
   }
 
   public async takeFromQueue(
@@ -66,7 +97,7 @@ export class StorageServiceMessageQueue implements DidCommQueueTransportReposito
       })
     } else {
       for (const messageRecord of messageRecordsToReturn) {
-        this.deliveryLeases.set(messageRecord.id, now + this.deliveryLeaseDurationMs)
+        this.deliveryLeases.set(messageRecord.id, { connectionId, expiresAt: now + this.ackTimeoutMs })
       }
     }
 
@@ -126,8 +157,8 @@ export class StorageServiceMessageQueue implements DidCommQueueTransportReposito
   }
 
   private clearExpiredDeliveryLeases(now: number) {
-    for (const [messageId, expiresAt] of this.deliveryLeases) {
-      if (expiresAt <= now) this.deliveryLeases.delete(messageId)
+    for (const [messageId, lease] of this.deliveryLeases) {
+      if (lease.expiresAt <= now) this.deliveryLeases.delete(messageId)
     }
   }
 
