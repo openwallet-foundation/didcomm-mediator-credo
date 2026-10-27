@@ -245,6 +245,15 @@ const zConfig = z
           .default({
             type: 'none',
           }),
+        implicitLiveMode: z
+          .enum(['true', 'false'], {
+            error:
+              "Message pickup implicit live mode must be a boolean. Can also be set using 'MESSAGE_PICKUP__IMPLICIT_LIVE_MODE' environment variable",
+          })
+          .transform((v) => v === 'true')
+          .or(z.boolean())
+          .optional()
+          .default(false),
       })
       .default({
         forwardingStrategy: DidCommMessageForwardingStrategy.DirectDelivery,
@@ -254,6 +263,7 @@ const zConfig = z
         multiInstanceDelivery: {
           type: 'none',
         },
+        implicitLiveMode: false,
       }),
 
     pushNotifications: z
@@ -352,6 +362,17 @@ const zConfig = z
     path: ['messagePickup', 'multiInstanceDelivery', 'type'],
     error: "When message pickup delivery type is 'redis', the cache type MUST also be 'redis'.",
   })
+  .refine(
+    ({ messagePickup }) =>
+      !messagePickup.implicitLiveMode ||
+      (messagePickup.storage.type === 'postgres' &&
+        messagePickup.forwardingStrategy === DidCommMessageForwardingStrategy.QueueAndLiveModeDelivery),
+    {
+      path: ['messagePickup', 'implicitLiveMode'],
+      error:
+        "Message pickup implicit live mode requires storage type 'postgres' and forwarding strategy 'QueueAndLiveModeDelivery'.",
+    }
+  )
   .transform((config) => {
     const agentEndpoints =
       config.agentEndpoints.length === 0

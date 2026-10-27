@@ -21,6 +21,7 @@ import { loadPushNotificationSender } from './config/pushNotificationLoader.js'
 import { loadRedisMessageDelivery } from './config/redisMessageDeliveryLoader.js'
 import { loadStorage } from './config/storageLoader.js'
 import { config, logger } from './config.js'
+import { registerImplicitLiveMode } from './live-mode/implicitLiveSessionMiddleware.js'
 import { registerShutdownHandlers } from './shutdown.js'
 
 async function createModules({
@@ -139,6 +140,11 @@ export async function createAgent() {
   // Optionally initialize queue transport repository
   // TODO: We should refactor this so it's handled by the agent.initialize (using a module?)
   await queueTransportRepository.initialize?.(agent)
+
+  if (config.messagePickup.implicitLiveMode) {
+    agent.config.logger.info('Enabling implicit live mode message pickup')
+    registerImplicitLiveMode(agent, queueTransportRepository)
+  }
 
   await agent.initialize()
   registerShutdownHandlers(agent, queueTransportRepository)
