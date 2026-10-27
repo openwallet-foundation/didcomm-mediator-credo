@@ -22,6 +22,7 @@ import { loadRedisMessageDelivery } from './config/redisMessageDeliveryLoader.js
 import { loadStorage } from './config/storageLoader.js'
 import { config, logger } from './config.js'
 import { registerImplicitLiveMode } from './live-mode/implicitLiveSessionMiddleware.js'
+import { registerRecipientKeyReassignment } from './mediation/recipientKeyReassignmentMiddleware.js'
 import { registerShutdownHandlers } from './shutdown.js'
 
 async function createModules({
@@ -144,6 +145,11 @@ export async function createAgent() {
   if (config.messagePickup.implicitLiveMode) {
     agent.config.logger.info('Enabling implicit live mode message pickup')
     registerImplicitLiveMode(agent, queueTransportRepository)
+  }
+
+  if (config.mediation.reassignRecipientKeys) {
+    agent.config.logger.warn('Enabling recipient key reassignment between mediation records')
+    registerRecipientKeyReassignment(agent)
   }
 
   await agent.initialize()

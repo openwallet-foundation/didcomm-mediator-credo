@@ -266,6 +266,22 @@ const zConfig = z
         implicitLiveMode: false,
       }),
 
+    mediation: z
+      .object({
+        reassignRecipientKeys: z
+          .enum(['true', 'false'], {
+            error:
+              "Mediation reassign recipient keys must be a boolean. Can also be set using 'MEDIATION__REASSIGN_RECIPIENT_KEYS' environment variable",
+          })
+          .transform((v) => v === 'true')
+          .or(z.boolean())
+          .optional()
+          .default(false),
+      })
+      .default({
+        reassignRecipientKeys: false,
+      }),
+
     pushNotifications: z
       .object({
         webhookUrl: z
