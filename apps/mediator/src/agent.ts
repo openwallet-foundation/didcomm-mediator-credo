@@ -21,6 +21,7 @@ import { loadPushNotificationSender } from './config/pushNotificationLoader.js'
 import { loadRedisMessageDelivery } from './config/redisMessageDeliveryLoader.js'
 import { loadStorage } from './config/storageLoader.js'
 import { config, logger } from './config.js'
+import { registerShutdownHandlers } from './shutdown.js'
 
 async function createModules({
   queueTransportRepository,
@@ -140,6 +141,7 @@ export async function createAgent() {
   await queueTransportRepository.initialize?.(agent)
 
   await agent.initialize()
+  registerShutdownHandlers(agent, queueTransportRepository)
 
   const inboundTransport = agent.didcomm.config.inboundTransports.find(
     (transport) => transport instanceof DidCommHttpInboundTransport
