@@ -157,7 +157,7 @@ Tracks ongoing Live Mode Message Pickup sessions across the cluster. One row per
 | `instance` | `VARCHAR(100)` | Identifier of the instance owning this session (`hostname-pid-uuid`). |
 | `created_at` | `TIMESTAMP` (default `CURRENT_TIMESTAMP`) | Insertion time. |
 
-Index: `(connection_id)`.
+Indexes: `(connection_id)`, `(instance)`.
 
 ### `instance`
 
@@ -326,3 +326,4 @@ This package is the successor of `@2060.io/credo-ts-message-pickup-repository-pg
 - **New `instance` table and heartbeat/reaper**: crashed instances no longer leave permanently stuck `live_session` rows. New config options `heartbeatIntervalMs`, `instanceTimeoutMs` and `reaperIntervalMs` control the cadence.
 - **Scoped `live_session` deletion**: `LiveSessionRemoved` deletes only rows owned by the current instance (`session_id` + `instance`), avoiding duplicate delivery during session migrations between pods.
 - **Package rename / publisher**: `@2060.io/credo-ts-message-pickup-repository-pg` → `@credo-ts/didcomm-transport-queue-postgres`.
+- **Databases from the v0.5.x `live-mode-postgres` line**: that line recorded different migrations as `002`–`004`. Migration `005` adds whatever they skipped, so these databases can be used as is. The `live_session.expires_at` column and the `live_session_expires_at_idx` index it left behind are unused.
