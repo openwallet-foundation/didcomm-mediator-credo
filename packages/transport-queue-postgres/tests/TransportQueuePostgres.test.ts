@@ -202,16 +202,20 @@ describe('DidCommTransportQueuePostgres delivery guarantees', () => {
     expect(sqls[sweep]).not.toContain('created_at')
   })
 
-  test('the sending index is built concurrently and replaces an invalid one', async () => {
+  test('indexes are built concurrently and replace invalid ones', async () => {
     db.client.push(lockAcquired, (sql) =>
       sql.includes('FROM pg_index') ? { rows: [{ indisvalid: false }], rowCount: 1 } : undefined
     )
     await queue.initialize(agent)
 
     const indexQueries = () => db.clientQueries.map((q) => q.sql).filter((sql) => sql.includes('INDEX CONCURRENTLY'))
-    await vi.waitFor(() => expect(indexQueries()).toHaveLength(2))
+    await vi.waitFor(() => expect(indexQueries()).toHaveLength(4))
     expect(indexQueries()[0]).toMatch(/^DROP INDEX CONCURRENTLY queued_message_sending_since_idx/)
     expect(indexQueries()[1]).toMatch(/^CREATE INDEX CONCURRENTLY queued_message_sending_since_idx/)
+    expect(indexQueries()[2]).toMatch(/^DROP INDEX CONCURRENTLY queued_message_recipient_dids_gin_idx/)
+    expect(indexQueries()[3]).toMatch(
+      /^CREATE INDEX CONCURRENTLY queued_message_recipient_dids_gin_idx ON queued_message USING GIN \(recipient_dids\)/
+    )
   })
 
   test('the reaper emits a pending event for each connection whose stale live session it removed', async () => {

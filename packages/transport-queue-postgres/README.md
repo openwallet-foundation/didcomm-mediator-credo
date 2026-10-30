@@ -143,7 +143,7 @@ Stores persisted DIDComm messages. One row per message.
 | `sending_since` | `TIMESTAMPTZ` | When the message last moved to `sending`. Used by the ack timeout. |
 | `attempts` | `INTEGER NOT NULL DEFAULT 0` | How many times the message moved to `sending`. A warning is logged when a message reverted by the ack timeout went above 5. |
 
-Indexes: `(connection_id)`, `(connection_id, state)`, `(created_at)`, `(sending_since) WHERE state = 'sending'`.
+Indexes: `(connection_id)`, `(connection_id, state)`, `(created_at)`, `(sending_since) WHERE state = 'sending'`, `GIN (recipient_dids)`. The last two are built with `CREATE INDEX CONCURRENTLY` on startup rather than in a migration, so large tables stay writable.
 
 ### `live_session`
 
@@ -157,7 +157,7 @@ Tracks ongoing Live Mode Message Pickup sessions across the cluster. One row per
 | `instance` | `VARCHAR(100)` | Identifier of the instance owning this session (`hostname-pid-uuid`). |
 | `created_at` | `TIMESTAMP` (default `CURRENT_TIMESTAMP`) | Insertion time. |
 
-Index: `(connection_id)`.
+Indexes: `(connection_id)`, `(instance)`.
 
 ### `instance`
 
@@ -326,3 +326,4 @@ This package is the successor of `@2060.io/credo-ts-message-pickup-repository-pg
 - **New `instance` table and heartbeat/reaper**: crashed instances no longer leave permanently stuck `live_session` rows. New config options `heartbeatIntervalMs`, `instanceTimeoutMs` and `reaperIntervalMs` control the cadence.
 - **Scoped `live_session` deletion**: `LiveSessionRemoved` deletes only rows owned by the current instance (`session_id` + `instance`), avoiding duplicate delivery during session migrations between pods.
 - **Package rename / publisher**: `@2060.io/credo-ts-message-pickup-repository-pg` → `@credo-ts/didcomm-transport-queue-postgres`.
+- **Databases from the v0.5.x `live-mode-postgres` line**: that line recorded different migrations as `002`–`004`. Migration `005` adds whatever they skipped, so these databases can be used as is. The `live_session.expires_at` column and the `live_session_expires_at_idx` index it left behind are unused.

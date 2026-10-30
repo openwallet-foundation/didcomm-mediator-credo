@@ -30,7 +30,13 @@ import { buildPgDatabaseWithMigrations } from './utils/buildPgDatabaseWithMigrat
 // Arbitrary but stable key used for the reaper's advisory lock. Chosen so it
 // is unlikely to collide with advisory locks used elsewhere in the same DB.
 const REAPER_ADVISORY_LOCK_KEY = 814200381
-const SENDING_INDEX_ADVISORY_LOCK_KEY = 814200382
+const INDEX_BUILD_ADVISORY_LOCK_KEY = 814200382
+
+// Not migrations: CONCURRENTLY keeps queued_message writable during the build but cannot run in the migration transaction
+const CONCURRENT_INDEXES = [
+  { name: 'queued_message_sending_since_idx', definition: "ON queued_message (sending_since) WHERE state = 'sending'" },
+  { name: 'queued_message_recipient_dids_gin_idx', definition: 'ON queued_message USING GIN (recipient_dids)' },
+]
 
 const ATTEMPTS_WARNING_THRESHOLD = 5
 
@@ -124,10 +130,8 @@ export class DidCommTransportQueuePostgres implements DidCommQueueTransportRepos
         port: 5432,
       })
 
-      this.createSendingIndex().catch((error) =>
-        agent.context.config.logger.warn(
-          `[initialize] Failed to create index queued_message_sending_since_idx: ${error}`
-        )
+      this.createIndexesConcurrently().catch((error) =>
+        agent.context.config.logger.warn(`[initialize] Failed to create indexes: ${error}`)
       )
 
       // Initialize Listener PUB/SUB
@@ -234,16 +238,20 @@ export class DidCommTransportQueuePostgres implements DidCommQueueTransportRepos
     )
 
     try {
-      // If deleteMessages is true, just fetch messages without updating their state
       if (deleteMessages) {
         const query = `
-        SELECT id, encrypted_message, state, created_at 
-        FROM queued_message 
-        WHERE (connection_id = $1 OR $2 = ANY (recipient_dids)) AND state = 'pending' 
-        ORDER BY created_at 
-        LIMIT $3
+        DELETE FROM queued_message
+        WHERE id IN (
+          SELECT id
+          FROM queued_message
+          WHERE (connection_id = $1 OR recipient_dids @> ARRAY[$2]::text[]) AND state = 'pending'
+          ORDER BY created_at
+          LIMIT $3
+          FOR UPDATE SKIP LOCKED
+        )
+        RETURNING id, encrypted_message, state, created_at;
       `
-        const params = [connectionId, recipientDid, limit ?? 0]
+        const params = [connectionId, recipientDid, limit ?? null]
         const result = await this.messagesCollection?.query(query, params)
 
         if (!result || result.rows.length === 0) {
@@ -266,7 +274,7 @@ export class DidCommTransportQueuePostgres implements DidCommQueueTransportRepos
       WHERE id IN (
         SELECT id 
         FROM queued_message 
-        WHERE (connection_id = $1 OR $2 = ANY (recipient_dids)) 
+        WHERE (connection_id = $1 OR recipient_dids @> ARRAY[$2]::text[]) 
         AND state = 'pending' 
         ORDER BY created_at 
         LIMIT $3
@@ -274,7 +282,7 @@ export class DidCommTransportQueuePostgres implements DidCommQueueTransportRepos
       )
       RETURNING id, encrypted_message, state, created_at;
     `
-      const params = [connectionId, recipientDid, limit ?? 0, this.instanceName]
+      const params = [connectionId, recipientDid, limit ?? null, this.instanceName]
       const result = await this.messagesCollection?.query(query, params)
 
       if (!result || result.rows.length === 0) {
@@ -716,30 +724,29 @@ export class DidCommTransportQueuePostgres implements DidCommQueueTransportRepos
     }
   }
 
-  // Not a migration: CONCURRENTLY keeps queued_message writable during the build but cannot run in the migration transaction
-  private async createSendingIndex(): Promise<void> {
+  private async createIndexesConcurrently(): Promise<void> {
     if (!this.messagesCollection) return
 
     const client = await this.messagesCollection.connect()
     try {
       const lockResult = await client.query<{ pg_try_advisory_lock: boolean }>(
         'SELECT pg_try_advisory_lock($1) AS pg_try_advisory_lock',
-        [SENDING_INDEX_ADVISORY_LOCK_KEY]
+        [INDEX_BUILD_ADVISORY_LOCK_KEY]
       )
       if (lockResult.rows[0]?.pg_try_advisory_lock !== true) return
 
       try {
-        const index = await client.query<{ indisvalid: boolean }>(
-          `SELECT indisvalid FROM pg_index WHERE indexrelid = to_regclass('queued_message_sending_since_idx')`
-        )
-        if (index.rows[0]?.indisvalid) return
-        // An interrupted build leaves an invalid index behind that the planner never uses
-        if (index.rows[0]) await client.query('DROP INDEX CONCURRENTLY queued_message_sending_since_idx')
-        await client.query(
-          `CREATE INDEX CONCURRENTLY queued_message_sending_since_idx ON queued_message (sending_since) WHERE state = 'sending'`
-        )
+        for (const { name, definition } of CONCURRENT_INDEXES) {
+          const index = await client.query<{ indisvalid: boolean }>(
+            `SELECT indisvalid FROM pg_index WHERE indexrelid = to_regclass('${name}')`
+          )
+          if (index.rows[0]?.indisvalid) continue
+          // An interrupted build leaves an invalid index behind that the planner never uses
+          if (index.rows[0]) await client.query(`DROP INDEX CONCURRENTLY ${name}`)
+          await client.query(`CREATE INDEX CONCURRENTLY ${name} ${definition}`)
+        }
       } finally {
-        await client.query('SELECT pg_advisory_unlock($1)', [SENDING_INDEX_ADVISORY_LOCK_KEY])
+        await client.query('SELECT pg_advisory_unlock($1)', [INDEX_BUILD_ADVISORY_LOCK_KEY])
       }
     } finally {
       client.release()

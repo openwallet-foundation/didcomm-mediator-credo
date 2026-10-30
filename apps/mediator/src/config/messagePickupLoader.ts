@@ -1,4 +1,4 @@
-import { Agent } from '@credo-ts/core'
+import { Agent, AgentContext } from '@credo-ts/core'
 import { DidCommQueueTransportRepository } from '@credo-ts/didcomm'
 import { DidCommTransportQueueDynamoDb } from '@credo-ts/didcomm-transport-queue-dynamodb'
 import { DidCommTransportQueuePostgres } from '@credo-ts/didcomm-transport-queue-postgres'
@@ -7,6 +7,7 @@ import { StorageServiceMessageQueue } from '../storage/StorageMessageQueue.js'
 
 export interface ExtendedQueueTransportRepository extends DidCommQueueTransportRepository {
   initialize?: (agent: Agent) => Promise<void>
+  shutdown?: (agentContext: AgentContext) => Promise<void>
 }
 
 export async function loadMessagePickupStorage(): Promise<ExtendedQueueTransportRepository> {

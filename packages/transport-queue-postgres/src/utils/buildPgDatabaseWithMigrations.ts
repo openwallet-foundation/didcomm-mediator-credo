@@ -6,6 +6,7 @@ import { Client, Pool } from 'pg'
 /**
  * Runs all pending SQL migrations in a target PostgreSQL database.
  * - Automatically creates the database if it does not exist.
+ * - Uses the `postgres` maintenance database to check/create the target database.
  * - Applies versioned `.sql` files from a directory.
  *
  * @param logger - Optional Credo-compatible logger instance
@@ -19,7 +20,7 @@ export async function buildPgDatabaseWithMigrations(
   targetDatabase: string,
   migrationsDir: string = path.resolve(import.meta.dirname, '../../migrations')
 ): Promise<void> {
-  const adminClient = new Client(postgresConfig)
+  const adminClient = new Client({ ...postgresConfig, database: 'postgres' })
 
   try {
     await adminClient.connect()
