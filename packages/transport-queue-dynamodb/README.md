@@ -6,7 +6,7 @@ This package provides a simple but efficient Transport Queue implementation to u
 
 ## Installation
 
-This module is designed to work with Credo 0.6.x. Newer versions may include breaking changes in its API and therefore would require code updates to this module.
+This module is designed to work with Credo 0.6.x and 0.7.x. Newer versions may include breaking changes in its API and therefore would require code updates to this module.
 
 To use it, install package in your DIDComm Mediator application. For example:
 

@@ -17,7 +17,7 @@ suite('dynamoDbMessagePickupRepository', () => {
 
   beforeAll(async () => {
     repository = await DidCommTransportQueueDynamoDb.initialize({
-      logger: new ConsoleLogger(LogLevel.off),
+      logger: new ConsoleLogger(LogLevel.Off),
       region: 'local',
       credentials: { accessKeyId: 'local', secretAccessKey: 'local' },
     })

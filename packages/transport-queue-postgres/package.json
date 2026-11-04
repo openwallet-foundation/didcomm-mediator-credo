@@ -2,7 +2,7 @@
   "name": "@credo-ts/didcomm-transport-queue-postgres",
   "main": "build/index.js",
   "types": "build/index.d.ts",
-  "version": "0.0.1",
+  "version": "0.0.3",
   "files": [
     "build",
     "migrations"
@@ -34,7 +34,7 @@
     "typescript": "catalog:"
   },
   "peerDependencies": {
-    "@credo-ts/core": "catalog:",
-    "@credo-ts/didcomm": "catalog:"
+    "@credo-ts/core": "^0.6.0 || ^0.7.0",
+    "@credo-ts/didcomm": "^0.6.0 || ^0.7.0"
   }
 }

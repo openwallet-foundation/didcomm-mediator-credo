@@ -36,7 +36,7 @@ agentContext.dependencyManager.registerInstance(
   DidCommPushNotificationsFcmRepository,
   new PushNotificationsFcmRepositoryMock()
 )
-agentContext.dependencyManager.registerInstance(InjectionSymbols.Logger, new ConsoleLogger(LogLevel.off))
+agentContext.dependencyManager.registerInstance(InjectionSymbols.Logger, new ConsoleLogger(LogLevel.Off))
 
 describe('Push Notifications Fcm ', () => {
   let pushNotificationsService: DidCommPushNotificationsFcmService
