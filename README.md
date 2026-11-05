@@ -154,6 +154,12 @@ You can also provide the following environment variables, these CANNOT be provid
   - `message-pickup-credo.json`, `message-pickup-dynamodb.json`, `message-pickup-postgres.json`: Message pickup storage examples
   - `storage-askar-sqlite.json`, `storage-askar-postgres.json`, `storage-drizzle-sqlite.json`, `storage-drizzle-postgres.json`: Storage backend examples
 
+### Shutdown
+
+On `SIGTERM`, `SIGINT`, or an uncaught exception, the mediator releases its queue resources before shutting down the agent. Cleanup has a total deadline of 25 seconds. If it hangs, the mediator logs the active cleanup step and exits with code `1`; additional signals do not restart cleanup or extend the deadline. Successful signal-triggered cleanup exits with code `0`, while exceptions or cleanup failures exit with code `1`.
+
+Configure the deployment termination grace period to exceed 25 seconds plus any `preStop` delay (the Helm chart defaults to 30 seconds with no `preStop` hook). The application watchdog requires a responsive Node.js event loop; the container runtime remains responsible for terminating a process with a blocked event loop. Forced termination can leave live-session rows behind, which the Postgres heartbeat/reaper mechanism recovers.
+
 ### Configuration Reference
 
 Below are the top-level configuration options. All can be set via ENV (with double underscores for nesting) or in a JSON config file.
