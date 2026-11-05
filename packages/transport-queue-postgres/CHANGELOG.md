@@ -1,5 +1,13 @@
 # @credo-ts/didcomm-transport-queue-postgres
 
+## 0.0.4
+
+### Patch Changes
+
+- 5d57a30: fix: migration `005` brings databases created by the v0.5.x `live-mode-postgres` pickup repository, which recorded different migrations as `002`–`004`, up to the current schema, and indexes `live_session` by `instance` for the reaper and shutdown.
+- 5d57a30: fix: `takeFromQueue` with `deleteMessages` now deletes the messages it returns, in one statement that concurrent takes can't overlap. Without a `limit` it returns every pending message instead of none. Recipient DID lookups use array containment, backed by a GIN index on `recipient_dids` that is built concurrently on startup.
+- fc575ad: chore: support Credo 0.7, the `@credo-ts/core` and `@credo-ts/didcomm` peer dependency range is now `^0.6.0 || ^0.7.0`
+
 ## 0.0.3
 
 ### Patch Changes

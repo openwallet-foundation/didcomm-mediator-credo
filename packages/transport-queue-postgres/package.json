@@ -2,7 +2,7 @@
   "name": "@credo-ts/didcomm-transport-queue-postgres",
   "main": "build/index.js",
   "types": "build/index.d.ts",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "files": [
     "build",
     "migrations"
