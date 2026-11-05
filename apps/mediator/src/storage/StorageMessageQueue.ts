@@ -60,9 +60,7 @@ export class StorageServiceMessageQueue implements DidCommQueueTransportReposito
       (messageRecord) => !this.deliveryLeases.has(messageRecord.id)
     ).length
 
-    agentContext.config.logger.debug(
-      `Found ${availableMessageCount} available messages for connection ${connectionId}`
-    )
+    agentContext.config.logger.debug(`Found ${availableMessageCount} available messages for connection ${connectionId}`)
 
     return availableMessageCount
   }
