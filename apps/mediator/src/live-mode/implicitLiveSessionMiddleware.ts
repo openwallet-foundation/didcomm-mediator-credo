@@ -21,7 +21,7 @@ const TRUST_PING_DEBOUNCE_MS = 2_000
 const DELIVERY_BATCH_SIZE = 10
 const EXPLICIT_PICKUP_METADATA_KEY = 'mediator/implicitLiveMode/explicitPickup'
 const EXPLICIT_PICKUP_MESSAGE_TYPE =
-  /^https:\/\/didcomm\.org\/messagepickup\/(?:1|2|4)\.0\/(?:batch-pickup|status-request|delivery-request|live-delivery-change|messages-received)$/
+  /^https:\/\/didcomm\.org\/message-?pickup\/(?:1|2|4)\.\d+\/(?:batch-pickup|status-request|delivery-request|live-delivery-change|messages-received)$/
 
 /**
  * Older clients never send `live-delivery-change`: they keep a WebSocket open and expect queued messages on it.
