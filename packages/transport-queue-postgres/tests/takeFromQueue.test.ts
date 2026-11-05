@@ -105,13 +105,55 @@ describe('DidCommTransportQueuePostgres.takeFromQueue against Postgres', () => {
     await vi.waitFor(
       async () => {
         const index = await withClient(database, (client) =>
-          client.query<{ indisvalid: boolean }>(
-            `SELECT indisvalid FROM pg_index WHERE indexrelid = to_regclass('queued_message_recipient_dids_gin_idx')`
+          client.query<{ indisvalid: boolean; predicate: string }>(
+            `SELECT indisvalid, pg_get_expr(indpred, indrelid) AS predicate
+             FROM pg_index WHERE indexrelid = to_regclass('queued_message_pending_recipient_dids_gin_idx')`
           )
         )
         expect(index.rows[0]?.indisvalid).toBe(true)
+        expect(index.rows[0]?.predicate).toBe("(state = 'pending'::message_state)")
       },
       { timeout: 10_000 }
     )
+  })
+
+  test('startup replaces a legacy full index without rebuilding a valid partial index', async () => {
+    await withClient(database, (client) =>
+      client.query('CREATE INDEX queued_message_recipient_dids_gin_idx ON queued_message USING GIN (recipient_dids)')
+    )
+    const indexOid = async () =>
+      withClient(database, async (client) => {
+        const result = await client.query<{ oid: number }>(
+          "SELECT oid FROM pg_class WHERE relname = 'queued_message_pending_recipient_dids_gin_idx'"
+        )
+        return result.rows[0]?.oid
+      })
+    await queue.shutdown(agentContext)
+    await withClient(database, (client) => client.query('DROP INDEX queued_message_pending_recipient_dids_gin_idx'))
+    await queue.initialize(agent)
+
+    await vi.waitFor(
+      async () => {
+        const oldIndex = await withClient(database, (client) =>
+          client.query("SELECT to_regclass('queued_message_recipient_dids_gin_idx') AS name")
+        )
+        expect(oldIndex.rows[0].name).toBeNull()
+      },
+      { timeout: 10_000 }
+    )
+    const replacementOid = await indexOid()
+    expect(replacementOid).toBeDefined()
+    await queue.shutdown(agentContext)
+    await withClient(database, (client) =>
+      client.query('CREATE INDEX queued_message_recipient_dids_gin_idx ON queued_message USING GIN (recipient_dids)')
+    )
+    await queue.initialize(agent)
+    await vi.waitFor(async () => {
+      const oldIndex = await withClient(database, (client) =>
+        client.query("SELECT to_regclass('queued_message_recipient_dids_gin_idx') AS name")
+      )
+      expect(oldIndex.rows[0].name).toBeNull()
+    })
+    expect(await indexOid()).toBe(replacementOid)
   })
 })

@@ -35,7 +35,11 @@ const INDEX_BUILD_ADVISORY_LOCK_KEY = 814200382
 // Not migrations: CONCURRENTLY keeps queued_message writable during the build but cannot run in the migration transaction
 const CONCURRENT_INDEXES = [
   { name: 'queued_message_sending_since_idx', definition: "ON queued_message (sending_since) WHERE state = 'sending'" },
-  { name: 'queued_message_recipient_dids_gin_idx', definition: 'ON queued_message USING GIN (recipient_dids)' },
+  {
+    name: 'queued_message_pending_recipient_dids_gin_idx',
+    definition: "ON queued_message USING GIN (recipient_dids) WHERE state = 'pending'",
+    supersedes: 'queued_message_recipient_dids_gin_idx',
+  },
 ]
 
 const ATTEMPTS_WARNING_THRESHOLD = 5
@@ -736,14 +740,20 @@ export class DidCommTransportQueuePostgres implements DidCommQueueTransportRepos
       if (lockResult.rows[0]?.pg_try_advisory_lock !== true) return
 
       try {
-        for (const { name, definition } of CONCURRENT_INDEXES) {
+        for (const indexDefinition of CONCURRENT_INDEXES) {
+          const { name, definition } = indexDefinition
           const index = await client.query<{ indisvalid: boolean }>(
             `SELECT indisvalid FROM pg_index WHERE indexrelid = to_regclass('${name}')`
           )
-          if (index.rows[0]?.indisvalid) continue
-          // An interrupted build leaves an invalid index behind that the planner never uses
-          if (index.rows[0]) await client.query(`DROP INDEX CONCURRENTLY ${name}`)
-          await client.query(`CREATE INDEX CONCURRENTLY ${name} ${definition}`)
+          if (!index.rows[0]?.indisvalid) {
+            // An interrupted build leaves an invalid index behind that the planner never uses
+            if (index.rows[0]) await client.query(`DROP INDEX CONCURRENTLY ${name}`)
+            await client.query(`CREATE INDEX CONCURRENTLY ${name} ${definition}`)
+          }
+          // Keep the old index until its replacement has been successfully built.
+          if (indexDefinition.supersedes) {
+            await client.query(`DROP INDEX CONCURRENTLY IF EXISTS ${indexDefinition.supersedes}`)
+          }
         }
       } finally {
         await client.query('SELECT pg_advisory_unlock($1)', [INDEX_BUILD_ADVISORY_LOCK_KEY])

@@ -209,13 +209,44 @@ describe('DidCommTransportQueuePostgres delivery guarantees', () => {
     await queue.initialize(agent)
 
     const indexQueries = () => db.clientQueries.map((q) => q.sql).filter((sql) => sql.includes('INDEX CONCURRENTLY'))
-    await vi.waitFor(() => expect(indexQueries()).toHaveLength(4))
+    await vi.waitFor(() => expect(indexQueries()).toHaveLength(5))
     expect(indexQueries()[0]).toMatch(/^DROP INDEX CONCURRENTLY queued_message_sending_since_idx/)
     expect(indexQueries()[1]).toMatch(/^CREATE INDEX CONCURRENTLY queued_message_sending_since_idx/)
-    expect(indexQueries()[2]).toMatch(/^DROP INDEX CONCURRENTLY queued_message_recipient_dids_gin_idx/)
-    expect(indexQueries()[3]).toMatch(
-      /^CREATE INDEX CONCURRENTLY queued_message_recipient_dids_gin_idx ON queued_message USING GIN \(recipient_dids\)/
+    expect(indexQueries()[2]).toBe('DROP INDEX CONCURRENTLY queued_message_pending_recipient_dids_gin_idx')
+    expect(indexQueries()[3]).toBe(
+      "CREATE INDEX CONCURRENTLY queued_message_pending_recipient_dids_gin_idx ON queued_message USING GIN (recipient_dids) WHERE state = 'pending'"
     )
+    expect(indexQueries()[4]).toBe('DROP INDEX CONCURRENTLY IF EXISTS queued_message_recipient_dids_gin_idx')
+  })
+
+  test('valid replacement indexes are reused and the superseded index is removed', async () => {
+    db.client.push(lockAcquired, (sql) =>
+      sql.includes('FROM pg_index') ? { rows: [{ indisvalid: true }], rowCount: 1 } : undefined
+    )
+    await queue.initialize(agent)
+
+    await vi.waitFor(() =>
+      expect(
+        db.clientQueries.some(
+          (q) => q.sql === 'DROP INDEX CONCURRENTLY IF EXISTS queued_message_recipient_dids_gin_idx'
+        )
+      ).toBe(true)
+    )
+    expect(db.clientQueries.some((q) => q.sql.startsWith('CREATE INDEX'))).toBe(false)
+  })
+
+  test('a failed replacement build leaves the old index intact and releases the lock', async () => {
+    db.client.push(lockAcquired, (sql) => {
+      if (sql.startsWith('CREATE INDEX CONCURRENTLY queued_message_pending_recipient_dids_gin_idx')) {
+        throw new Error('index build failed')
+      }
+      return undefined
+    })
+    await queue.initialize(agent)
+
+    await vi.waitFor(() => expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('index build failed')))
+    expect(db.clientQueries.some((q) => q.sql.includes('DROP INDEX CONCURRENTLY IF EXISTS'))).toBe(false)
+    expect(db.clientQueries.some((q) => q.sql.includes('pg_advisory_unlock'))).toBe(true)
   })
 
   test('the reaper emits a pending event for each connection whose stale live session it removed', async () => {
