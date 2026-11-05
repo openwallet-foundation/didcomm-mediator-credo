@@ -43,14 +43,7 @@ export function registerImplicitLiveMode(
     }
   )
 
-  const shouldStartFromTrustPing = async (agentContext: AgentContext, connection: DidCommConnectionRecord) => {
-    if (connection.state !== DidCommDidExchangeState.Completed && !connection.getTag('completedConnection')) {
-      // The first ping may still be completing the connection; the next one starts the session
-      connection.setTag('completedConnection', true)
-      await agentContext.resolve(DidCommConnectionRepository).update(agentContext, connection)
-      return false
-    }
-
+  const shouldStartFromTrustPing = (connection: DidCommConnectionRecord) => {
     const now = Date.now()
     const previous = lastTrustPingAt.get(connection.id)
     lastTrustPingAt.set(connection.id, now)
@@ -85,19 +78,17 @@ export function registerImplicitLiveMode(
       return next()
     }
 
-    let start = true
-    if (message instanceof DidCommTrustPingMessage) {
-      try {
-        start = await shouldStartFromTrustPing(agentContext, connection)
-      } catch (error) {
-        agentContext.config.logger.warn(`[implicitLiveMode] Failed to tag connection ${connection.id}`, { error })
-        start = false
-      }
-    }
+    const isTrustPing = message instanceof DidCommTrustPingMessage
+    const wasCompleted = connection.state === DidCommDidExchangeState.Completed
 
     await next()
 
-    if (!start) return
+    if (
+      isTrustPing &&
+      (!wasCompleted || connection.state !== DidCommDidExchangeState.Completed || !shouldStartFromTrustPing(connection))
+    ) {
+      return
+    }
     try {
       await startLiveSessionAndDeliver(context, connection, queueTransportRepository, middlewareCreatedLiveSessionIds)
     } catch (error) {

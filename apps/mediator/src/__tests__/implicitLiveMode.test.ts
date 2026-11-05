@@ -3,6 +3,7 @@ import {
   DidCommBasicMessage,
   DidCommConnectionRecord,
   DidCommConnectionRepository,
+  DidCommConnectionService,
   DidCommDidExchangeRole,
   DidCommDidExchangeState,
   DidCommInboundMessageContext,
@@ -19,6 +20,8 @@ import {
   DidCommQueueTransportRepository,
   DidCommTransportService,
   DidCommTrustPingMessage,
+  DidCommTrustPingMessageHandler,
+  DidCommTrustPingService,
   QueuedDidCommMessage,
 } from '@credo-ts/didcomm'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -220,16 +223,72 @@ describe('implicit live mode', () => {
     expect(queue.takeFromQueue).toHaveBeenCalledTimes(2)
   })
 
-  it('answers the first trust ping on an incomplete connection and starts on the next one', async () => {
+  it('skips the handshake-completing ping handled by Credo and starts on the next one', async () => {
     connection.state = DidCommDidExchangeState.ResponseSent
+    const updateState = vi.fn(
+      async (_context: AgentContext, record: DidCommConnectionRecord, state: DidCommDidExchangeState) => {
+        record.state = state
+      }
+    )
+    const processPing = vi.fn()
+    const handler = new DidCommTrustPingMessageHandler(
+      { processPing } as unknown as DidCommTrustPingService,
+      { updateState } as unknown as DidCommConnectionService
+    )
+    next.mockImplementation(() =>
+      handler.handle(new DidCommInboundMessageContext(new DidCommTrustPingMessage({}), { agentContext, connection }))
+    )
 
     await receive(new DidCommTrustPingMessage({}))
     expect(next).toHaveBeenCalledOnce()
-    expect(connection.getTag('completedConnection')).toBe(true)
-    expect(connectionRepository.update).toHaveBeenCalledWith(agentContext, connection)
+    expect(updateState).toHaveBeenCalledWith(agentContext, connection, DidCommDidExchangeState.Completed)
+    expect(connection.state).toBe(DidCommDidExchangeState.Completed)
+    expect(connection.getTag('completedConnection')).toBeUndefined()
+    expect(connectionRepository.update).not.toHaveBeenCalled()
     expect(queue.takeFromQueue).not.toHaveBeenCalled()
 
     await receive(new DidCommTrustPingMessage({}))
+    expect(processPing).toHaveBeenCalledTimes(2)
+    expect(updateState).toHaveBeenCalledOnce()
+    expect(queue.takeFromQueue).toHaveBeenCalledOnce()
+  })
+
+  it.each([
+    false,
+    true,
+  ])('never starts from pings on a connection that remains incomplete (legacy marker: %s)', async (hasLegacyMarker) => {
+    connection.state = DidCommDidExchangeState.ResponseSent
+    if (hasLegacyMarker) connection.setTag('completedConnection', true)
+
+    await receive(new DidCommTrustPingMessage({}))
+    await receive(new DidCommTrustPingMessage({}))
+
+    expect(next).toHaveBeenCalledTimes(2)
+    expect(connection.getTag('completedConnection')).toBe(hasLegacyMarker ? true : undefined)
+    expect(connectionRepository.update).not.toHaveBeenCalled()
+    expect(pickupSessionService.saveLiveSession).not.toHaveBeenCalled()
+    expect(queue.takeFromQueue).not.toHaveBeenCalled()
+  })
+
+  it('does not start if message handling leaves a completed connection incomplete', async () => {
+    next.mockImplementation(async () => {
+      connection.state = DidCommDidExchangeState.Abandoned
+    })
+
+    await receive(new DidCommTrustPingMessage({}))
+
+    expect(pickupSessionService.saveLiveSession).not.toHaveBeenCalled()
+    expect(queue.takeFromQueue).not.toHaveBeenCalled()
+  })
+
+  it('does not deliver or debounce a ping whose handler fails', async () => {
+    next.mockRejectedValueOnce(new Error('handler failed'))
+
+    await expect(receive(new DidCommTrustPingMessage({}))).rejects.toThrow('handler failed')
+    expect(queue.takeFromQueue).not.toHaveBeenCalled()
+
+    await receive(new DidCommTrustPingMessage({}))
+
     expect(queue.takeFromQueue).toHaveBeenCalledOnce()
   })
 
