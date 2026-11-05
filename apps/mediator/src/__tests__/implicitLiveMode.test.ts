@@ -180,22 +180,36 @@ describe('implicit live mode', () => {
     expect(queue.takeFromQueue).not.toHaveBeenCalled()
   })
 
-  it.each(['1.0', '2.0', '4.0'])('marks %s Pickup clients and skips implicit delivery', async (version) => {
-    const messages = ['batch-pickup', 'status-request', 'delivery-request', 'live-delivery-change', 'messages-received']
+  const pickupTypes = [
+    'messagepickup/1.0/batch-pickup',
+    ...['messagepickup/2.0', 'message-pickup/4.0', 'messagepickup/2.1', 'message-pickup/4.12'].flatMap((protocol) =>
+      ['status-request', 'delivery-request', 'live-delivery-change', 'messages-received'].map(
+        (message) => `${protocol}/${message}`
+      )
+    ),
+  ]
 
-    for (const messageType of messages) {
-      await receive({ type: `https://didcomm.org/messagepickup/${version}/${messageType}` } as DidCommMessage)
-    }
+  it.each(pickupTypes)('recognizes %s independently and skips implicit delivery', async (type) => {
+    await receive({ type: `https://didcomm.org/${type}` } as DidCommMessage)
 
     expect(connection.metadata.get('mediator/implicitLiveMode/explicitPickup')).toEqual({ enabled: true })
     expect(connectionRepository.update).toHaveBeenCalledOnce()
-    expect(next).toHaveBeenCalledTimes(messages.length)
-
     await receive(new DidCommTrustPingMessage({}))
 
-    expect(next).toHaveBeenCalledTimes(messages.length + 1)
+    expect(next).toHaveBeenCalledTimes(2)
     expect(pickupSessionService.saveLiveSession).not.toHaveBeenCalled()
     expect(queue.takeFromQueue).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    'messagepickup/3.0/status-request',
+    'message-pickup/4.0/unknown',
+    'other/2.0/status-request',
+  ])('does not mark unrelated message %s as Pickup', async (type) => {
+    await receive({ type: `https://didcomm.org/${type}` } as DidCommMessage)
+
+    expect(connection.metadata.get('mediator/implicitLiveMode/explicitPickup')).toBeNull()
+    expect(connectionRepository.update).not.toHaveBeenCalled()
   })
 
   it('continues implicit delivery on sessions created by this middleware', async () => {
