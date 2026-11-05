@@ -6,6 +6,9 @@ import {
   DidCommDidExchangeRole,
   DidCommDidExchangeState,
   DidCommInboundMessageContext,
+  DidCommKeylistUpdate,
+  DidCommKeylistUpdateAction,
+  DidCommKeylistUpdateMessage,
   DidCommMediationRequestMessage,
   DidCommMessage,
   DidCommMessageHandlerMiddleware,
@@ -133,22 +136,75 @@ describe('implicit live mode', () => {
   })
 
   it('replaces a live session on another WebSocket but keeps one on the same WebSocket', async () => {
-    await receive(new DidCommMediationRequestMessage({}), 'ws-2')
-    await receive(new DidCommMediationRequestMessage({}), 'ws-1')
-    await receive(new DidCommMediationRequestMessage({}), 'ws-1')
+    const keylistUpdate = () =>
+      new DidCommKeylistUpdateMessage({
+        updates: [new DidCommKeylistUpdate({ recipientKey: 'key', action: DidCommKeylistUpdateAction.add })],
+      })
+    await receive(keylistUpdate(), 'ws-2')
+    await receive(keylistUpdate(), 'ws-1')
+    await receive(keylistUpdate(), 'ws-1')
 
     expect(pickupSessionService.saveLiveSession).toHaveBeenCalledTimes(2)
     expect(liveSessions).toEqual([expect.objectContaining({ transportSessionId: 'ws-1' })])
     expect(queue.takeFromQueue).toHaveBeenCalledTimes(3)
   })
 
-  it('does nothing beyond handling the message without a WebSocket that accepts messages', async () => {
-    await receive(new DidCommMediationRequestMessage({}), 'http-1')
-    await receive(new DidCommMediationRequestMessage({}), null)
+  it('does not implicitly deliver for a live session created outside this middleware', async () => {
+    liveSessions = [
+      {
+        id: 'pickup-session',
+        connectionId: connection.id,
+        protocolVersion: 'v2',
+        role: DidCommMessagePickupSessionRole.MessageHolder,
+        transportSessionId: 'ws-1',
+      },
+    ]
 
-    expect(next).toHaveBeenCalledTimes(2)
+    await receive(new DidCommTrustPingMessage({}))
+
+    expect(next).toHaveBeenCalledOnce()
     expect(pickupSessionService.saveLiveSession).not.toHaveBeenCalled()
     expect(queue.takeFromQueue).not.toHaveBeenCalled()
+  })
+
+  it('does not implicitly deliver for mediation requests or without a WebSocket', async () => {
+    await receive(new DidCommMediationRequestMessage({}), 'ws-1')
+    await receive(new DidCommTrustPingMessage({}), 'http-1')
+    await receive(new DidCommTrustPingMessage({}), null)
+
+    expect(next).toHaveBeenCalledTimes(3)
+    expect(pickupSessionService.saveLiveSession).not.toHaveBeenCalled()
+    expect(queue.takeFromQueue).not.toHaveBeenCalled()
+  })
+
+  it.each(['1.0', '2.0', '4.0'])('marks %s Pickup clients and skips implicit delivery', async (version) => {
+    const messages = ['batch-pickup', 'status-request', 'delivery-request', 'live-delivery-change', 'messages-received']
+
+    for (const messageType of messages) {
+      await receive({ type: `https://didcomm.org/messagepickup/${version}/${messageType}` } as DidCommMessage)
+    }
+
+    expect(connection.metadata.get('mediator/implicitLiveMode/explicitPickup')).toEqual({ enabled: true })
+    expect(connectionRepository.update).toHaveBeenCalledOnce()
+    expect(next).toHaveBeenCalledTimes(messages.length)
+
+    await receive(new DidCommTrustPingMessage({}))
+
+    expect(next).toHaveBeenCalledTimes(messages.length + 1)
+    expect(pickupSessionService.saveLiveSession).not.toHaveBeenCalled()
+    expect(queue.takeFromQueue).not.toHaveBeenCalled()
+  })
+
+  it('continues implicit delivery on sessions created by this middleware', async () => {
+    await receive(new DidCommTrustPingMessage({}))
+    await receive(
+      new DidCommKeylistUpdateMessage({
+        updates: [new DidCommKeylistUpdate({ recipientKey: 'key', action: DidCommKeylistUpdateAction.add })],
+      })
+    )
+
+    expect(pickupSessionService.saveLiveSession).toHaveBeenCalledOnce()
+    expect(queue.takeFromQueue).toHaveBeenCalledTimes(2)
   })
 
   it('answers but ignores a trust ping within 2s of the previous one until the live session ends', async () => {
@@ -159,6 +215,7 @@ describe('implicit live mode', () => {
     expect(queue.takeFromQueue).toHaveBeenCalledOnce()
 
     onLiveSessionRemoved({ payload: { session: liveSessions[0] } })
+    liveSessions = []
     await receive(new DidCommTrustPingMessage({}))
     expect(queue.takeFromQueue).toHaveBeenCalledTimes(2)
   })
@@ -180,7 +237,7 @@ describe('implicit live mode', () => {
     transportSessions['ws-1'].send.mockResolvedValueOnce(undefined).mockRejectedValueOnce(new Error('closed'))
     queue.takeFromQueue.mockResolvedValue([queued('m1'), queued('m2'), queued('m3')])
 
-    await receive(new DidCommMediationRequestMessage({}))
+    await receive(new DidCommTrustPingMessage({}))
 
     expect(transportSessions['ws-1'].send).toHaveBeenCalledTimes(2)
     expect(queue.removeMessages).toHaveBeenCalledWith(agentContext, { connectionId: connection.id, messageIds: ['m1'] })
@@ -189,7 +246,7 @@ describe('implicit live mode', () => {
   it('does not fail message handling when delivery fails', async () => {
     queue.takeFromQueue.mockRejectedValue(new Error('pool closed'))
 
-    await expect(receive(new DidCommMediationRequestMessage({}))).resolves.toBeUndefined()
+    await expect(receive(new DidCommTrustPingMessage({}))).resolves.toBeUndefined()
     expect(next).toHaveBeenCalledOnce()
     expect(agentContext.config.logger.error).toHaveBeenCalled()
   })

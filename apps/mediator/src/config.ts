@@ -386,7 +386,7 @@ const zConfig = z
     {
       path: ['messagePickup', 'implicitLiveMode'],
       error:
-        "Message pickup implicit live mode requires storage type 'postgres' and forwarding strategy 'QueueAndLiveModeDelivery'.",
+        "Message pickup implicit live mode is currently supported only with storage type 'postgres' and forwarding strategy 'QueueAndLiveModeDelivery'.",
     }
   )
   .transform((config) => {

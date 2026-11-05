@@ -243,7 +243,11 @@ When running the Askar to Drizzle storage delettion after successul migration fr
 - `multiInstanceDelivery.type`: `none` or `redis`.
   - `none`. In this case multi instance delivery is not enabled. Use this if you're using `postgres` for `messagePickup.storage.type`, or if only deploying a single instance.
   - For `redis`: You MUST also use `redis` for `cache.type` in this case. The redis URL will be extracted from the cache configuration. The `redis` multi instance delivery uses Redis streams, ensuring consistent delivery and handling of underliverd messages.
-- `implicitLiveMode`: `true` or `false` (default). For older clients that keep a WebSocket open but never send a Pickup V2 `live-delivery-change` message. When enabled, a trust ping, `mediate-request` or `keylist-update` received over a WebSocket with return routing starts a live session on that WebSocket, and up to 10 queued messages are sent over it each time. Repeated trust pings within 2 seconds don't trigger delivery, and on a connection that isn't completed yet only the second trust ping does. Requires `storage.type` `postgres` and `forwardingStrategy` `QueueAndLiveModeDelivery`. Can also be set using the `MESSAGE_PICKUP__IMPLICIT_LIVE_MODE` environment variable.
+- `implicitLiveMode`: `true` or `false` (default). For older clients that keep a WebSocket open but never send a Pickup V2 `live-delivery-change` message. When enabled, a trust ping or `keylist-update` received over a WebSocket with return routing starts a live session on that WebSocket, and up to 10 queued messages are sent over it for each trigger. A client that sends a Pickup V1, V2, or V4 pickup message is treated as an explicit-pickup client and does not receive implicit delivery. Repeated trust pings within 2 seconds don't trigger delivery, and on a connection that isn't completed yet only the second trust ping does.
+
+  Implicit delivery sends encrypted messages directly over the WebSocket, not in a Pickup V2 `delivery` message, and does not wait for a `messages-received` acknowledgement. Messages are removed from the queue after the WebSocket send succeeds. If a send fails, the message remains in the queue and can be retried after the acknowledgement timeout. This differs from the normal `QueueAndLiveModeDelivery` path, where clients acknowledge Pickup V2 deliveries.
+
+  This feature is currently supported only with `storage.type` `postgres` and `forwardingStrategy` `QueueAndLiveModeDelivery`. Can also be set using the `MESSAGE_PICKUP__IMPLICIT_LIVE_MODE` environment variable.
 
 #### Mediation
 

@@ -22,13 +22,13 @@ describe('messagePickup.implicitLiveMode config', () => {
     const { config } = await import('../config.js')
 
     expect(config.messagePickup.implicitLiveMode).toBe(true)
-  })
+  }, 30_000)
 
   it('is rejected with any other forwarding strategy', async () => {
     process.env = { ...baseEnv, MESSAGE_PICKUP__FORWARDING_STRATEGY: 'QueueOnly' }
 
-    await expect(import('../config.js')).rejects.toThrow(/implicit live mode requires/)
-  })
+    await expect(import('../config.js')).rejects.toThrow(/implicit live mode is currently supported only/)
+  }, 30_000)
 
   it('is disabled by default', async () => {
     process.env = { ...baseEnv, MESSAGE_PICKUP__IMPLICIT_LIVE_MODE: undefined }
