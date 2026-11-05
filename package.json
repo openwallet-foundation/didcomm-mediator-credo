@@ -29,7 +29,8 @@
   },
   "pnpm": {
     "overrides": {
-      "vite": "npm:rolldown-vite@^7.2.10"
+      "vite": "npm:rolldown-vite@^7.2.10",
+      "undici": "^6.29.1"
     },
     "onlyBuiltDependencies": [
       "@biomejs/biome",

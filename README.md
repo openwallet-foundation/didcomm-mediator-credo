@@ -154,6 +154,12 @@ You can also provide the following environment variables, these CANNOT be provid
   - `message-pickup-credo.json`, `message-pickup-dynamodb.json`, `message-pickup-postgres.json`: Message pickup storage examples
   - `storage-askar-sqlite.json`, `storage-askar-postgres.json`, `storage-drizzle-sqlite.json`, `storage-drizzle-postgres.json`: Storage backend examples
 
+### Shutdown
+
+On `SIGTERM`, `SIGINT`, or an uncaught exception, the mediator releases its queue resources before shutting down the agent. Cleanup has a total deadline of 25 seconds. If it hangs, the mediator logs the active cleanup step and exits with code `1`; additional signals do not restart cleanup or extend the deadline. Successful signal-triggered cleanup exits with code `0`, while exceptions or cleanup failures exit with code `1`.
+
+Configure the deployment termination grace period to exceed 25 seconds plus any `preStop` delay (the Helm chart defaults to 30 seconds with no `preStop` hook). The application watchdog requires a responsive Node.js event loop; the container runtime remains responsible for terminating a process with a blocked event loop. Forced termination can leave live-session rows behind, which the Postgres heartbeat/reaper mechanism recovers.
+
 ### Configuration Reference
 
 Below are the top-level configuration options. All can be set via ENV (with double underscores for nesting) or in a JSON config file.
@@ -165,7 +171,8 @@ Below are the top-level configuration options. All can be set via ENV (with doub
 | `kms`               | `{ type: 'askar' }`                                                | `{ type: 'askar' }`             | KMS backend              |
 | `askar`             | `{ storeId, storeKey, keyDerivationMethod, database }`             |                                 | Askar config (see below) |
 | `cache`             | `{ type: 'in-memory' }` or `{ type: 'redis', redisUrl }`           | `{ type: 'in-memory'}`          | Cache backend            |
-| `messagePickup`     | `{ forwardingStrategy, storage, multiInstanceDelivery }`           | See below                       | Message pickup config    |
+| `messagePickup`     | `{ forwardingStrategy, storage, multiInstanceDelivery, implicitLiveMode }` | See below                 | Message pickup config    |
+| `mediation`         | `{ reassignRecipientKeys }`                                        | See below                       | Mediation config         |
 | `pushNotifications`  | `{ webhookUrl, firebase }`                                          | `{}`                            | Push notification config |
 | `agentPort`         | Number                                                             | `3110`                          | Port for HTTP/WS         |
 | `agentEndpoints`    | Array of URLs                                                      | See below                       | Agent endpoints          |
@@ -242,6 +249,15 @@ When running the Askar to Drizzle storage delettion after successul migration fr
 - `multiInstanceDelivery.type`: `none` or `redis`.
   - `none`. In this case multi instance delivery is not enabled. Use this if you're using `postgres` for `messagePickup.storage.type`, or if only deploying a single instance.
   - For `redis`: You MUST also use `redis` for `cache.type` in this case. The redis URL will be extracted from the cache configuration. The `redis` multi instance delivery uses Redis streams, ensuring consistent delivery and handling of underliverd messages.
+- `implicitLiveMode`: `true` or `false` (default). For older clients that keep a WebSocket open but never send a Pickup V2 `live-delivery-change` message. When enabled, a trust ping or `keylist-update` received over a WebSocket with return routing starts a live session on that WebSocket, and up to 10 queued messages are sent over it for each trigger. A client that sends a Pickup V1, V2, or V4 pickup message is treated as an explicit-pickup client and does not receive implicit delivery. Trust pings trigger delivery only when the connection is completed both before and after message handling; the ping that completes the handshake does not trigger delivery. Repeated eligible trust pings within 2 seconds don't trigger delivery.
+
+  Implicit delivery sends encrypted messages directly over the WebSocket, not in a Pickup V2 `delivery` message, and does not wait for a `messages-received` acknowledgement. Messages are removed from the queue after the WebSocket send succeeds. If a send fails, the message remains in the queue and can be retried after the acknowledgement timeout. This differs from the normal `QueueAndLiveModeDelivery` path, where clients acknowledge Pickup V2 deliveries.
+
+  This feature is currently supported only with `storage.type` `postgres` and `forwardingStrategy` `QueueAndLiveModeDelivery`. Can also be set using the `MESSAGE_PICKUP__IMPLICIT_LIVE_MODE` environment variable.
+
+#### Mediation
+
+- `reassignRecipientKeys`: `true` or `false` (default). Credo routes a forwarded message to the single mediation record holding its recipient key. If a wallet registers a key that another connection already holds (for example after reconnecting or restoring a backup), forwards to that key fail. When enabled, a `keylist-update` that adds a key removes it from other connections' mediation records, so the latest connection receives the messages. **Only enable this if you trust all mediated connections:** recipient keys are public, so any connection with granted mediation can take over routing for another wallet's key. The messages stay encrypted, but they can be withheld from the wallet. Can also be set using the `MEDIATION__REASSIGN_RECIPIENT_KEYS` environment variable.
 
 #### Push Notifications
 

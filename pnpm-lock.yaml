@@ -45,6 +45,7 @@ catalogs:
 
 overrides:
   vite: npm:rolldown-vite@^7.2.10
+  undici: ^6.29.1
 
 importers:
 
@@ -1829,6 +1830,7 @@ packages:
 
   '@sphereon/kmp-mdoc-core@0.2.0-SNAPSHOT.26':
     resolution: {integrity: sha512-QXJ6R8ENiZV2rPMbn06cw5JKwqUYN1kzVRbYfONqE1PEXx1noQ4md7uxr2zSczi0ubKkNcbyYDNtIMTZIhGzmQ==}
+    bundledDependencies: []
 
   '@sphereon/pex-models@2.3.2':
     resolution: {integrity: sha512-foFxfLkRwcn/MOp/eht46Q7wsvpQGlO7aowowIIb5Tz9u97kYZ2kz6K2h2ODxWuv5CRA7Q0MY8XUBGE2lfOhOQ==}
@@ -3636,8 +3638,8 @@ packages:
   undici-types@6.21.0:
     resolution: {integrity: sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ==}
 
-  undici@6.22.0:
-    resolution: {integrity: sha512-hU/10obOIu62MGYjdskASR3CUAiYaFTtC9Pa6vHyf//mAipSvSQg6od2CnJswq7fvzNS3zJhxoRkgNVaHurWKw==}
+  undici@6.29.1:
+    resolution: {integrity: sha512-EvRlUt/QqAEvXdQeRMYUfwOQsfzpDztykrG2owGEE/rBOBoYv9uF39ZzsNDh4lTFHhTr2XOZjKkYgueD12ZmGA==}
     engines: {node: '>=18.17'}
 
   universalify@0.1.2:
@@ -4708,7 +4710,7 @@ snapshots:
   '@digitalcredentials/http-client@5.0.4':
     dependencies:
       ky: 1.14.0
-      undici: 6.22.0
+      undici: 6.29.1
 
   '@digitalcredentials/jsonld-signatures@12.0.1':
     dependencies:
@@ -7773,7 +7775,7 @@ snapshots:
 
   undici-types@6.21.0: {}
 
-  undici@6.22.0: {}
+  undici@6.29.1: {}
 
   universalify@0.1.2: {}
 
